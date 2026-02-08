@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of, from } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Asset, BuildingData } from '../data/models';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from './supabase.service';
 import { environment } from '../../environments/environment';
 
 import fallbackBuilding from '../components/floor-plan/e12-floor1.json';
@@ -13,15 +13,10 @@ const FALLBACK_BUILDING = fallbackBuilding as unknown as BuildingData;
 @Injectable({ providedIn: 'root' })
 export class BuildingDataService {
   private readonly http = inject(HttpClient);
-  private supabase: SupabaseClient;
+  private supabaseService = inject(SupabaseService);
 
-  constructor() {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey, {
-      auth: {
-        persistSession: false
-      }
-    });
-  }
+  constructor() { }
+
 
   /**
    * 1. ดึงข้อมูลอาคาร (สำหรับการดูแผนผัง)
@@ -47,7 +42,7 @@ export class BuildingDataService {
       return of([]);
     }
 
-    const request = this.supabase
+    const request = this.supabaseService.client
       .from('assets')
       .select(`
         id,
