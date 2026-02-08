@@ -1,0 +1,179 @@
+<ion-content [scrollY]="false" style="--background: black;">
+  <div class="main-content-container" [class.scale-down]="isModalOpen">
+    <div id="map" style="width: 100%; height: 100%; position: absolute; z-index: 1;"></div>
+
+    <!-- Top Container: Search + Location Selector -->
+    <div class="absolute top-4 left-0 right-0 z-[20] flex flex-col items-center px-4 pt-safe-top gap-3">
+
+      <!-- Google Style Search Bar -->
+      <div class="bg-white rounded-full shadow-md flex items-center w-full max-w-sm px-4 py-3 border border-gray-100">
+        <ion-icon name="navigate-outline" class="text-[#1a73e8] text-xl mr-3"></ion-icon>
+        <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()" placeholder="ไปที่ไหน?"
+          class="flex-1 bg-transparent border-none outline-none text-base text-gray-700 placeholder-gray-400 font-medium">
+
+        <div class="flex items-center gap-3 border-l border-gray-200 pl-3 ml-2">
+          <ion-icon name="mic-outline" class="text-gray-500 text-xl"></ion-icon>
+          <div
+            class="w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center">
+            <!-- Placeholder for user avatar or similar -->
+            <img src="https://i.pravatar.cc/150?u=user" alt="User" class="w-full h-full object-cover">
+          </div>
+        </div>
+      </div>
+
+      <!-- Location Selector -->
+      <div
+        class="bg-white/90 backdrop-blur-md rounded-full p-1 shadow-lg border border-gray-100 flex items-center w-full max-w-sm">
+
+        <!-- Parking Option -->
+        <div
+          class="flex-1 cursor-pointer rounded-full py-2 px-1 text-center transition-all duration-300 relative overflow-hidden"
+          (click)="selectedLocation = 'parking'; locationChanged({detail: {value: 'parking'}})"
+          [ngClass]="{'text-white shadow-md': selectedLocation === 'parking', 'text-gray-500 hover:bg-gray-50': selectedLocation !== 'parking'}">
+
+          <div class="absolute inset-0 bg-[#1a73e8] transition-transform duration-300 ease-out origin-left"
+            [style.transform]="selectedLocation === 'parking' ? 'scaleX(1)' : 'scaleX(0)'" style="z-index: 0;"></div>
+
+          <div class="relative z-10 flex items-center justify-center gap-2">
+            <ion-icon name="car-sport"
+              [style.color]="selectedLocation === 'parking' ? 'white' : 'currentColor'"></ion-icon>
+            <span class="text-sm font-bold">ที่จอดรถ</span>
+          </div>
+        </div>
+
+        <!-- Building Option -->
+        <div
+          class="flex-1 cursor-pointer rounded-full py-2 px-1 text-center transition-all duration-300 relative overflow-hidden"
+          (click)="selectedLocation = 'building'; locationChanged({detail: {value: 'building'}})"
+          [ngClass]="{'text-white shadow-md': selectedLocation === 'building', 'text-gray-500 hover:bg-gray-50': selectedLocation !== 'building'}">
+
+          <div class="absolute inset-0 bg-[#1a73e8] transition-transform duration-300 ease-out origin-right"
+            [style.transform]="selectedLocation === 'building' ? 'scaleX(1)' : 'scaleX(0)'" style="z-index: 0;"></div>
+
+          <div class="relative z-10 flex items-center justify-center gap-2">
+            <ion-icon name="business"
+              [style.color]="selectedLocation === 'building' ? 'white' : 'currentColor'"></ion-icon>
+            <span class="text-sm font-bold">อาคารผู้เยี่ยมชม</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="fab-container" style="position: absolute; bottom: 40%; right: 16px; z-index: 2;">
+      <ion-fab-button color="light" (click)="focusOnUser()">
+        <ion-icon name="locate"></ion-icon>
+      </ion-fab-button>
+    </div>
+
+    <div class="bottom-sheet" [style.height.px]="currentSheetHeight" [class.snapping]="isSnapping" style="z-index: 10;">
+      <div class="drag-header" (mousedown)="startDrag($event)" (touchstart)="startDrag($event)">
+        <div class="drag-line"></div>
+      </div>
+
+      <div class="sheet-content" #sheetContent [class.lock-scroll]="!canScroll">
+        <div class="sticky-header">
+          <div class="filter-row">
+            <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" mode="ios" [scrollable]="true">
+              <ion-segment-button value="all">
+                <ion-label>All</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="normal">
+                <ion-label>Car</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="ev">
+                <ion-label>EV</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="motorcycle">
+                <ion-label>Motorcycle</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          </div>
+        </div>
+
+        <div class="lot-list" (touchstart)="startDrag($event)" (mousedown)="startDrag($event)">
+          <!-- Empty State -->
+          <div *ngIf="filteredParkingLots.length === 0" class="empty-state"
+            style="text-align: center; padding: 40px 20px; color: #6b7280;">
+            <ion-icon name="search-outline" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;"></ion-icon>
+            <p>ไม่พบข้อมูลที่จอดรถในบริเวณนี้</p>
+          </div>
+
+          <div *ngFor="let lot of filteredParkingLots"
+            class="lot-card bg-white rounded-xl p-4 mb-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 relative overflow-hidden"
+            (click)="viewLotDetails(lot)">
+
+            <div class="flex flex-row gap-4">
+              <!-- Left Column: Status & Capacity -->
+              <div class="flex flex-col items-center min-w-[70px] text-center border-r border-gray-100 pr-3">
+                <div class="rounded-full px-3 py-[2px] text-xs text-white font-bold mb-1" [ngClass]="{
+                    'bg-[#1a73e8]': lot.status === 'available',
+                    'bg-yellow-500': lot.status === 'low',
+                    'bg-red-500': lot.status === 'full' || lot.status === 'closed'
+                  }">
+                  {{ getStatusText(lot.status) }}
+                </div>
+
+                <div class="text-3xl font-bold text-[#1a73e8] leading-none mb-1">
+                  {{ getDisplayAvailable(lot) }}
+                </div>
+
+                <div class="text-[10px] text-gray-400 font-normal">
+                  ห่าง {{ lot.distance }} ม.
+                </div>
+              </div>
+
+              <!-- Center Column: Details -->
+              <div class="flex-1 flex flex-col justify-start gap-1 overflow-hidden">
+                <!-- Title Row -->
+                <div class="flex items-start gap-2 mb-0.5">
+                  <div class="text-base font-bold text-gray-800 leading-tight">{{ lot.name }}</div>
+                  <ion-icon *ngIf="lot.isBookmarked" name="bookmark"
+                    class="text-gray-400 text-sm mt-0.5 shrink-0"></ion-icon>
+                </div>
+
+                <!-- Hours -->
+                <div class="flex items-center gap-1.5 text-xs text-gray-600">
+                  <ion-icon name="time-outline" class="text-gray-400 text-sm"></ion-icon>
+                  <span class="truncate">{{ lot.hours }}</span>
+                </div>
+
+                <!-- User Types -->
+                <div class="flex items-center gap-1.5 text-xs text-gray-600">
+                  <ion-icon name="briefcase-outline" class="text-gray-400 text-sm"></ion-icon>
+                  <span class="truncate">{{ lot.userTypes }}</span>
+                </div>
+
+                <!-- Note (Optional) -->
+                <div *ngIf="lot.note" class="flex items-center gap-1.5 text-xs text-gray-600">
+                  <ion-icon name="information-circle-outline" class="text-gray-400 text-sm"></ion-icon>
+                  <span class="truncate">{{ lot.note }}</span>
+                </div>
+              </div>
+
+              <!-- Right Column: Price & Promo -->
+              <div class="flex flex-col items-end justify-between pl-1 min-w-[80px]">
+                <div class="text-[10px] text-gray-400 text-right">
+                  {{ lot.promotion || '' }}
+                </div>
+
+                <div class="text-right mt-1">
+                  <div class="flex items-center justify-end gap-1">
+                    <ion-icon name="cash-outline" class="text-[#1a73e8] text-lg"></ion-icon>
+                    <span class="text-xl font-bold text-[#1a73e8]" *ngIf="lot.price > 0">฿{{ lot.price }}</span>
+                    <span class="text-xl font-bold text-[#1a73e8]" *ngIf="lot.price === 0">ฟรี</span>
+                  </div>
+                  <div class="text-[10px] text-gray-400" *ngIf="lot.price > 0">
+                    {{ lot.priceUnit }}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</ion-content>

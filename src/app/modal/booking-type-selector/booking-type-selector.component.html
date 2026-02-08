@@ -1,0 +1,43 @@
+<ion-header class="ion-no-border">
+    <ion-toolbar style="--background: #ffffff;">
+        <ion-title class="font-bold text-center text-lg">เลือกรูปแบบการจอง</ion-title>
+        <ion-buttons slot="end">
+            <ion-button (click)="close()">
+                <ion-icon name="close-outline" class="text-xl text-gray-400"></ion-icon>
+            </ion-button>
+        </ion-buttons>
+    </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding" style="--background: #f9fafb;">
+    <div class="flex flex-col gap-3">
+        <div *ngFor="let type of bookingTypes" (click)="selectType(type.id)"
+            class="relative p-4 rounded-2xl border border-gray-100 bg-white shadow-sm active:scale-95 transition-transform duration-200 flex items-center gap-4 ripple-parent overflow-hidden">
+
+            <!-- Icon Box -->
+            <div
+                [class]="'w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ' + 'bg-' + type.color + '-50 text-' + type.color">
+                <ion-icon [name]="type.icon"></ion-icon>
+            </div>
+
+            <!-- Text Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                    <h3 class="text-base font-bold text-gray-900 m-0 leading-tight">{{ type.title }}</h3>
+                    <span *ngIf="type.badge"
+                        class="px-2 py-0.5 rounded-full text-[10px] bg-red-50 text-red-600 font-bold border border-red-100 uppercase tracking-wide">
+                        {{ type.badge }}
+                    </span>
+                </div>
+                <p class="text-xs text-gray-500 m-0 leading-snug line-clamp-2">
+                    {{ type.desc }}
+                </p>
+            </div>
+
+            <!-- Arrow -->
+            <ion-icon name="chevron-forward-outline" class="text-gray-300 text-lg"></ion-icon>
+
+            <ion-ripple-effect></ion-ripple-effect>
+        </div>
+    </div>
+</ion-content>
