@@ -14,6 +14,7 @@ import { Router } from '@angular/router';
 import { Subscription, interval, of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 import { UiEventService } from '../services/ui-event';
+import { SupabaseService } from '../services/supabase.service';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
 
@@ -73,6 +74,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private alertCtrl: AlertController, // ✅ Inject AlertController
     private parkingDataService: ParkingDataService, // Renamed for clarity
     private parkingApiService: ParkingService, // Inject new RPC Service
+    private supabaseService: SupabaseService, // Inject Supabase for Realtime
     private router: Router, // ✅ Inject Router
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
@@ -83,7 +85,64 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     console.log('[Tab1] 0. Start Loading Mock Data...');
     this.useMockData();
 
-    // 1. Fetch Real Data from Supabase
+    // 1. Fetch Real Data
+    this.loadRealData();
+
+    // Subscribe to Refresh Event
+    this.uiEventService.refreshParkingData$.subscribe(() => {
+      console.log('[Tab1] 🔄 Refresh Event Received. Reloading Data...');
+      this.loadRealData();
+    });
+
+    this.updateSheetHeightByLevel(this.sheetLevel);
+
+    this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
+      requestAnimationFrame(() => {
+        this.toggleSheetState();
+      });
+    });
+
+    this.timeCheckSub = interval(60000).subscribe(() => {
+      this.updateParkingStatuses();
+    });
+
+    // Start Realtime Subscription
+    this.setupRealtimeSubscription();
+  }
+
+  setupRealtimeSubscription() {
+    console.log('[Tab1] 🔴 Starting Realtime Subscription...');
+
+    // Create a NEW channel for multiple tables
+    const channel = this.supabaseService.client.channel('parking-channel-multi');
+
+    // 1. Listen to Reservations (Bookings change availability)
+    channel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, (payload) => {
+        console.log('[Tab1] 🔔 Realtime Reservation Update:', payload);
+        this.handleRealtimeUpdate();
+      })
+      // 2. Listen to Parking Lots (Status/Capacity changes by Admin)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_lots' }, (payload) => {
+        console.log('[Tab1] 🔔 Realtime Parking Lot Update:', payload);
+        this.handleRealtimeUpdate();
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[Tab1] ✅ Realtime Connection Established (Multi-Table)');
+        }
+      });
+  }
+
+  handleRealtimeUpdate() {
+    // Add a small delay/debounce to allow DB triggers to finish computing
+    setTimeout(() => {
+      console.log('[Tab1] 🔄 Refreshing Data due to Realtime Event...');
+      this.loadRealData();
+    }, 1000); // 1s delay for safety
+  }
+
+  loadRealData() {
     console.log('[Tab1] 1. Requesting Real Data API...');
     this.parkingApiService.getSiteBuildings('1')
       .pipe(
@@ -129,18 +188,6 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
           console.error('[Tab1] Subscribe Error:', err);
         }
       });
-
-    this.updateSheetHeightByLevel(this.sheetLevel);
-
-    this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
-      requestAnimationFrame(() => {
-        this.toggleSheetState();
-      });
-    });
-
-    this.timeCheckSub = interval(60000).subscribe(() => {
-      this.updateParkingStatuses();
-    });
   }
 
   filterData() {
@@ -613,9 +660,9 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async viewLotDetails(lot: ParkingLot) {
-    // 0. Check if it's a building -> Go to Tab2
+    // 0. Check if it's a building -> Go to Tab4 (was Tab2)
     if (lot.category === 'building') {
-      this.router.navigate(['/tabs/tab2']);
+      this.router.navigate(['/tabs/tab4']);
       return;
     }
 

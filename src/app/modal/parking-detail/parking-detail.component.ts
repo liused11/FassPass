@@ -1,5 +1,7 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
+import { RealtimeChannel } from '@supabase/supabase-js';
+import { SupabaseService } from '../../services/supabase.service';
 import { ModalController, ToastController, LoadingController, AlertController } from '@ionic/angular';
 import { ParkingLot, Booking } from '../../data/models';
 import { ParkingDataService } from '../../services/parking-data.service';
@@ -9,6 +11,7 @@ import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 import { BookingSuccessModalComponent } from '../booking-success-modal/booking-success-modal.component';
 import { ReservationService } from '../../services/reservation.service';
 import { ParkingService } from '../../services/parking.service';
+import { UiEventService } from '../../services/ui-event';
 
 // --- Interfaces copied from ParkingReservations ---
 interface DaySection {
@@ -70,7 +73,7 @@ interface AggregatedZone {
   styleUrls: ['./parking-detail.component.scss'],
   standalone: false
 })
-export class ParkingDetailComponent implements OnInit {
+export class ParkingDetailComponent implements OnInit, OnDestroy {
 
   @Input() lot!: ParkingLot;
   @Input() initialType: string = 'normal';
@@ -109,6 +112,7 @@ export class ParkingDetailComponent implements OnInit {
   crossDayCount: number = 1;
   minDate: string = new Date().toISOString(); // Validator
   isBooking: boolean = false; // Loading state for booking process
+  private realtimeChannel: RealtimeChannel | null = null;
 
   constructor(
     private modalCtrl: ModalController,
@@ -118,7 +122,9 @@ export class ParkingDetailComponent implements OnInit {
     private parkingDataService: ParkingDataService, // Old Mock
     private parkingApiService: ParkingService, // New RPC Service
     private reservationService: ReservationService,
-    private router: Router
+    private uiEventService: UiEventService,
+    private router: Router,
+    private supabaseService: SupabaseService,
   ) { }
 
   ngOnInit() {
@@ -135,6 +141,35 @@ export class ParkingDetailComponent implements OnInit {
 
     // Generate Time Slots initially
     this.generateTimeSlots();
+
+    // Subscribe to Realtime Updates (Reservations Table)
+    this.realtimeChannel = this.supabaseService.client
+      .channel('public:reservations')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservations' },
+        (payload) => {
+          console.log('Realtime Update:', payload);
+          this.refreshRealtimeData();
+        }
+      )
+      .subscribe();
+  }
+
+  ngOnDestroy() {
+    if (this.realtimeChannel) {
+      this.supabaseService.client.removeChannel(this.realtimeChannel);
+    }
+  }
+
+  refreshRealtimeData() {
+    // 1. Refresh Time Slots (Counts)
+    this.fetchTimeSlotAvailability();
+
+    // 2. Refresh Floor/Zone logic if a slot is selected
+    if (this.startSlot && this.endSlot) {
+      this.loadAvailability(true);
+    }
   }
 
   // --- Date Selection ---
@@ -418,7 +453,7 @@ export class ParkingDetailComponent implements OnInit {
       }
       this.updateMonthLabel(); // Only for daily modes
     }
-    
+
     // Fetch real availability for the generated slots
     this.fetchTimeSlotAvailability();
 
@@ -453,7 +488,7 @@ export class ParkingDetailComponent implements OnInit {
 
     const isPast = timeObj < new Date();
     // Default to 0, will be updated by fetchTimeSlotAvailability
-    let remaining = isPast ? 0 : capacity; 
+    let remaining = isPast ? 0 : capacity;
 
     slots.push({
       id: `${targetDate.toISOString()}-${timeStr}`,
@@ -483,7 +518,7 @@ export class ParkingDetailComponent implements OnInit {
     const buildingId = this.lot.id; // Correct ID usage?
     // Check if selectedLot.id is actually the building ID or site ID?
     // In getSiteBuildings, likely building.id.
-    
+
     // Convert vehicle type? The component might calculate this.
     const vehicleType = 'car'; // Use a real value if stored in component
 
@@ -491,13 +526,13 @@ export class ParkingDetailComponent implements OnInit {
       .subscribe(data => {
         // Map data to slots
         // data: { slot_time: string, available_count: number, ... }[]
-        
+
         // Create a lookup map for speed
         const availabilityMap = new Map<string, number>();
         data.forEach(row => {
           // Normalize time string to match slot.dateTime.toISOString() or similar comparison
           // User updated RPC to return 't_start' and aligned times
-          const timeVal = row.t_start || row.slot_time; 
+          const timeVal = row.t_start || row.slot_time;
           if (timeVal) {
             const t = new Date(timeVal).getTime();
             availabilityMap.set(t.toString(), row.available_count);
@@ -618,20 +653,20 @@ export class ParkingDetailComponent implements OnInit {
   // --- Mock Data Generation ---
 
   // --- Real Data Generation ---
-  loadAvailability() {
+  loadAvailability(preserveSelection: boolean = false) {
     // --- REAL DATA INTEGRATION ---
     if (!this.startSlot || !this.endSlot) return;
 
     // Loading State? (Optional interaction improvement)
-    this.floorData = []; 
+    this.floorData = [];
 
     // Calculate accurate End Time (EndSlot Start + Duration)
     const endTime = new Date(this.endSlot.dateTime.getTime() + (this.endSlot.duration || 60) * 60000);
 
     this.parkingApiService.getAvailability(
-      this.lot.id, 
-      this.startSlot.dateTime, 
-      endTime, 
+      this.lot.id,
+      this.startSlot.dateTime,
+      endTime,
       this.selectedType // 'normal'/'car', 'ev', 'motorcycle' passed here
     ).subscribe({
       next: (data) => {
@@ -640,16 +675,36 @@ export class ParkingDetailComponent implements OnInit {
 
         // Default Select First Floor
         if (this.floorData.length > 0) {
-          // If previous selection exists and is valid, keep it?
-          // For now, simpler to reset to first floor on new fetch
-          this.selectedFloorIds = [this.floorData[0].id];
-          this.updateDisplayZones();
-          this.clearAllZones();
+          if (preserveSelection) {
+            // Keep selection if possible
+            const validFloors = this.selectedFloorIds.filter(id => this.floorData.some(f => f.id === id));
+            if (validFloors.length > 0) {
+              this.selectedFloorIds = validFloors;
+            } else {
+              // If previously selected floor is gone, select first
+              this.selectedFloorIds = [this.floorData[0].id];
+              this.clearAllZones(); // Reset zones if floor changed
+            }
+            this.updateDisplayZones();
+
+            // Validate Zone Selection: If any selected zone is now FULL, deselect it.
+            this.displayZones.forEach(z => {
+              if (this.isZoneSelected(z.name) && z.status === 'full') {
+                // Remove these IDs from selectedZoneIds
+                this.selectedZoneIds = this.selectedZoneIds.filter(id => !z.ids.includes(id));
+              }
+            });
+          } else {
+            // Default Select First Floor (Reset)
+            this.selectedFloorIds = [this.floorData[0].id];
+            this.updateDisplayZones();
+            this.clearAllZones();
+          }
         }
       },
       error: (err) => {
-         console.error('Error loading detailed availability', err);
-         // Fallback or Toast?
+        console.error('Error loading detailed availability', err);
+        // Fallback or Toast?
       }
     });
   }
@@ -922,13 +977,13 @@ export class ParkingDetailComponent implements OnInit {
     else if (this.bookingMode === 'flat24') {
       finalEnd = new Date(finalStart.getTime() + (24 * 60 * 60 * 1000));
     } else {
-        if (finalEnd.getTime() <= finalStart.getTime()) {
-             finalEnd = new Date(finalStart.getTime() + (60 * 60 * 1000));
-        }
+      if (finalEnd.getTime() <= finalStart.getTime()) {
+        finalEnd = new Date(finalStart.getTime() + (60 * 60 * 1000));
+      }
     }
 
     let data: any = {
-      siteId: this.lot.id.split('-')[0], 
+      siteId: this.lot.id.split('-')[0],
       siteName: this.lot.name,
       selectedType: this.selectedType,
       selectedFloors: this.selectedFloorIds,
@@ -981,41 +1036,44 @@ export class ParkingDetailComponent implements OnInit {
         };
 
         this.parkingDataService.addBooking(newBooking);
-        
-        try {
-            await this.reservationService.createReservation(
-                newBooking,
-                this.reservationService.getTestUserId(),
-                bookingData.siteId,
-                bookingData.selectedFloors[0],
-                bookingData.selectedSlotId
-            );
-            
-            // Hide loading
-            await loading.dismiss();
-            this.isBooking = false;
 
-            // Show success modal with complete data
-            const successData = {
-              ...newBooking,
-              selectedSlotId: bookingData.selectedSlotId,
-              selectedFloors: bookingData.selectedFloors,
-              selectedZones: bookingData.selectedZones,
-              siteName: bookingData.siteName,
-              startSlot: bookingData.startSlot,
-              endSlot: bookingData.endSlot
-            };
-            await this.showSuccessModal(successData);
+        try {
+          await this.reservationService.createReservation(
+            newBooking,
+            this.reservationService.getTestUserId(),
+            bookingData.siteId,
+            bookingData.selectedFloors[0],
+            bookingData.selectedSlotId
+          );
+
+          // Hide loading
+          await loading.dismiss();
+          this.isBooking = false;
+
+          // Trigger Data Refresh
+          this.uiEventService.triggerRefreshParkingData();
+
+          // Show success modal with complete data
+          const successData = {
+            ...newBooking,
+            selectedSlotId: bookingData.selectedSlotId,
+            selectedFloors: bookingData.selectedFloors,
+            selectedZones: bookingData.selectedZones,
+            siteName: bookingData.siteName,
+            startSlot: bookingData.startSlot,
+            endSlot: bookingData.endSlot
+          };
+          await this.showSuccessModal(successData);
 
         } catch (e: any) {
-            // Hide loading
-            await loading.dismiss();
-            this.isBooking = false;
-            
-            console.error('Reservation Failed', e);
-            
-            // Show detailed error
-            await this.showErrorAlert(e);
+          // Hide loading
+          await loading.dismiss();
+          this.isBooking = false;
+
+          console.error('Reservation Failed', e);
+
+          // Show detailed error
+          await this.showErrorAlert(e);
         }
       }
 

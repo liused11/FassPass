@@ -7,6 +7,8 @@ import { IonicModule } from '@ionic/angular';
 import { Tab4PageRoutingModule } from './tab4-routing.module';
 
 import { Tab4Page } from './tab4.page';
+import { BuildingViewComponent } from '../components/building-view/building-view.component';
+import { FloorPlanComponent } from '../components/floor-plan/floor-plan.component';
 
 @NgModule({
   imports: [
@@ -14,7 +16,9 @@ import { Tab4Page } from './tab4.page';
     FormsModule,
     IonicModule,
     Tab4PageRoutingModule,
-    Tab4Page
-  ]
+    BuildingViewComponent,
+    FloorPlanComponent
+  ],
+  declarations: [Tab4Page]
 })
 export class Tab4PageModule { }
