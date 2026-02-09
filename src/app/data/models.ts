@@ -21,6 +21,7 @@ export interface ParkingLot {
     id: string;
     name: string;
     category?: 'parking' | 'building'; // New field for location type
+    zone?: 'north' | 'south'; // Optional zone for buildings
     capacity: {
         normal: number;
         ev: number;

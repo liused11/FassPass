@@ -196,9 +196,18 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     // 1. Filter by Location Type (Safe & Case-Insensitive)
     results = results.filter(lot => (lot.category || '').toLowerCase() === (this.selectedLocation || '').toLowerCase());
 
-    // 2. Filter by Vehicle Type (Tab)
+    // 2. Filter by Vehicle Type (Tab) OR Zone
     if (this.selectedTab !== 'all') {
-      results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+      if (this.selectedLocation === 'parking') {
+        results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+      } else {
+        // Building -> Filter by Zone
+        if (this.selectedTab === 'north') {
+          results = results.filter((lot) => lot.zone === 'north');
+        } else if (this.selectedTab === 'south') {
+          results = results.filter((lot) => lot.zone === 'south');
+        }
+      }
     }
 
     if (this.searchQuery.trim() !== '') {
@@ -217,6 +226,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   onTabChange() { this.filterData(); }
   locationChanged(ev: any) {
     this.selectedLocation = ev.detail.value;
+    this.selectedTab = 'all'; // Reset tab when location changes
     this.filterData();
   }
 

@@ -74,7 +74,9 @@
       <div class="sheet-content" #sheetContent [class.lock-scroll]="!canScroll">
         <div class="sticky-header">
           <div class="filter-row">
-            <ion-segment [(ngModel)]="selectedTab" (ionChange)="onTabChange()" mode="ios" [scrollable]="true">
+            <!-- Parking Segments -->
+            <ion-segment *ngIf="selectedLocation === 'parking'" [(ngModel)]="selectedTab" (ionChange)="onTabChange()"
+              mode="ios" [scrollable]="true">
               <ion-segment-button value="all">
                 <ion-label>All</ion-label>
               </ion-segment-button>
@@ -86,6 +88,20 @@
               </ion-segment-button>
               <ion-segment-button value="motorcycle">
                 <ion-label>Motorcycle</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+
+            <!-- Building Segments -->
+            <ion-segment *ngIf="selectedLocation === 'building'" [(ngModel)]="selectedTab" (ionChange)="onTabChange()"
+              mode="ios" [scrollable]="true">
+              <ion-segment-button value="all">
+                <ion-label>All</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="north">
+                <ion-label>โซนเหนือ</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="south">
+                <ion-label>โซนใต้</ion-label>
               </ion-segment-button>
             </ion-segment>
           </div>
