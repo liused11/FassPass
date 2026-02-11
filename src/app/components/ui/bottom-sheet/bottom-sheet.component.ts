@@ -7,13 +7,13 @@ import { FloorplanInteractionService } from '../../../services/floorplan/floorpl
 
 // 1. Import addIcons และชื่อ Icon ที่ใช้
 import { addIcons } from 'ionicons';
-import { 
-  business, 
-  businessOutline, 
-  close, 
-  cubeOutline, 
-  navigateOutline, 
-  chevronForwardOutline, 
+import {
+  business,
+  businessOutline,
+  close,
+  cubeOutline,
+  navigateOutline,
+  chevronForwardOutline,
   arrowBack // เพิ่ม icon ย้อนกลับ
 } from 'ionicons/icons';
 
@@ -40,13 +40,13 @@ export class BottomSheetComponent implements OnInit {
 
   constructor() {
     // 2. Register Icon ทั้งหมดที่ใช้ใน HTML ของหน้านี้
-    addIcons({ 
-      business, 
-      businessOutline, 
-      close, 
-      cubeOutline, 
-      navigateOutline, 
-      chevronForwardOutline, 
+    addIcons({
+      business,
+      businessOutline,
+      close,
+      cubeOutline,
+      navigateOutline,
+      chevronForwardOutline,
       arrowBack // register icon ใหม่
     });
   }
@@ -84,7 +84,7 @@ export class BottomSheetComponent implements OnInit {
     const clientY = this.getClientY(event);
     const deltaY = this.startY - clientY;
     const newHeight = this.startHeight + deltaY;
-    const maxHeight = window.innerHeight - 60; 
+    const maxHeight = window.innerHeight - 60;
 
     if (newHeight > 0 && newHeight <= maxHeight) {
       this.renderer.setStyle(this.sheetRef.nativeElement, 'height', `${newHeight}px`);
@@ -126,7 +126,7 @@ export class BottomSheetComponent implements OnInit {
       this.bottomSheetService.setExpansionState(state as ExpansionState);
     }
   }
-  
+
   selectBuilding(item: any) {
     this.bottomSheetService.triggerAction('enter-building', item.id);
   }
@@ -141,7 +141,7 @@ export class BottomSheetComponent implements OnInit {
     this.interactionService.clearFocus();
 
     // 2. สั่ง Bottom Sheet ย้อนกลับไปหน้า Access List (ส่งข้อมูลเดิมกลับไปแบบง่ายๆ)
-    const previousData = []; // สามารถดึงจาก floorData/permission ปัจจุบันมาแทนได้ภายหลัง
+    const previousData: any[] = []; // สามารถดึงจาก floorData/permission ปัจจุบันมาแทนได้ภายหลัง
     this.bottomSheetService.goBackToAccessList(previousData);
   }
 

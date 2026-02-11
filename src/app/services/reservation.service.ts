@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
 import { SupabaseService } from './supabase.service';
 import { Booking } from '../data/models';
 
@@ -6,13 +7,17 @@ import { Booking } from '../data/models';
   providedIn: 'root'
 })
 export class ReservationService {
-  private testUserId: string = '00000000-0000-0000-0000-000000000000';
+  private testUserId: string = '';
+  private testUserIdSubject = new BehaviorSubject<string>('');
+  testUserId$ = this.testUserIdSubject.asObservable();
+
   private testSlotId: string = '';
 
   constructor(private supabaseService: SupabaseService) { }
 
   setTestUserId(id: string) {
     this.testUserId = id;
+    this.testUserIdSubject.next(id);
     console.log('Test User ID set:', this.testUserId);
   }
 
@@ -64,10 +69,10 @@ export class ReservationService {
       .single();
 
     if (error) {
-       if (error.code === '23P01' || error.message.includes('Double Booking')) {
-           throw new Error('This slot is already booked. Please choose another.');
-       }
-       throw error;
+      if (error.code === '23P01' || error.message.includes('Double Booking')) {
+        throw new Error('This slot is already booked. Please choose another.');
+      }
+      throw error;
     }
     return data;
   }
@@ -99,5 +104,62 @@ export class ReservationService {
 
     console.log(`Cleaned up ${data || 0} expired reservation(s)`);
     return data || 0;
+  }
+
+  async getUserReservationsFromEdge() {
+    console.log('getUserReservationsFromEdge: Method called');
+
+    if (!this.testUserId) {
+      console.log('getUserReservationsFromEdge: No Test User ID set. Waiting for user input.');
+      return [];
+    }
+    // For testing purposes, we are bypassing the auth check
+    // const { data: { user }, error: userError } = await this.supabaseService.client.auth.getUser();
+
+    // if (userError || !user) {
+    //   console.error('getUserReservationsFromEdge: User not logged in', userError);
+    //   throw new Error('User not logged in');
+    // }
+    console.log('getUserReservationsFromEdge: Auth check bypassed for testing. Using testUserId:', this.testUserId);
+
+    console.log('getUserReservationsFromEdge: Invoking edge function "reservation_user" with body:', { user_id: this.testUserId });
+    const { data, error } = await this.supabaseService.client.functions.invoke('reservation_user', {
+      body: { user_id: this.testUserId }
+    });
+
+    console.log('getUserReservationsFromEdge: Edge function response:', { data, error });
+
+    if (error) {
+      console.error('getUserReservationsFromEdge: Error from edge function:', error);
+      throw error;
+    }
+
+    console.log('getUserReservationsFromEdge: Success, returning data:', data.data);
+    return data.data;
+  }
+
+  subscribeToUserReservations(callback: () => void) {
+    if (!this.testUserId) {
+      console.warn('subscribeToUserReservations: No Test User ID set. Skipping subscription.');
+      return null;
+    }
+
+    console.log('Subscribing to reservations changes for user:', this.testUserId);
+    return this.supabaseService.client
+      .channel(`user_reservations_${this.testUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reservations',
+          filter: `user_id=eq.${this.testUserId}`
+        },
+        (payload) => {
+          console.log('Realtime update received for reservations:', payload);
+          callback();
+        }
+      )
+      .subscribe();
   }
 }

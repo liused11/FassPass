@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Booking } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
+import { ReservationService } from '../services/reservation.service';
 
 @Component({
   selector: 'app-tab2',
@@ -41,13 +42,158 @@ export class Tab2Page implements OnInit {
   // Mock Data
   allBookings: Booking[] = [];
 
-  constructor(private parkingService: ParkingDataService) { }
+  // Subscription for Realtime updates
+  reservationsSubscription: any;
+
+  constructor(
+    private parkingService: ParkingDataService,
+    private reservationService: ReservationService
+  ) { }
 
   ngOnInit() {
+    // Initial load from service subscription (mock data mostly)
     this.parkingService.bookings$.subscribe(bookings => {
       this.allBookings = bookings;
       this.updateFilter();
     });
+
+    // Subscribe to Test User ID changes to reload data automatically
+    this.reservationService.testUserId$.subscribe(async (userId) => {
+      if (userId) {
+        console.log('Tab2: Test User ID changed to', userId);
+        await this.loadRealReservations();
+
+        // Re-subscribe to realtime channel for new user
+        if (this.reservationsSubscription) {
+          this.reservationsSubscription.unsubscribe();
+        }
+        this.setupRealtimeSubscription();
+      }
+    });
+  }
+
+  async ionViewWillEnter() {
+    await this.loadRealReservations();
+    this.setupRealtimeSubscription();
+  }
+
+  ionViewWillLeave() {
+    if (this.reservationsSubscription) {
+      this.reservationsSubscription.unsubscribe();
+      this.reservationsSubscription = null;
+    }
+  }
+
+  setupRealtimeSubscription() {
+    if (this.reservationsSubscription) {
+      return; // Already subscribed
+    }
+
+    this.reservationsSubscription = this.reservationService.subscribeToUserReservations(() => {
+      console.log('Tab2: Realtime update triggered reload');
+      this.loadRealReservations();
+    });
+  }
+
+  async loadRealReservations() {
+    try {
+      const reservations = await this.reservationService.getUserReservationsFromEdge();
+      console.log('Real reservations loaded:', reservations);
+
+      if (reservations) {
+        // Map DB reservations to Booking model
+        const mappedBookings: Booking[] = reservations.map((r: any) => {
+          const lot = this.parkingService.getParkingLotById(r.parking_site_id);
+
+          let status: any = 'pending_payment';
+          let statusLabel = 'รอชำระเงิน';
+
+          switch (r.status) {
+            case 'pending':
+              status = 'pending_payment';
+              statusLabel = 'รอชำระเงิน';
+              break;
+            case 'confirmed':
+              status = 'confirmed';
+              statusLabel = 'จองแล้ว';
+              break;
+            case 'checked_in':
+              status = 'active';
+              statusLabel = 'กำลังจอด';
+              break;
+            case 'checked_out':
+              status = 'completed';
+              statusLabel = 'เสร็จสิ้น';
+              break;
+            case 'cancelled':
+              status = 'cancelled';
+              statusLabel = 'ยกเลิกแล้ว';
+              break;
+          }
+
+          // Zone & Location Logic
+          let zoneLabel = '-';
+          let floorLabel = '-';
+          let buildingLabel = '-';
+          let derivedPlaceName = null;
+
+          if (r.slot_id) {
+            const parts = r.slot_id.split('-');
+            if (parts.length >= 2) {
+              const buildingId = `${parts[0]}-${parts[1]}`;
+              const derivedLot = this.parkingService.getParkingLotById(buildingId);
+              if (derivedLot) {
+                derivedPlaceName = derivedLot.name;
+              }
+            }
+
+            if (parts.length >= 5) { // Ensure enough parts: building-floor-zone-slot
+              // "1-2-1-1-1" -> Building is parts[1] (2)
+              buildingLabel = parts[1];
+
+              // "1-1-2-1-1" -> Floor is parts[2] (2)
+              floorLabel = parts[2];
+
+              // "1-1-1-2-1" -> Zone is parts[3] (2 -> B)
+              if (parts[3] === '1') zoneLabel = 'A';
+              else if (parts[3] === '2') zoneLabel = 'B';
+            }
+          }
+
+          // Use derived name if found, otherwise fallback to existing logic
+          let placeName = derivedPlaceName;
+          if (!placeName) {
+            placeName = lot ? lot.name : (r.parking_site_id || 'Unknown Location');
+          }
+
+          return {
+            id: r.id,
+            placeName: placeName,
+            locationDetails: `ตึก ${buildingLabel} ชั้น ${floorLabel} | โซน ${zoneLabel} | ${r.slot_id || '-'}`,
+            bookingTime: new Date(r.start_time),
+            endTime: new Date(r.end_time),
+            status: status,
+            statusLabel: statusLabel,
+            price: r.total_amount || 0,
+            discountBadge: undefined,
+            carBrand: 'TOYOTA', // Placeholder or fetch from vehicle_id if available
+            licensePlate: 'กข 1234', // Placeholder
+            bookingType: 'daily', // Assume daily for now
+            periodLabel: undefined
+          } as Booking;
+        });
+
+        // Use ONLY real data as requested. If empty, show empty.
+        this.allBookings = mappedBookings;
+        this.allBookings.sort((a, b) => b.bookingTime.getTime() - a.bookingTime.getTime());
+
+        this.updateFilter();
+      }
+    } catch (error) {
+      console.error('Error loading real reservations:', error);
+      // Fallback to mock data if call fails? Or show empty?
+      // Current behavior leaves mock data if load fails, which is safer as fallback.
+    }
   }
 
   segmentChanged(event: any) {
