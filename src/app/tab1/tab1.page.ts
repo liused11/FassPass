@@ -17,6 +17,7 @@ import { UiEventService } from '../services/ui-event';
 import { SupabaseService } from '../services/supabase.service';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
+import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 
 
 import * as ngeohash from 'ngeohash';
@@ -670,9 +671,21 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async viewLotDetails(lot: ParkingLot) {
-    // 0. Check if it's a building -> Go to Tab4 (was Tab2)
+    // 0. Check if it's a building -> Open Building Detail Modal
     if (lot.category === 'building') {
-      this.router.navigate(['/tabs/tab4']);
+      // Open Building Detail Modal
+      const modal = await this.modalCtrl.create({
+        component: BuildingDetailComponent,
+        componentProps: {
+          lot: lot
+        },
+        initialBreakpoint: 1,
+        breakpoints: [0, 1],
+        backdropDismiss: true,
+        showBackdrop: true,
+        cssClass: 'detail-sheet-modal', // Reuse same class if appropriate
+      });
+      await modal.present();
       return;
     }
 

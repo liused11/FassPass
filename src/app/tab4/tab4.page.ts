@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { BuildingData } from '../data/models';
 import { BuildingDataService } from '../services/building-data.service';
 
@@ -14,11 +15,20 @@ export class Tab4Page implements OnInit {
   selectedFloor: number | null = null;
   selectedFloorData: any = null;
 
-  constructor(private buildingService: BuildingDataService) { }
+  constructor(
+    private buildingService: BuildingDataService,
+    private route: ActivatedRoute
+  ) { }
 
   ngOnInit() {
-    // ใช้ ID อะไรก็ได้เพื่อดึง Fallback หรือ API
-    this.buildingService.getBuilding('school-building-01').subscribe(data => {
+    this.route.queryParams.subscribe(params => {
+      const bId = params['buildingId'] || 'school-building-01'; // Default Fallback
+      this.loadBuilding(bId);
+    });
+  }
+
+  loadBuilding(id: string) {
+    this.buildingService.getBuilding(id).subscribe(data => {
       this.buildingData = data;
     });
   }
