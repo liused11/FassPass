@@ -5,7 +5,7 @@ import { SupabaseService } from '../../services/supabase.service';
 import { ModalController, ToastController, LoadingController, AlertController } from '@ionic/angular';
 import { ParkingLot, Booking } from '../../data/models';
 import { ParkingDataService } from '../../services/parking-data.service';
-import { PARKING_DETAIL_MOCK_SITES } from '../../data/mock-data';
+
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 import { BookingSuccessModalComponent } from '../booking-success-modal/booking-success-modal.component';
@@ -79,7 +79,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   @Input() initialType: string = 'normal';
   @Input() bookingMode: 'daily' | 'monthly' | 'flat24' | 'monthly_night' = 'daily';
 
-  mockSites: ParkingLot[] = [];
+  availableSites: ParkingLot[] = [];
   weeklySchedule: DailySchedule[] = [];
   isOpenNow = false;
 
@@ -128,7 +128,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    this.mockSites = PARKING_DETAIL_MOCK_SITES;
+    this.parkingDataService.parkingLots$.subscribe(sites => {
+      this.availableSites = sites;
+    });
 
     if (this.initialType && this.lot.supportedTypes.includes(this.initialType)) {
       this.selectedType = this.initialType;

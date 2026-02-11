@@ -16,7 +16,7 @@
             <ng-template>
               <ion-list lines="none">
                 <ion-list-header>เปลี่ยนสถานที่</ion-list-header>
-                <ion-item *ngFor="let s of mockSites" button (click)="selectSite(s)"
+                <ion-item *ngFor="let s of availableSites" button (click)="selectSite(s)"
                   [class.selected-item]="lot.id === s.id">
                   <ion-label class="ion-text-wrap">{{ s.name }}</ion-label>
                 </ion-item>

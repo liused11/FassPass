@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Booking, ParkingLot, UserProfile, Vehicle } from '../data/models';
 import { TAB1_PARKING_LOTS, TAB2_BOOKINGS, TAB3_USER_PROFILE, TAB3_VEHICLES } from '../data/mock-data';
+import { SupabaseService } from './supabase.service';
 
 @Injectable({
     providedIn: 'root'
@@ -9,7 +10,7 @@ import { TAB1_PARKING_LOTS, TAB2_BOOKINGS, TAB3_USER_PROFILE, TAB3_VEHICLES } fr
 export class ParkingDataService {
 
     // Data Sources (BehaviorSubjects hold the current value)
-    private parkingLotsSubject = new BehaviorSubject<ParkingLot[]>(TAB1_PARKING_LOTS);
+    private parkingLotsSubject = new BehaviorSubject<ParkingLot[]>([]);
     private bookingsSubject = new BehaviorSubject<Booking[]>([]);
     private userProfileSubject = new BehaviorSubject<UserProfile>(TAB3_USER_PROFILE);
     private vehiclesSubject = new BehaviorSubject<Vehicle[]>(TAB3_VEHICLES);
@@ -20,7 +21,64 @@ export class ParkingDataService {
     userProfile$ = this.userProfileSubject.asObservable();
     vehicles$ = this.vehiclesSubject.asObservable();
 
-    constructor() { }
+    constructor(private supabaseService: SupabaseService) {
+        this.loadParkingLots();
+    }
+
+    async loadParkingLots() {
+        const { data, error } = await this.supabaseService.client
+            .from('buildings')
+            .select('*');
+
+        if (error) {
+            console.error('Error loading parking lots:', error);
+            // Fallback to mock data on error? Or just leave empty?
+            // For now, let's fallback to mock data if DB fails or is empty to avoid broken UI during transition
+            if (this.parkingLotsSubject.value.length === 0) {
+                 this.parkingLotsSubject.next(TAB1_PARKING_LOTS);
+            }
+            return;
+        }
+
+        if (data && data.length > 0) {
+            const parkingLots: ParkingLot[] = data.map((item: any) => ({
+                id: item.id,
+                name: item.name,
+                category: item.category || 'parking',
+                zone: item.zone,
+                capacity: {
+                    normal: item.capacity_normal || 0,
+                    ev: item.capacity_ev || 0,
+                    motorcycle: item.capacity_motorcycle || 0
+                },
+                available: {
+                    normal: item.available_normal || 0,
+                    ev: item.available_ev || 0,
+                    motorcycle: item.available_motorcycle || 0
+                },
+                floors: item.floors || [],
+                mapX: item.map_x || 0,
+                mapY: item.map_y || 0,
+                lat: item.lat || 0,
+                lng: item.lng || 0,
+                status: item.status || 'available',
+                isBookmarked: false,
+                distance: 0,
+                hours: item.hours || '08:00 - 20:00',
+                hasEVCharger: item.has_ev_charger || false,
+                userTypes: item.user_types || 'General',
+                price: item.price || 0,
+                priceUnit: item.price_unit || 'บาท/ชม.',
+                supportedTypes: item.supported_types || ['normal'],
+                schedule: item.schedule || [],
+                images: item.images || ['assets/images/parking/default.png']
+            }));
+            this.parkingLotsSubject.next(parkingLots);
+        } else {
+             // If DB is empty, use Mock for now so UI doesn't look broken
+             this.parkingLotsSubject.next(TAB1_PARKING_LOTS);
+        }
+    }
 
     // --- Booking Management ---
 
