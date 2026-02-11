@@ -11,6 +11,7 @@ import { ParkingReservationsComponent } from '../modal/parking-reservations/park
 import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
 import { BookingSlotComponent } from '../modal/booking-slot/booking-slot.component';
 import { BookingSuccessModalComponent } from '../modal/booking-success-modal/booking-success-modal.component';
+import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 
 
 @NgModule({
@@ -20,8 +21,8 @@ import { BookingSuccessModalComponent } from '../modal/booking-success-modal/boo
     FormsModule,
     ExploreContainerComponentModule,
     Tab1PageRoutingModule,
-    
+
   ],
-  declarations: [Tab1Page , ParkingDetailComponent , ParkingReservationsComponent ,CheckBookingComponent ,BookingSlotComponent , BookingSuccessModalComponent]
+  declarations: [Tab1Page, ParkingDetailComponent, ParkingReservationsComponent, CheckBookingComponent, BookingSlotComponent, BookingSuccessModalComponent, BuildingDetailComponent]
 })
-export class Tab1PageModule {}
+export class Tab1PageModule { }

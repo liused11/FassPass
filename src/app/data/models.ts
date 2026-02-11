@@ -52,6 +52,7 @@ export interface ParkingLot {
     images?: string[];
     note?: string; // e.g. "รองรับผู้มาติดต่อมหาลัย"
     promotion?: string; // e.g. "จอดฟรี 1 ชม."
+    description?: string; // Additional details
 }
 
 export interface Booking {
