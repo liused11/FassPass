@@ -20,7 +20,7 @@ export class Tab3Page implements OnInit {
   constructor(private parkingService: ParkingDataService) { }
 
   ngOnInit() {
-    this.parkingService.userProfile$.subscribe(p => this.userProfile = p);
+    this.parkingService.userProfile$.subscribe(p => { if (p) this.userProfile = p; });
     this.parkingService.vehicles$.subscribe(v => this.vehicles = v);
   }
 
@@ -28,23 +28,22 @@ export class Tab3Page implements OnInit {
     this.selectedSegment = event.detail.value;
   }
 
-  selectVehicle(vehicleId: number) {
+  selectVehicle(vehicleId: number | string) {
     this.parkingService.setDefaultVehicle(vehicleId);
   }
 
   addVehicle() {
-    // Generate simple ID based on length (simplified)
-    const nextId = this.vehicles.length > 0 ? Math.max(...this.vehicles.map(v => v.id)) + 1 : 1;
+    const nextRank = this.vehicles.length + 1;
     const newVehicle: Vehicle = {
-      id: nextId,
-      model: 'NEW CAR ' + nextId,
-      licensePlate: '9กก ' + (1000 + nextId),
+      id: 'temp-' + nextRank, // Temporary ID, service will handle it
+      model: 'NEW CAR ' + nextRank,
+      licensePlate: '9กก ' + (1000 + nextRank),
       province: 'กรุงเทพฯ',
       image: 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg',
       isDefault: false,
       status: '',
       lastUpdate: 'เพิ่งเพิ่ม',
-      rank: nextId
+      rank: nextRank
     };
     this.parkingService.addVehicle(newVehicle);
   }

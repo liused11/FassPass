@@ -13,6 +13,13 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
+
+
+
+
+
+
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
@@ -57,6 +64,35 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+
+
+CREATE TYPE "public"."activity_category" AS ENUM (
+    'normal',
+    'abnormal'
+);
+
+
+ALTER TYPE "public"."activity_category" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."activity_log_type" AS ENUM (
+    'revision',
+    'activity'
+);
+
+
+ALTER TYPE "public"."activity_log_type" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."activity_status" AS ENUM (
+    'success',
+    'warning',
+    'denied',
+    'error'
+);
+
+
+ALTER TYPE "public"."activity_status" OWNER TO "postgres";
 
 
 CREATE TYPE "public"."reservation_status" AS ENUM (
@@ -225,6 +261,7 @@ BEGIN
     AND r.start_time < p_end_time 
     AND r.end_time > p_start_time
   )
+  -- FIX: Sort by length first to handle text-based number sorting (e.g. '2' before '10')
   ORDER BY length(s.id) ASC, s.id ASC 
   LIMIT 1;
 
@@ -715,6 +752,72 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."activity_logs" (
+    "id" bigint NOT NULL,
+    "time" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "log_type" "public"."activity_log_type" NOT NULL,
+    "action" "text" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "user_name" "text" NOT NULL,
+    "category" "public"."activity_category" NOT NULL,
+    "status" "public"."activity_status" NOT NULL,
+    "entity_type" "text",
+    "entity_id" "uuid",
+    "detail" "text",
+    "changes" "jsonb",
+    "meta" "jsonb",
+    CONSTRAINT "revision_requires_entity_id" CHECK (((("log_type" = 'revision'::"public"."activity_log_type") AND ("entity_id" IS NOT NULL)) OR ("log_type" = 'activity'::"public"."activity_log_type"))),
+    CONSTRAINT "revision_requires_entity_type" CHECK (((("log_type" = 'revision'::"public"."activity_log_type") AND ("entity_type" IS NOT NULL)) OR ("log_type" = 'activity'::"public"."activity_log_type")))
+);
+
+
+ALTER TABLE "public"."activity_logs" OWNER TO "postgres";
+
+
+CREATE SEQUENCE IF NOT EXISTS "public"."activity_logs_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE "public"."activity_logs_id_seq" OWNER TO "postgres";
+
+
+ALTER SEQUENCE "public"."activity_logs_id_seq" OWNED BY "public"."activity_logs"."id";
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."admin_users" (
+    "id" "uuid" NOT NULL,
+    "name" "text",
+    "email" "text",
+    "phone" "text",
+    "role" "text",
+    "status" "text",
+    "department" "text",
+    "access_expire" "date",
+    "created_at" timestamp without time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."admin_users" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."alerts" (
+    "id" "uuid" DEFAULT "gen_random_uuid"(),
+    "source" "text",
+    "message" "text",
+    "level" "text",
+    "resolved" boolean DEFAULT false,
+    "created_at" timestamp without time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."alerts" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."buildings" (
     "id" "text" NOT NULL,
     "parking_site_id" "text" NOT NULL,
@@ -748,6 +851,11 @@ CREATE TABLE IF NOT EXISTS "public"."cars" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "vehicle_type" "public"."vehicle_type" DEFAULT 'car'::"public"."vehicle_type" NOT NULL,
     "vehicle_type_code" smallint DEFAULT 1,
+    "image" "text",
+    "is_default" boolean DEFAULT false,
+    "status" "text" DEFAULT ''::"text",
+    "rank" integer DEFAULT 0,
+    "province" "text" DEFAULT 'กรุงเทพฯ'::"text",
     CONSTRAINT "cars_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2])))
 );
 
@@ -820,6 +928,22 @@ CREATE TABLE IF NOT EXISTS "public"."parking_sites" (
 
 
 ALTER TABLE "public"."parking_sites" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."profiles" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "phone" "text",
+    "avatar" "text",
+    "role" "text" DEFAULT 'Visitor'::"text",
+    "line_id" "text",
+    "email" "text",
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+);
+
+
+ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."recent_activities" (
@@ -995,6 +1119,10 @@ CREATE TABLE IF NOT EXISTS "public"."users" (
 ALTER TABLE "public"."users" OWNER TO "postgres";
 
 
+ALTER TABLE ONLY "public"."activity_logs" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."activity_logs_id_seq"'::"regclass");
+
+
+
 ALTER TABLE ONLY "public"."event_store" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."event_store_id_seq"'::"regclass");
 
 
@@ -1004,6 +1132,16 @@ ALTER TABLE ONLY "public"."recent_activities" ALTER COLUMN "id" SET DEFAULT "nex
 
 
 ALTER TABLE ONLY "public"."reservations_history" ALTER COLUMN "id" SET DEFAULT "nextval"('"public"."reservations_history_id_seq"'::"regclass");
+
+
+
+ALTER TABLE ONLY "public"."activity_logs"
+    ADD CONSTRAINT "activity_logs_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."admin_users"
+    ADD CONSTRAINT "admin_users_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1049,6 +1187,11 @@ ALTER TABLE ONLY "public"."reservations"
 
 ALTER TABLE ONLY "public"."parking_sites"
     ADD CONSTRAINT "parking_sites_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1102,6 +1245,22 @@ ALTER TABLE ONLY "public"."zones"
 
 
 
+CREATE INDEX "activity_logs_category_time_idx" ON "public"."activity_logs" USING "btree" ("category", "time" DESC);
+
+
+
+CREATE INDEX "activity_logs_entity_type_entity_id_idx" ON "public"."activity_logs" USING "btree" ("entity_type", "entity_id");
+
+
+
+CREATE INDEX "activity_logs_time_idx" ON "public"."activity_logs" USING "btree" ("time" DESC);
+
+
+
+CREATE INDEX "activity_logs_user_id_idx" ON "public"."activity_logs" USING "btree" ("user_id");
+
+
+
 CREATE INDEX "idx_buildings_lat_lng" ON "public"."buildings" USING "btree" ("lat", "lng");
 
 
@@ -1115,6 +1274,10 @@ CREATE INDEX "idx_reservations_floor" ON "public"."reservations" USING "btree" (
 
 
 CREATE INDEX "idx_reservations_history_reservation_id" ON "public"."reservations_history" USING "btree" ("reservation_id");
+
+
+
+CREATE INDEX "idx_reservations_pending_status_time" ON "public"."reservations" USING "btree" ("start_time") WHERE ("status" = 'pending'::"public"."reservation_status");
 
 
 
@@ -1156,7 +1319,7 @@ ALTER TABLE ONLY "public"."buildings"
 
 
 ALTER TABLE ONLY "public"."cars"
-    ADD CONSTRAINT "cars_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "cars_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -1225,9 +1388,31 @@ ALTER TABLE ONLY "public"."zones"
 
 
 
+CREATE POLICY "Public profiles access" ON "public"."profiles" USING (true);
+
+
+
+ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."reservations";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."slots";
+
+
+
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -1318,6 +1503,27 @@ GRANT ALL ON FUNCTION "public"."gbtreekey_var_out"("public"."gbtreekey_var") TO 
 GRANT ALL ON FUNCTION "public"."gbtreekey_var_out"("public"."gbtreekey_var") TO "anon";
 GRANT ALL ON FUNCTION "public"."gbtreekey_var_out"("public"."gbtreekey_var") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."gbtreekey_var_out"("public"."gbtreekey_var") TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2778,6 +2984,36 @@ GRANT ALL ON FUNCTION "public"."tstz_dist"(timestamp with time zone, timestamp w
 
 
 
+
+
+
+
+
+
+GRANT ALL ON TABLE "public"."activity_logs" TO "anon";
+GRANT ALL ON TABLE "public"."activity_logs" TO "authenticated";
+GRANT ALL ON TABLE "public"."activity_logs" TO "service_role";
+
+
+
+GRANT ALL ON SEQUENCE "public"."activity_logs_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."activity_logs_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."activity_logs_id_seq" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."admin_users" TO "anon";
+GRANT ALL ON TABLE "public"."admin_users" TO "authenticated";
+GRANT ALL ON TABLE "public"."admin_users" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."alerts" TO "anon";
+GRANT ALL ON TABLE "public"."alerts" TO "authenticated";
+GRANT ALL ON TABLE "public"."alerts" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."buildings" TO "anon";
 GRANT ALL ON TABLE "public"."buildings" TO "authenticated";
 GRANT ALL ON TABLE "public"."buildings" TO "service_role";
@@ -2817,6 +3053,12 @@ GRANT ALL ON TABLE "public"."latest_versions" TO "service_role";
 GRANT ALL ON TABLE "public"."parking_sites" TO "anon";
 GRANT ALL ON TABLE "public"."parking_sites" TO "authenticated";
 GRANT ALL ON TABLE "public"."parking_sites" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."profiles" TO "anon";
+GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
+GRANT ALL ON TABLE "public"."profiles" TO "service_role";
 
 
 

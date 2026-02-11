@@ -81,7 +81,7 @@ export interface UserProfile {
 }
 
 export interface Vehicle {
-    id: number;
+    id: number | string;
     model: string;
     licensePlate: string;
     province: string;
