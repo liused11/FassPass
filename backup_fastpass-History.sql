@@ -225,7 +225,7 @@ BEGIN
     AND r.start_time < p_end_time 
     AND r.end_time > p_start_time
   )
-  ORDER BY s.id ASC 
+  ORDER BY length(s.id) ASC, s.id ASC 
   LIMIT 1;
 
   IF v_slot_id IS NOT NULL THEN

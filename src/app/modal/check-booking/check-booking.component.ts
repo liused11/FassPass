@@ -207,8 +207,8 @@ export class CheckBookingComponent implements OnInit {
     }
 
     const start = new Date(this.data.startSlot.dateTime);
-    const endSlotDuration = this.data.endSlot.duration || 60;
-    const end = new Date(start.getTime() + (endSlotDuration * 60000));
+    // FIXED: Use the passed end time directly
+    const end = new Date(this.data.endSlot.dateTime);
 
     // We only support picking ONE slot.
     // Logic: Try the first selected zone.
@@ -252,8 +252,8 @@ export class CheckBookingComponent implements OnInit {
   calculateDurationAndPrice() {
     if (this.data?.startSlot?.dateTime && this.data?.endSlot?.dateTime) {
       const start = new Date(this.data.startSlot.dateTime).getTime();
-      const endSlotDuration = this.data.endSlot.duration || 0;
-      const end = new Date(this.data.endSlot.dateTime).getTime() + (endSlotDuration * 60000);
+      // FIXED: Use the passed end time directly, as it's already calculated in parent
+      const end = new Date(this.data.endSlot.dateTime).getTime();
       const diffMs = end - start;
       const roundedHours = Math.ceil(diffMs / (1000 * 60 * 60)); // Round up for pricing
 

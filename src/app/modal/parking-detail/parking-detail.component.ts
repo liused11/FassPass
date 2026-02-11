@@ -435,7 +435,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
               }
 
               this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, duration);
-              currentBtnTime.setMinutes(currentBtnTime.getMinutes() + this.slotInterval);
+              // FIXED: Always increment by 60 mins (1 hour) to allow overlapping slots (e.g. 4-hour duration starting at 13:00, 14:00 etc.)
+              // Instead of jumping by duration (which prevented selecting 14:00 if 13:00 was start of block)
+              currentBtnTime.setMinutes(currentBtnTime.getMinutes() + 60);
             }
           }
         }
@@ -977,9 +979,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     else if (this.bookingMode === 'flat24') {
       finalEnd = new Date(finalStart.getTime() + (24 * 60 * 60 * 1000));
     } else {
-      if (finalEnd.getTime() <= finalStart.getTime()) {
-        finalEnd = new Date(finalStart.getTime() + (60 * 60 * 1000));
-      }
+      // Daily Mode: Use exact duration from endSlot for both single and range selections
+      const duration = this.endSlot.duration || 60;
+      finalEnd = new Date(this.endSlot.dateTime.getTime() + (duration * 60000));
     }
 
     let data: any = {
