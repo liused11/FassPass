@@ -27,3 +27,9 @@ BEGIN
   END IF;
 END;
 $$;
+
+ALTER FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) OWNER TO "postgres";
+
+GRANT ALL ON FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) TO "anon";
+GRANT ALL ON FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) TO "service_role";
