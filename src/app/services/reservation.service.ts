@@ -8,7 +8,7 @@ import { Booking } from '../data/models';
 })
 export class ReservationService {
   private testUserId: string = '00000000-0000-0000-0000-000000000000';
-  private testUserIdSubject = new BehaviorSubject<string>('');
+  private testUserIdSubject = new BehaviorSubject<string>(this.testUserId);
   testUserId$ = this.testUserIdSubject.asObservable();
 
   private testSlotId: string = '';

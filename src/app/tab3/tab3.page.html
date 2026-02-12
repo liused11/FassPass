@@ -22,7 +22,7 @@
     <div class="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
       <div class="flex items-center">
         <ion-avatar class="w-[60px] h-[60px] mr-4 border border-black">
-          <img [src]="userProfile.avatar" alt="Avatar" />
+          <img [src]="userProfile.avatar" alt="Avatar" class="w-full h-full object-cover" />
         </ion-avatar>
         <div class="flex-1">
           <h2 class="m-0 text-lg font-bold text-[#0056b3]">{{ userProfile.name }}</h2>
@@ -85,12 +85,26 @@
     <!-- Top Section: Background Gray -->
     <div class="bg-[#f8f9fa] py-6">
       <!-- Vehicle Horizontal Scroll -->
-      <div class="flex overflow-x-auto px-4 pt-5 gap-4 snap-x snap-mandatory scrollbar-hide pb-4">
-        <div class="w-full bg-white border-2 border-[#1a73e8] rounded-2xl p-4 snap-center relative shrink-0"
-          *ngFor="let vehicle of vehicles" [class.hidden]="!vehicle.isDefault">
+      <!-- Empty State -->
+      <div *ngIf="vehicles.length === 0" class="flex flex-col items-center justify-center py-8 text-center bg-white border-2 border-dashed border-gray-300 rounded-2xl mx-4">
+        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+          <ion-icon name="car-sport-outline" class="text-3xl text-gray-400"></ion-icon>
+        </div>
+        <h3 class="text-base font-bold text-gray-600">ยังไม่มียานพาหนะ</h3>
+        <p class="text-sm text-gray-500 mb-4">เพิ่มรถของคุณเพื่อเริ่มใช้งาน</p>
+        <ion-button (click)="addVehicle()" size="small" class="font-bold [--background:#1a73e8] [--border-radius:8px]">
+          <ion-icon name="add-outline" slot="start"></ion-icon>
+          เพิ่มยานพาหนะ
+        </ion-button>
+      </div>
 
-          <!-- Badge -->
-          <div
+      <!-- Vehicle Horizontal Scroll (Show only if vehicles exist) -->
+      <div *ngIf="vehicles.length > 0" class="flex overflow-x-auto px-4 pt-5 gap-4 snap-x snap-mandatory scrollbar-hide pb-4">
+        <div class="w-full bg-white border-2 border-[#1a73e8] rounded-2xl p-4 snap-center relative shrink-0"
+          *ngFor="let vehicle of vehicles">
+
+          <!-- Badge: Show only if Default -->
+          <div *ngIf="vehicle.isDefault"
             class="absolute -top-3.5 right-4 bg-[#1a73e8] text-white px-4 py-1 rounded-lg text-sm font-bold z-10 shadow-sm">
             เลือกแล้ว
           </div>
@@ -168,75 +182,87 @@
   <!-- List View -->
   <div *ngIf="selectedSegment === 'list'" class="bg-white min-h-full pb-20">
 
-    <div class="text-lg font-bold m-4 mb-3 text-black">ใช้งานล่าสุด</div>
-
-    <!-- Active Vehicle Card -->
-    <div class="mx-4 mb-6 bg-white border-2 border-[#1a73e8] rounded-xl p-0 relative overflow-visible"
-      *ngFor="let vehicle of vehicles" [class.hidden]="!vehicle.isDefault">
-      <div class="absolute -top-3 right-4 bg-[#1a73e8] text-white px-3 py-1 rounded text-xs font-bold z-10">เลือกแล้ว
+    <!-- Empty State for List View -->
+    <div *ngIf="vehicles.length === 0" class="flex flex-col items-center justify-center py-10 mt-10 text-center mx-4">
+      <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+        <ion-icon name="car-sport-outline" class="text-4xl text-gray-400"></ion-icon>
       </div>
-
-      <div class="flex p-4 justify-between">
-        <div class="flex-1">
-          <div class="text-[#666] text-xs mb-2">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
-          <div class="flex items-center gap-3 mb-1">
-            <div
-              class="border border-black rounded-md px-1 py-1 bg-white leading-none min-w-[90px] h-[50px] flex flex-col items-center justify-center">
-              <div class="font-bold text-base leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
-              <div class="font-bold text-xl leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
-              </div>
-            </div>
-            <div class="text-sm font-bold text-black whitespace-nowrap">{{ vehicle.province }}</div>
-          </div>
-          <div class="text-[#888] text-sm uppercase">{{ vehicle.model }}</div>
-        </div>
-        <div class="w-[120px] h-[80px]">
-          <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg" />
-        </div>
-      </div>
-
-      <div class="h-px bg-gray-200 mx-4"></div>
-
-      <div class="flex justify-between items-center p-3 px-4">
-        <div class="flex items-center gap-1.5">
-          <ion-icon name="checkmark-circle" color="primary" class="text-lg"
-            *ngIf="vehicle.status === 'พร้อมใช้งาน'"></ion-icon>
-          <span class="text-[#1a73e8] font-bold text-sm" *ngIf="vehicle.status === 'พร้อมใช้งาน'">พร้อมใช้งาน</span>
-          <span class="text-[#888] text-xs ml-2">อัพเดทล่าสุด {{ vehicle.lastUpdate }}</span>
-        </div>
-        <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer">
-          แก้ไข <ion-icon name="arrow-forward"></ion-icon>
-        </div>
-      </div>
+      <h3 class="text-lg font-bold text-gray-600">ยังไม่มียานพาหนะ</h3>
+      <p class="text-sm text-gray-500 mb-6">เพิ่มรถของคุณเพื่อเริ่มใช้งาน</p>
     </div>
 
-    <div class="text-lg font-bold m-4 mb-3 text-black">รถทั้งหมด</div>
+    <!-- Vehicle Lists (Show only if vehicles exist) -->
+    <div *ngIf="vehicles.length > 0">
+      <div class="text-lg font-bold m-4 mb-3 text-black">ใช้งานล่าสุด</div>
 
-    <!-- Other Vehicles List -->
-    <div class="mx-4 mb-4 bg-white border border-gray-300 rounded-xl p-4 shadow-sm" *ngFor="let vehicle of vehicles"
-      [class.hidden]="vehicle.isDefault" (click)="selectVehicle(vehicle.id)">
-      <div class="flex items-center gap-4 mb-3">
-        <div class="w-[110px] h-[75px]">
-          <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg" />
+      <!-- Active Vehicle Card -->
+      <div class="mx-4 mb-6 bg-white border-2 border-[#1a73e8] rounded-xl p-0 relative overflow-visible"
+        *ngFor="let vehicle of vehicles" [class.hidden]="!vehicle.isDefault">
+        <div class="absolute -top-3 right-4 bg-[#1a73e8] text-white px-3 py-1 rounded text-xs font-bold z-10">เลือกแล้ว
         </div>
-        <div class="flex-1">
-          <div class="text-[#888] text-xs mb-1.5">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
-          <div class="flex items-center gap-3 mb-1">
-            <div
-              class="border border-black rounded-md px-1 py-1 bg-white leading-none min-w-[90px] h-[50px] flex flex-col items-center justify-center">
-              <div class="font-bold text-base leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
-              <div class="font-bold text-xl leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
+
+        <div class="flex p-4 justify-between">
+          <div class="flex-1">
+            <div class="text-[#666] text-xs mb-2">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
+            <div class="flex items-center gap-3 mb-1">
+              <div
+                class="border border-black rounded-md px-1 py-1 bg-white leading-none min-w-[90px] h-[50px] flex flex-col items-center justify-center">
+                <div class="font-bold text-base leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
+                <div class="font-bold text-xl leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
+                </div>
               </div>
+              <div class="text-sm font-bold text-black whitespace-nowrap">{{ vehicle.province }}</div>
             </div>
-            <span class="text-sm font-bold text-black whitespace-nowrap">{{ vehicle.province }}</span>
+            <div class="text-[#888] text-sm uppercase">{{ vehicle.model }}</div>
           </div>
-          <div class="text-[#666] text-sm uppercase">{{ vehicle.model }}</div>
+          <div class="w-[120px] h-[80px]">
+            <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg" />
+          </div>
+        </div>
+
+        <div class="h-px bg-gray-200 mx-4"></div>
+
+        <div class="flex justify-between items-center p-3 px-4">
+          <div class="flex items-center gap-1.5">
+            <ion-icon name="checkmark-circle" color="primary" class="text-lg"
+              *ngIf="vehicle.status === 'พร้อมใช้งาน'"></ion-icon>
+            <span class="text-[#1a73e8] font-bold text-sm" *ngIf="vehicle.status === 'พร้อมใช้งาน'">พร้อมใช้งาน</span>
+            <span class="text-[#888] text-xs ml-2">อัพเดทล่าสุด {{ vehicle.lastUpdate }}</span>
+          </div>
+          <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer">
+            แก้ไข <ion-icon name="arrow-forward"></ion-icon>
+          </div>
         </div>
       </div>
-      <div class="flex justify-between items-center text-xs">
-        <span class="text-[#888]" *ngIf="vehicle.lastUpdate">แก้ไขเมื่อ {{ vehicle.lastUpdate }}</span>
-        <div class="text-[#1a73e8] flex items-center gap-1 font-bold">
-          แก้ไข <ion-icon name="arrow-forward"></ion-icon>
+
+      <div class="text-lg font-bold m-4 mb-3 text-black">รถทั้งหมด</div>
+
+      <!-- Other Vehicles List -->
+      <div class="mx-4 mb-4 bg-white border border-gray-300 rounded-xl p-4 shadow-sm" *ngFor="let vehicle of vehicles"
+        [class.hidden]="vehicle.isDefault" (click)="selectVehicle(vehicle.id)">
+        <div class="flex items-center gap-4 mb-3">
+          <div class="w-[110px] h-[75px]">
+            <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg" />
+          </div>
+          <div class="flex-1">
+            <div class="text-[#888] text-xs mb-1.5">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
+            <div class="flex items-center gap-3 mb-1">
+              <div
+                class="border border-black rounded-md px-1 py-1 bg-white leading-none min-w-[90px] h-[50px] flex flex-col items-center justify-center">
+                <div class="font-bold text-base leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
+                <div class="font-bold text-xl leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
+                </div>
+              </div>
+              <span class="text-sm font-bold text-black whitespace-nowrap">{{ vehicle.province }}</span>
+            </div>
+            <div class="text-[#666] text-sm uppercase">{{ vehicle.model }}</div>
+          </div>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-[#888]" *ngIf="vehicle.lastUpdate">แก้ไขเมื่อ {{ vehicle.lastUpdate }}</span>
+          <div class="text-[#1a73e8] flex items-center gap-1 font-bold">
+            แก้ไข <ion-icon name="arrow-forward"></ion-icon>
+          </div>
         </div>
       </div>
     </div>

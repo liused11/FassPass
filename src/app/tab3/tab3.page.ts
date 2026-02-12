@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { SettingItem, UserProfile, Vehicle } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
-import { TAB3_GENERAL_SETTINGS, TAB3_OTHER_SETTINGS } from '../data/mock-data';
+import { GENERAL_SETTINGS, OTHER_SETTINGS } from '../data/app-settings';
 
 @Component({
   selector: 'app-tab3',
@@ -14,8 +14,8 @@ export class Tab3Page implements OnInit {
 
   userProfile: UserProfile = { name: '', phone: '', avatar: '', role: '' };
   vehicles: Vehicle[] = [];
-  generalSettings = TAB3_GENERAL_SETTINGS;
-  otherSettings = TAB3_OTHER_SETTINGS;
+  generalSettings = GENERAL_SETTINGS;
+  otherSettings = OTHER_SETTINGS;
 
   constructor(private parkingService: ParkingDataService) { }
 

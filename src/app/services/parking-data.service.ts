@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Booking, ParkingLot, UserProfile, Vehicle } from '../data/models';
-import { TAB1_PARKING_LOTS, TAB2_BOOKINGS, TAB3_USER_PROFILE, TAB3_VEHICLES } from '../data/mock-data';
 import { SupabaseService } from './supabase.service';
+import { ReservationService } from './reservation.service'; // Import ReservationService
 
 @Injectable({
     providedIn: 'root'
@@ -13,7 +13,7 @@ export class ParkingDataService {
     private parkingLotsSubject = new BehaviorSubject<ParkingLot[]>([]);
     private bookingsSubject = new BehaviorSubject<Booking[]>([]);
     private userProfileSubject = new BehaviorSubject<UserProfile | any>(null); // Initialize with null or empty
-    private vehiclesSubject = new BehaviorSubject<Vehicle[]>(TAB3_VEHICLES);
+    private vehiclesSubject = new BehaviorSubject<Vehicle[]>([]);
 
     // Observables for Components to subscribe to
     parkingLots$ = this.parkingLotsSubject.asObservable();
@@ -21,10 +21,19 @@ export class ParkingDataService {
     userProfile$ = this.userProfileSubject.asObservable();
     vehicles$ = this.vehiclesSubject.asObservable();
 
-    constructor(private supabaseService: SupabaseService) {
+    constructor(
+        private supabaseService: SupabaseService,
+        private reservationService: ReservationService
+    ) {
         this.loadParkingLots();
-        this.loadUserProfile(); // Load User Profile on init
-        this.loadUserVehicles(); // Load User Vehicles on init
+        // Subscribe to user ID changes
+        this.reservationService.testUserId$.subscribe(userId => {
+            if (userId) {
+                console.log('[ParkingDataService] User ID Changed:', userId);
+                this.loadUserProfile(userId);
+                this.loadUserVehicles(userId);
+            }
+        });
     }
 
     async loadParkingLots() {
@@ -34,10 +43,9 @@ export class ParkingDataService {
 
         if (error) {
             console.error('Error loading parking lots:', error);
-            // Fallback to mock data on error? Or just leave empty?
-            // For now, let's fallback to mock data if DB fails or is empty to avoid broken UI during transition
+            // Fallback to empty array on error
             if (this.parkingLotsSubject.value.length === 0) {
-                 this.parkingLotsSubject.next(TAB1_PARKING_LOTS);
+                 this.parkingLotsSubject.next([]);
             }
             return;
         }
@@ -77,22 +85,24 @@ export class ParkingDataService {
             }));
             this.parkingLotsSubject.next(parkingLots);
         } else {
-             // If DB is empty, use Mock for now so UI doesn't look broken
-             this.parkingLotsSubject.next(TAB1_PARKING_LOTS);
+             this.parkingLotsSubject.next([]);
         }
     }
 
     async loadUserProfile(userId: string = '00000000-0000-0000-0000-000000000000') {
+        console.log('Loading user profile for:', userId);
         const { data, error } = await this.supabaseService.client
             .from('profiles')
             .select('*')
             .eq('id', userId)
             .single();
 
+        console.log('User Profile Data:', data);
+        console.log('User Profile Error:', error);
+
         if (error) {
             console.error('Error loading user profile:', error);
-            // Fallback to mock data if not found logic could go here, but let's try to stick to real data
-            this.userProfileSubject.next(TAB3_USER_PROFILE); // Fallback for safety
+            this.userProfileSubject.next(null);
             return;
         }
 
@@ -118,8 +128,8 @@ export class ParkingDataService {
 
         if (error) {
             console.error('Error loading user vehicles:', error);
-             // Fallback to mock data if error
-            this.vehiclesSubject.next(TAB3_VEHICLES);
+             // Fallback to empty if error
+            this.vehiclesSubject.next([]);
             return;
         }
 
@@ -137,8 +147,8 @@ export class ParkingDataService {
             }));
             this.vehiclesSubject.next(vehicles);
         } else {
-             // If DB is empty, use Mock for now
-             this.vehiclesSubject.next(TAB3_VEHICLES);
+             // If DB is empty, use empty
+             this.vehiclesSubject.next([]);
         }
     }
 
