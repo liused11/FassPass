@@ -619,6 +619,85 @@ $$;
 ALTER FUNCTION "public"."get_site_buildings"("p_site_id" "text", "p_lat" double precision, "p_lng" double precision, "p_user_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb" DEFAULT NULL::"jsonb") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+
+  insert into activity_logs (
+    log_type,
+    action,
+    user_id,
+    user_name,
+    category,
+    status,
+    entity_type,
+    entity_id,
+    detail,
+    changes,
+    meta
+  )
+  values (
+    p_log_type,
+    p_action,
+    p_user_id,
+    p_user_name,
+    p_category,
+    p_status,
+    p_entity_type,
+    p_entity_id,
+    p_detail,
+    p_changes,
+    p_meta
+  );
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb" DEFAULT NULL::"jsonb") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+begin
+
+  insert into activity_logs (
+    log_type,
+    action,
+    user_id,
+    user_name,
+    category,
+    status,
+    entity_type,
+    entity_id,
+    detail,
+    changes,
+    meta
+  )
+  values (
+    p_log_type,
+    p_action,
+    p_user_id,
+    p_user_name,
+    p_category,
+    p_status,
+    p_entity_type,
+    p_entity_id,
+    p_detail,
+    p_changes,
+    p_meta
+  );
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."save_events_and_update_version"("p_aggregate_id" "uuid", "p_expected_version" integer, "p_new_version" integer, "p_events" "jsonb") RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$
@@ -747,6 +826,98 @@ $$;
 
 ALTER FUNCTION "public"."sync_vehicle_type_logic"() OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."update_config_with_log"("p_entity_type" "text", "p_entity_id" "text", "p_updates" "jsonb", "p_user_id" "uuid", "p_user_name" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $_$
+declare
+  v_old_data jsonb;
+  v_new_data jsonb;
+  v_changes jsonb := '{}';
+  v_key text;
+  v_columns text;
+begin
+  -- 🔹 0. normalize entity_type
+  p_entity_type := lower(p_entity_type);
+
+  -- 🔹 1. ตรวจ entity_type
+  if p_entity_type not in ('buildings','floors','zones','slots') then
+    raise exception 'Invalid entity type';
+  end if;
+
+  -- 🔹 2. ดึงข้อมูลเก่า
+  execute format(
+    'select to_jsonb(t) from %I t where id = $1',
+    p_entity_type
+  )
+  into v_old_data
+  using p_entity_id;
+
+  if v_old_data is null then
+    raise exception 'Entity not found';
+  end if;
+
+  -- 🔹 4. สร้าง column list
+  select string_agg(quote_ident(key), ', ')
+  into v_columns
+  from jsonb_object_keys(p_updates) as key;
+
+  if v_columns is null then
+    raise exception 'Invalid update keys';
+  end if;
+
+  -- 🔹 5. UPDATE แบบ type-safe
+  execute format(
+    'update %I
+     set (%s) = (
+       select %s
+       from jsonb_populate_record(null::%I, $2)
+     )
+     where id = $1
+     returning to_jsonb(%I)',
+    p_entity_type,
+    v_columns,
+    v_columns,
+    p_entity_type,
+    p_entity_type
+  )
+  into v_new_data
+  using p_entity_id, p_updates;
+
+  -- 🔹 4. สร้าง changes diff
+  for v_key in select key from jsonb_each(p_updates)
+  loop
+    v_changes := v_changes || jsonb_build_object(
+      v_key,
+      jsonb_build_object(
+        'old', v_old_data -> v_key,
+        'new', v_new_data -> v_key
+      )
+    );
+  end loop;
+
+  -- 🔹 5. insert activity log
+  perform insert_activity_log(
+    'revision',
+    'update_' || p_entity_type,
+    p_user_id,
+    p_user_name,
+    'normal',
+    'success',
+    p_entity_type,
+    p_entity_id,
+    'Updated ' || p_entity_type,
+    v_changes,
+    null
+  );
+
+end;
+$_$;
+
+
+ALTER FUNCTION "public"."update_config_with_log"("p_entity_type" "text", "p_entity_id" "text", "p_updates" "jsonb", "p_user_id" "uuid", "p_user_name" "text") OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -762,7 +933,7 @@ CREATE TABLE IF NOT EXISTS "public"."activity_logs" (
     "category" "public"."activity_category" NOT NULL,
     "status" "public"."activity_status" NOT NULL,
     "entity_type" "text",
-    "entity_id" "uuid",
+    "entity_id" "text",
     "detail" "text",
     "changes" "jsonb",
     "meta" "jsonb",
@@ -1401,6 +1572,10 @@ ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
 
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."cars";
 
 
 
@@ -2895,6 +3070,18 @@ GRANT ALL ON FUNCTION "public"."get_site_buildings"("p_site_id" "text", "p_lat" 
 
 
 
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."int2_dist"(smallint, smallint) TO "postgres";
 GRANT ALL ON FUNCTION "public"."int2_dist"(smallint, smallint) TO "anon";
 GRANT ALL ON FUNCTION "public"."int2_dist"(smallint, smallint) TO "authenticated";
@@ -2966,6 +3153,12 @@ GRANT ALL ON FUNCTION "public"."tstz_dist"(timestamp with time zone, timestamp w
 GRANT ALL ON FUNCTION "public"."tstz_dist"(timestamp with time zone, timestamp with time zone) TO "anon";
 GRANT ALL ON FUNCTION "public"."tstz_dist"(timestamp with time zone, timestamp with time zone) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tstz_dist"(timestamp with time zone, timestamp with time zone) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_config_with_log"("p_entity_type" "text", "p_entity_id" "text", "p_updates" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."update_config_with_log"("p_entity_type" "text", "p_entity_id" "text", "p_updates" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_config_with_log"("p_entity_type" "text", "p_entity_id" "text", "p_updates" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "service_role";
 
 
 

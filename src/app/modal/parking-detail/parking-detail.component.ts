@@ -374,11 +374,29 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
         let startH = 8, startM = 0;
         let endH = 20, endM = 0;
-        let isOpen = true;
-        let timeLabel = '08:00 - 20:00';
+        let isOpen = false;
+        let timeLabel = 'ปิดบริการ';
 
-        if (this.lot.schedule && this.lot.schedule.length > 0) {
-          // Mock
+        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const currentDayKey = dayKeys[dayIndex];
+
+        if (this.lot && this.lot.schedule) {
+             const schedule = this.lot.schedule.find(s => s.days.includes(currentDayKey));
+             if (schedule) {
+                 isOpen = true;
+                 const [oH, oM] = schedule.open_time.split(':').map(Number);
+                 const [cH, cM] = schedule.close_time.split(':').map(Number);
+                 startH = oH; startM = oM;
+                 endH = cH; endM = cM;
+                 timeLabel = `${schedule.open_time.slice(0,5)} - ${schedule.close_time.slice(0,5)}`;
+             }
+        } else {
+            // Fallback if no schedule but maybe open_time/close_time exists in parsed hours? 
+            // Or assume open if available?
+            // For now, if no schedule, default to 08:00 - 20:00 as fallback
+             isOpen = true;
+             timeLabel = '08:00 - 20:00';
+             startH = 8; endH = 20;
         }
 
         const slots: TimeSlot[] = [];
@@ -390,10 +408,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         const totalOpenMinutes = Math.floor((closingTime.getTime() - startTime.getTime()) / 60000);
 
         if (!isOpen) {
-          // ... 
+           // Closed logic handled below by empty slots
         } else {
 
-          // --- ADAPTED LOGIC FOR BOOKING MODES ---
           // --- ADAPTED LOGIC FOR BOOKING MODES ---
           // NOTE: flat24 moved to loop logic below to allow start time selection
 
@@ -1104,7 +1121,36 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
   pad(num: number): string { return num < 10 ? '0' + num : num.toString(); }
   dismiss() { this.modalCtrl.dismiss(); }
-  checkOpenStatus() { this.isOpenNow = this.lot.status === 'available' || this.lot.status === 'low'; }
+  checkOpenStatus() {
+    if (!this.lot || !this.lot.schedule || this.lot.schedule.length === 0) {
+      // Fallback
+      this.isOpenNow = this.lot.status === 'available' || this.lot.status === 'low';
+      return;
+    }
+
+    const now = new Date();
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDayName = days[now.getDay()];
+
+    // Find schedule for today
+    const todaySchedule = this.lot.schedule.find(s => s.days.includes(currentDayName));
+
+    if (todaySchedule) {
+      const [openH, openM] = todaySchedule.open_time.split(':').map(Number);
+      const [closeH, closeM] = todaySchedule.close_time.split(':').map(Number);
+
+      const openTime = new Date(now);
+      openTime.setHours(openH, openM, 0, 0);
+
+      const closeTime = new Date(now);
+      closeTime.setHours(closeH, closeM, 0, 0);
+
+      this.isOpenNow = now >= openTime && now < closeTime;
+    } else {
+      this.isOpenNow = false; // Closed today
+    }
+  }
+
   getCurrentCapacity(): number { return (this.lot.capacity as any)[this.selectedType] || 0; }
   getCurrentAvailable(): number { return (this.lot.available as any)[this.selectedType] || 0; }
   getTypeName(type: string): string {
@@ -1119,12 +1165,26 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   generateWeeklySchedule() {
     const today = new Date().getDay();
     const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    
     this.weeklySchedule = [];
+    
     for (let i = 0; i < 7; i++) {
       const dayIndex = (today + i) % 7;
+      const dayKey = dayKeys[dayIndex];
+      
+      let timeRange = 'ปิดบริการ';
+      
+      if (this.lot && this.lot.schedule) {
+        const schedule = this.lot.schedule.find(s => s.days.includes(dayKey));
+        if (schedule) {
+          timeRange = `${schedule.open_time.slice(0, 5)} - ${schedule.close_time.slice(0, 5)}`;
+        }
+      }
+
       this.weeklySchedule.push({
         dayName: dayNames[dayIndex],
-        timeRange: '08:00 - 20:00',
+        timeRange: timeRange,
         isToday: i === 0
       });
     }

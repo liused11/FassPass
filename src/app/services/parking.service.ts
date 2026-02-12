@@ -28,8 +28,14 @@ export class ParkingService {
     };
 
     return from(
-      this.supabase.client
-        .rpc(rpcName, params)
+      this.supabase.client.functions.invoke('get-parking-lots', {
+        body: {
+          site_id: siteId,
+          lat: lat,
+          lng: lng,
+          user_id: userId
+        }
+      })
     ).pipe(
       map(response => {
         if (response.error) {
@@ -38,7 +44,7 @@ export class ParkingService {
         return response.data as ParkingLot[];
       }),
       catchError(err => {
-        console.error('Available RPC Call Failed:', err);
+        console.error('Available Edge Function Call Failed:', err);
         return of([]); 
       })
     );

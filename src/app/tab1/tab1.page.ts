@@ -22,7 +22,6 @@ import { BuildingDetailComponent } from '../modal/building-detail/building-detai
 
 import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem } from '../data/models';
-import { TAB1_PARKING_LOTS } from '../data/mock-data';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ParkingService } from '../services/parking.service';
 
@@ -82,10 +81,6 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
 
   ngOnInit() {
-    // 0. Load Mock Data Immediately
-    console.log('[Tab1] 0. Start Loading Mock Data...');
-    this.useMockData();
-
     // 1. Fetch Real Data
     this.loadRealData();
 
@@ -149,44 +144,33 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       .pipe(
         timeout(3000),
         catchError(err => {
-          console.error('[Tab1] API Error or Timeout. Staying with Mock Data.', err);
+          console.error('[Tab1] API Error or Timeout.', err);
           return of([]);
         })
       )
       .subscribe({
         next: (realLots) => {
-          if (realLots && realLots.length > 0) {
-            console.log('[Tab1] ✅ API Success: Validating Data...');
-
-            // Check for valid categories
-            const hasValidData = realLots.some(lot =>
-              (lot.category || '').toLowerCase() === 'parking' ||
-              (lot.category || '').toLowerCase() === 'building'
-            );
-
-            if (!hasValidData) {
-              console.warn('[Tab1] ⚠️ API returned data, but NO valid categories found (parking/building). Reverting to Mock Data.');
-              return; // Do not overwrite mock data
-            }
-
+          if (realLots) {
             console.log('[Tab1] Applying Real Data (Count: ' + realLots.length + ')');
             this.allParkingLots = realLots;
             this.processScheduleData();
             this.updateParkingStatuses();
             this.filterData();
 
-            // Safety Check: If view is empty after API update, user sees nothing.
             if (this.filteredParkingLots.length === 0) {
-              console.warn('[Tab1] ⚠️ View is empty after API update. Mismatching categories or filter?');
-              // You could revert here if critical: this.useMockData();
+              console.warn('[Tab1] ⚠️ View is empty after API update.');
             }
 
           } else {
-            console.warn('[Tab1] ⚠️ API returned empty/error. Using Mock Data.');
+            console.warn('[Tab1] ⚠️ API returned empty/error.');
+            this.allParkingLots = [];
+            this.filterData();
           }
         },
         error: (err) => {
           console.error('[Tab1] Subscribe Error:', err);
+          this.allParkingLots = [];
+          this.filterData();
         }
       });
   }
@@ -232,21 +216,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
 
-  // Helper to load mock data
-  useMockData() {
-    console.log('[Tab1] Loading Mock Data...');
-    // Deep clone to prevent side effects on subsequent reloads
-    const lots = JSON.parse(JSON.stringify(TAB1_PARKING_LOTS));
-    this.allParkingLots = lots;
 
-    console.log('[Tab1] Mock Data Used (Count: ' + lots.length + ')');
-    console.log('[Tab1] Mock Data Content:', lots);
-
-    this.processScheduleData();
-    this.updateParkingStatuses();
-    this.filterData();
-    console.log('[Tab1] After Filter Mock Data (Count):', this.filteredParkingLots.length);
-  }
 
   //  ทำงานหลังจากหน้าเว็บโหลดเสร็จ (เพื่อโหลด Map)
   async ngAfterViewInit() {
