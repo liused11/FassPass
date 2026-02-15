@@ -1,0 +1,109 @@
+
+<ion-header class="ion-no-border">
+  <div class="h-1 w-10 bg-gray-300 rounded-full mx-auto mt-3 mb-1"></div>
+  <ion-toolbar class="--background:transparent">
+    <ion-title class="text-center font-bold text-lg">เพิ่มยานพาหนะใหม่</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding-horizontal pb-6">
+  <form [formGroup]="vehicleForm" (ngSubmit)="submit()">
+
+    <!-- 1. Image Section -->
+    <div class="flex flex-col items-center justify-center py-6 bg-gray-50 rounded-xl mb-6 border border-dashed border-gray-200">
+      <div class="relative w-24 h-24 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center mb-2 overflow-hidden">
+        <img *ngIf="selectedImage" [src]="selectedImage" class="w-full h-full object-cover">
+        <ion-icon *ngIf="!selectedImage" name="car-sport" class="text-4xl text-gray-300"></ion-icon>
+        
+        <!-- Camera Button -->
+        <button type="button" class="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md border-2 border-white transform translate-x-1 translate-y-1">
+          <ion-icon name="camera" class="text-sm"></ion-icon>
+        </button>
+      </div>
+      <span class="text-xs text-gray-400">เพิ่มรูปภาพยานพาหนะของคุณ</span>
+    </div>
+
+    <!-- 2. Form Section -->
+    <div class="flex flex-col gap-6">
+
+      <!-- Vehicle Type -->
+      <div class="form-group">
+        <label class="font-bold text-sm text-gray-800 mb-2 block">ประเภทรถ</label>
+        <div class="relative">
+          <select formControlName="type"
+            class="w-full h-12 border border-gray-200 rounded-xl px-4 appearance-none bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors">
+            <option value="" disabled selected hidden>เลือกประเภท</option>
+            <option *ngFor="let t of vehicleTypes" [value]="t.value">{{ t.label }}</option>
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+            <ion-icon name="chevron-down"></ion-icon>
+          </div>
+        </div>
+      </div>
+
+      <!-- Brand & Model -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="form-group">
+          <label class="font-bold text-sm text-gray-800 mb-2 block">ยี่ห้อ</label>
+          <div class="relative">
+            <select formControlName="brand"
+              class="w-full h-12 border border-gray-200 rounded-xl px-3 appearance-none bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors">
+              <option value="" disabled selected hidden>เลือกยี่ห้อ</option>
+              <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-500">
+              <ion-icon name="chevron-down"></ion-icon>
+            </div>
+          </div>
+          <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('brand')">กรุณาเลือกยี่ห้อ</span>
+        </div>
+
+        <div class="form-group">
+          <label class="font-bold text-sm text-gray-800 mb-2 block">รุ่น</label>
+          <input type="text" formControlName="model" placeholder="ระบุรุ่น"
+            class="w-full h-12 border border-gray-200 rounded-xl px-3 bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors">
+          <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('model')">กรุณากรอกรุ่น</span>
+        </div>
+      </div>
+
+      <!-- Color Input -->
+      <div class="form-group">
+        <label class="font-bold text-sm text-gray-800 mb-3 block">สีรถ</label>
+        <input type="text" formControlName="color" placeholder="ระบุสีรถ (เช่น ขาว, ดำ, เทา)"
+          class="w-full h-12 border border-gray-200 rounded-xl px-4 bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors">
+        <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('color')">กรุณาระบุสีรถ</span>
+      </div>
+
+      <!-- License Plate & Province -->
+      <div class="form-group">
+        <label class="font-bold text-sm text-gray-800 mb-2 block">เลขทะเบียนยานพาหนะ</label>
+        <div class="flex gap-3 h-12">
+          <div class="flex-[3]">
+             <input type="text" formControlName="licensePlate" placeholder="เช่น 1กข 1234"
+            class="w-full h-full border border-gray-200 rounded-xl px-4 bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-300">
+          </div>
+          <div class="flex-[4] relative">
+            <select formControlName="province"
+              class="w-full h-full border border-gray-200 rounded-xl px-2 appearance-none bg-white text-gray-700 text-sm focus:outline-none focus:border-blue-500 transition-colors truncate pr-8">
+              <option value="" disabled selected hidden>จังหวัด</option>
+              <option *ngFor="let p of provinces" [value]="p">{{ p }}</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500 bg-white rounded-r-xl">
+              <ion-icon name="chevron-down"></ion-icon>
+            </div>
+          </div>
+        </div>
+        <span class="text-xs text-gray-400 mt-1 block">กรุณากรอกเลขทะเบียนให้ถูกต้องเพื่อความสะดวกในการเข้า-ออก</span>
+      </div>
+
+    </div>
+
+    <!-- Submit Button (Sticky Bottom or Just Bottom) -->
+    <div class="mt-8 mb-4">
+      <ion-button type="submit" expand="block" shape="round" color="primary" class="h-12 font-bold text-base shadow-none">
+        บันทึกข้อมูล
+      </ion-button>
+    </div>
+
+  </form>
+</ion-content>

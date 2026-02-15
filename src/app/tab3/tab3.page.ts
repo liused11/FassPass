@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
+import { ModalController } from '@ionic/angular';
 import { SettingItem, UserProfile, Vehicle } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { GENERAL_SETTINGS, OTHER_SETTINGS } from '../data/app-settings';
+import { AddVehicleModalComponent } from '../modal/add-vehicle/add-vehicle-modal.component';
 
 @Component({
   selector: 'app-tab3',
@@ -17,7 +19,10 @@ export class Tab3Page implements OnInit {
   generalSettings = GENERAL_SETTINGS;
   otherSettings = OTHER_SETTINGS;
 
-  constructor(private parkingService: ParkingDataService) { }
+  constructor(
+    private parkingService: ParkingDataService,
+    private modalCtrl: ModalController
+  ) { }
 
   ngOnInit() {
     this.parkingService.userProfile$.subscribe(p => { if (p) this.userProfile = p; });
@@ -32,20 +37,28 @@ export class Tab3Page implements OnInit {
     this.parkingService.setDefaultVehicle(vehicleId);
   }
 
-  addVehicle() {
-    const nextRank = this.vehicles.length + 1;
-    const newVehicle: Vehicle = {
-      id: 'temp-' + nextRank, // Temporary ID, service will handle it
-      model: 'NEW CAR ' + nextRank,
-      licensePlate: '9กก ' + (1000 + nextRank),
-      province: 'กรุงเทพฯ',
-      image: 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg',
-      isDefault: false,
-      status: '',
-      lastUpdate: 'เพิ่งเพิ่ม',
-      rank: nextRank
-    };
-    this.parkingService.addVehicle(newVehicle);
+  async addVehicle() {
+    const modal = await this.modalCtrl.create({
+      component: AddVehicleModalComponent,
+      breakpoints: [0, 0.85, 1],
+      initialBreakpoint: 0.85,
+      cssClass: 'add-vehicle-modal'
+    });
+
+    await modal.present();
+
+    const { data, role } = await modal.onDidDismiss();
+
+    if (role === 'confirm' && data) {
+      // Assign ID and Rank here or in service (Service handles ID mostly but let's be safe)
+      const newVehicle: Vehicle = {
+        ...data,
+        id: 'temp-' + new Date().getTime(),
+        rank: this.vehicles.length + 1
+      };
+      
+      this.parkingService.addVehicle(newVehicle);
+    }
   }
 
   getLicensePlateParts(plate: string): string[] {
