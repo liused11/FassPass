@@ -58,6 +58,17 @@ export class AddVehicleModalComponent implements OnInit {
     this.updateDefaultImage();
   }
 
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.selectedImage = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
   updateDefaultImage() {
     if (this.selectedImage) return; // User uploaded overrides default
     
@@ -71,14 +82,17 @@ export class AddVehicleModalComponent implements OnInit {
   }
 
   submit() {
+    console.log('[AddVehicleModal] Submit called');
     if (this.vehicleForm.valid) {
+      console.log('[AddVehicleModal] Form is valid');
       const formValue = this.vehicleForm.value;
       
       // Construct Vehicle Object
       const newVehicle: Partial<Vehicle> = {
         model: `${formValue.brand} ${formValue.model}`,
-        licensePlate: `${formValue.licensePlate} ${formValue.province}`,
+        licensePlate: formValue.licensePlate, // Send clean plate, province is separate
         province: formValue.province,
+        color: formValue.color, // Add color
         image: this.selectedImage || 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg', // Fallback
         isDefault: false,
         status: 'active',
@@ -88,7 +102,16 @@ export class AddVehicleModalComponent implements OnInit {
 
       this.modalCtrl.dismiss(newVehicle, 'confirm');
     } else {
+      console.warn('[AddVehicleModal] Form is invalid');
       this.vehicleForm.markAllAsTouched();
+      
+      // Log errors
+      Object.keys(this.vehicleForm.controls).forEach(key => {
+        const controlErrors = this.vehicleForm.get(key)?.errors;
+        if (controlErrors) {
+          console.error(`[AddVehicleModal] Invalid control: ${key}`, controlErrors);
+        }
+      });
     }
   }
 

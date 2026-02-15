@@ -1005,7 +1005,10 @@ CREATE TABLE IF NOT EXISTS "public"."buildings" (
     "close_time" time without time zone DEFAULT '20:00:00'::time without time zone,
     "price_info" "text" DEFAULT 'ฟรี'::"text",
     "price_value" integer DEFAULT 0,
-    "user_types" "text" DEFAULT 'นศ., บุคลากร'::"text"
+    "user_types" "text" DEFAULT 'นศ., บุคลากร'::"text",
+    "address" "text",
+    "is_active" boolean DEFAULT true,
+    "capacity" integer DEFAULT 0
 );
 
 

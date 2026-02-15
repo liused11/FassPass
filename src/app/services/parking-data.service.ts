@@ -178,13 +178,76 @@ export class ParkingDataService {
 
     // --- Vehicle Management ---
 
-    addVehicle(vehicle: Vehicle) {
-        const currentVehicles = this.vehiclesSubject.value;
-        // Generate a temporary ID (if using real DB, this should ideally be handled by backend return)
-        // For now, generate a random string to avoid collision with UUIDs
-        const newId = 'temp-' + Math.random().toString(36).substr(2, 9);
-        const newVehicle = { ...vehicle, id: newId };
-        this.vehiclesSubject.next([...currentVehicles, newVehicle]);
+    async addVehicle(vehicle: Partial<Vehicle>) {
+        console.log('[ParkingDataService] Adding vehicle:', vehicle);
+        
+        // Get current user ID
+        const userId = this.reservationService.getTestUserId(); 
+        
+        if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
+             console.warn('[ParkingDataService] Warning: Using test/default User ID.');
+        }
+
+        // 1. Calculate Next Rank from DB to avoid collision (length+1 is unsafe if items deleted)
+        const { data: maxRankData, error: rankError } = await this.supabaseService.client
+            .from('cars')
+            .select('rank')
+            .eq('user_id', userId)
+            .order('rank', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        let nextRank = 1;
+        if (maxRankData) {
+            nextRank = (maxRankData.rank || 0) + 1;
+        }
+        console.log('[ParkingDataService] Calculated Next Rank:', nextRank);
+
+        // 2. Insert new vehicle
+        const { data, error } = await this.supabaseService.client
+            .from('cars')
+            .insert([{
+                user_id: userId,
+                model: vehicle.model,
+                license_plate: vehicle.licensePlate, 
+                province: vehicle.province, 
+                color: vehicle.color || null, // Add color
+                image: vehicle.image,
+                is_default: vehicle.isDefault || false,
+                status: vehicle.status || 'active',
+                rank: nextRank
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[ParkingDataService] Error adding vehicle:', error);
+            // Check for duplicate key error (PGRST110 or 23505)
+            if (error.code === '23505') {
+                console.error('[ParkingDataService] Duplicate data found (License Plate or Rank).');
+            }
+            throw error;
+        }
+
+        console.log('[ParkingDataService] Vehicle added successfully:', data);
+
+        // 3. Update local state
+        if (data) {
+             const newVehicle: Vehicle = {
+                id: data.id,
+                model: data.model,
+                licensePlate: data.license_plate,
+                province: data.province,
+                color: data.color, // Add color
+                image: data.image,
+                isDefault: data.is_default,
+                status: data.status,
+                lastUpdate: 'Just now',
+                rank: data.rank
+            };
+            const currentVehicles = this.vehiclesSubject.value;
+            this.vehiclesSubject.next([...currentVehicles, newVehicle]);
+        }
     }
 
     updateVehicle(updatedVehicle: Vehicle) {

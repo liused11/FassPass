@@ -91,6 +91,7 @@ export interface Vehicle {
     status: string;
     lastUpdate: string;
     rank: number;
+    color?: string; // Added color field
 }
 
 export interface SettingItem {

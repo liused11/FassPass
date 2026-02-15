@@ -41,3 +41,40 @@
 .google-map-sheet-under-tabbar {
   z-index: 999 !important; // ต่ำกว่ tab bar
 }
+
+/* Custom Toast Styles */
+.custom-toast {
+  --background: #ffffff;
+  --color: #1f2937; /* gray-800 */
+  --border-radius: 12px;
+  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --button-color: #6b7280; /* gray-500 */
+  
+  font-weight: 500;
+  
+  &.success-toast {
+    --start: 12px;
+    --border-width: 0 0 0 6px;
+    --border-style: solid;
+    --border-color: #10b981; /* green-500 */
+    
+    ion-icon {
+      color: #10b981;
+      font-size: 24px;
+      margin-right: 8px;
+    }
+  }
+
+  &.error-toast {
+    --start: 12px;
+    --border-width: 0 0 0 6px;
+    --border-style: solid;
+    --border-color: #ef4444; /* red-500 */
+
+    ion-icon {
+      color: #ef4444;
+      font-size: 24px;
+      margin-right: 8px;
+    }
+  }
+}
