@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { ModalController, ToastController } from '@ionic/angular';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
+import { BookingTypeSelectorComponent } from '../booking-type-selector/booking-type-selector.component';
 import { ParkingDataService } from '../../services/parking-data.service';
 import { Booking } from '../../data/models';
 
@@ -23,7 +24,7 @@ interface TimeSlot {
   isSelected: boolean;
   isInRange: boolean;
   remaining: number;
-  duration?: number; // ✅ เพิ่ม property เพื่อเก็บระยะเวลาของ slot นี้ (ใช้สำหรับแบบครึ่งวัน/เต็มวัน)
+  duration?: number; //  เพิ่ม property เพื่อเก็บระยะเวลาของ slot นี้ (ใช้สำหรับแบบครึ่งวัน/เต็มวัน)
 }
 
 @Component({
@@ -47,13 +48,16 @@ export class ParkingReservationsComponent implements OnInit {
   ];
   currentSiteName: string = '';
   isSpecificSlot: boolean = false;
-  isCrossDay: boolean = false; // ✅ New state for Cross Day toggle
+  isCrossDay: boolean = false; //  New state for Cross Day toggle
 
   selectedType: string = 'normal';
   selectedTypeText = 'รถทั่วไป';
 
   selectedFloorIds: string[] = [];
   selectedZoneNames: string[] = [];
+
+  bookingMode: string = 'hourly';
+  bookingModeText: string = 'รายชั่วโมง (ทั่วไป)';
 
   slotInterval: number = 60; // ค่า -1 = เต็มวัน, -2 = ครึ่งวัน
 
@@ -209,6 +213,45 @@ export class ParkingReservationsComponent implements OnInit {
     if (popover) popover.dismiss();
   }
 
+  async openBookingTypeSelector() {
+    const modal = await this.modalCtrl.create({
+      component: BookingTypeSelectorComponent,
+      cssClass: 'auto-height-modal',
+      breakpoints: [0, 0.5, 0.75],
+      initialBreakpoint: 0.5,
+      backdropDismiss: true
+    });
+
+    await modal.present();
+
+    const { data, role } = await modal.onDidDismiss();
+
+    if (role === 'confirm' && data) {
+      this.bookingMode = data.bookingMode;
+      this.updateBookingModeText();
+      this.resetSelection();
+      this.generateData();
+
+      // Show toast
+      const toast = await this.toastCtrl.create({
+        message: `เปลี่ยนรูปแบบเป็น: ${this.bookingModeText}`,
+        duration: 2000,
+        position: 'top',
+        color: 'success'
+      });
+      toast.present();
+    }
+  }
+
+  updateBookingModeText() {
+    switch (this.bookingMode) {
+      case 'hourly': this.bookingModeText = 'รายชั่วโมง (ทั่วไป)'; break;
+      case 'flat_24h': this.bookingModeText = 'เหมาจ่าย 24 ชม.'; break;
+      case 'monthly_regular': this.bookingModeText = 'สมาชิกรายเดือน'; break;
+      case 'monthly_night': this.bookingModeText = 'รายเดือน (Night-Only)'; break;
+    }
+  }
+
   toggleCrossDay() {
     this.isCrossDay = !this.isCrossDay;
     this.generateData();
@@ -252,7 +295,7 @@ export class ParkingReservationsComponent implements OnInit {
     const today = new Date();
     const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
 
-    // ✅ If isCrossDay is true, show 2 days (Today + Tomorrow). Otherwise show 1 day (Today).
+    //  If isCrossDay is true, show 2 days (Today + Tomorrow). Otherwise show 1 day (Today).
     const daysToShow = this.isCrossDay ? 2 : 1;
 
     for (let i = 0; i < daysToShow; i++) {
@@ -309,7 +352,7 @@ export class ParkingReservationsComponent implements OnInit {
       const closingTime = new Date(targetDate);
       closingTime.setHours(endH, endM, 0, 0);
 
-      // ✅ Logic ใหม่สำหรับ เต็มวัน/ครึ่งวัน
+      //  Logic ใหม่สำหรับ เต็มวัน/ครึ่งวัน
       const totalOpenMinutes = Math.floor((closingTime.getTime() - startTime.getTime()) / 60000);
 
       if (this.slotInterval === -1) {
@@ -414,14 +457,21 @@ export class ParkingReservationsComponent implements OnInit {
   onSlotClick(slot: TimeSlot) {
     if (!slot.isAvailable) return;
 
-    // ✅ ถ้าเป็นโหมด เต็มวัน/ครึ่งวัน ให้เลือกอัตโนมัติ (ไม่ต้องจิ้ม 2 ที)
-    if (this.slotInterval < 0) {
+    // ✅ Special modes (Fixed Duration)
+    let fixedDuration = 0;
+    if (this.bookingMode === 'flat_24h') fixedDuration = 24 * 60; // 1440 mins
+    else if (this.bookingMode === 'monthly_regular') fixedDuration = 30 * 24 * 60; // 30 days
+    else if (this.bookingMode === 'monthly_night') fixedDuration = 14 * 60; // 18:00 - 08:00 = 14 hours (simplified)
+
+    // ✅ If is Fixed Duration OR Interval Mode (Full/Half Day)
+    if (this.slotInterval < 0 || fixedDuration > 0) {
       this.startSlot = slot;
 
-      // คำนวณเวลาจบจาก duration ที่เราเก็บไว้
-      const endTime = new Date(slot.dateTime.getTime() + (slot.duration || 0) * 60000);
+      // Calculate end time
+      const duration = fixedDuration > 0 ? fixedDuration : (slot.duration || 0); // Use fixed if set, else slot duration
+      const endTime = new Date(slot.dateTime.getTime() + duration * 60000);
 
-      // สร้าง endSlot เทียม เพื่อให้ระบบคำนวณ diff เวลาได้ถูกต้อง
+      // Create dummy endSlot
       this.endSlot = {
         id: 'auto-end',
         timeText: `${this.pad(endTime.getHours())}:${this.pad(endTime.getMinutes())}`,
@@ -429,12 +479,15 @@ export class ParkingReservationsComponent implements OnInit {
         isAvailable: true,
         isSelected: true,
         isInRange: false,
-        remaining: 0
+        remaining: 0,
+        duration: duration // Important for display
       };
 
       this.updateSelectionUI();
       return;
     }
+
+    // === Hourly (Standard) Mode ===
 
     // Logic ใหม่: เลือกช่องแรก = เป็นทั้ง Start และ End ทันที
     // ถ้าคลิกอีกช่อง > Start = เป็น End (Range)
@@ -518,7 +571,8 @@ export class ParkingReservationsComponent implements OnInit {
       startSlot: this.startSlot,
       endSlot: this.endSlot,
       isSpecificSlot: this.isSpecificSlot,
-      isRandomSystem: !this.isSpecificSlot
+      isRandomSystem: !this.isSpecificSlot,
+      bookingMode: this.bookingMode
     };
 
     try {
@@ -582,7 +636,7 @@ export class ParkingReservationsComponent implements OnInit {
         price: bookingData.totalPrice,
         carBrand: 'TOYOTA YARIS', // Mock default
         licensePlate: '1กข 1234', // Mock default
-        bookingType: 'daily',
+        bookingType: (this.bookingMode as any), // Cast to fit BookingType
       };
       this.parkingService.addBooking(newBooking);
 

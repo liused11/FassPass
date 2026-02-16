@@ -58,17 +58,32 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="bg-[#f7f8fa]">
-  <div class="p-4 pb-10">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
 
-    <!-- 1. Latest Bookings -->
+  <div class="h-full flex flex-col items-center justify-center space-y-4" *ngIf="isLoading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p class="text-gray-400 text-sm">กำลังโหลดข้อมูล...</p>
+  </div>
+
+  <div class="p-4 pb-10" *ngIf="!isLoading">
+
+    <!-- 1. Hourly Bookings -->
     <div class="mb-6">
-      <div class="mb-3">
-        <div class="text-sm font-semibold text-black m-0">รายการล่าสุด</div>
+      <div class="mb-3 flex justify-between items-center">
+        <div class="text-sm font-semibold text-black m-0">รายการจองรายชั่วโมง</div>
+        <div class="text-xs text-[var(--ion-color-primary)] font-medium cursor-pointer"
+          (click)="toggleSection('hourly')" *ngIf="hourlyBookings.length > 1">
+          {{ expandedSections['hourly'] ? 'ย่อรายการ' : 'ดูรายการทั้งหมด' }}
+        </div>
       </div>
-      <div *ngIf="latestBookings.length === 0" class="text-center text-gray-400 text-sm p-2.5">
-        - ไม่พบรายการ -
+      <div *ngIf="hourlyBookings.length === 0"
+        class="flex flex-col items-center justify-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100">
+        <ion-icon name="calendar-clear-outline" class="text-3xl mb-2 opacity-40"></ion-icon>
+        <span class="text-xs">ไม่พบรายการจองรายชั่วโมง</span>
       </div>
-      <div *ngFor="let item of latestBookings"
+      <div *ngFor="let item of (expandedSections['hourly'] ? hourlyBookings : (hourlyBookings | slice:0:1))"
         class="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-4 overflow-hidden border border-gray-100">
         <div class="p-4 pb-3">
           <!-- Top Row -->
@@ -94,7 +109,11 @@
                 class="text-xs text-gray-500 mb-0.5 flex items-center gap-1 before:content-[''] before:inline-block before:w-3 before:h-3 before:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%3Cpath%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22%20d=%22M256%2048c-79.5%200-144%2061.39-144%20137%200%2087%2096%20224.87%20131.25%20272.49a15.77%2015.77%200%200025.5%200C304%20409.89%20400%20272.07%20400%20185c0-75.61-64.5-137-144-137z%22/%3E%3Ccircle%20cx=%22256%22%20cy=%22192%22%20r=%2248%22%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22/%3E%3C/svg%3E')] before:bg-contain before:bg-no-repeat">
                 {{ item.placeName }}</div>
               <div class="text-xl text-gray-900 font-bold tracking-tight">
-                {{ item.locationDetails }}
+                <span class="text-lg">ตึก {{ item.building }} ชั้น {{ item.floor }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="text-base">โซน {{ item.zone }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="text-base text-[var(--ion-color-primary)]">{{ item.slot }}</span>
               </div>
             </div>
             <!-- BR: Car / User -->
@@ -125,13 +144,19 @@
 
     <!-- 2. Flat 24h Bookings -->
     <div class="mb-6">
-      <div class="mb-3">
+      <div class="mb-3 flex justify-between items-center">
         <div class="text-sm font-semibold text-black m-0">รายการเหมาจ่าย 24 ชั่วโมง</div>
+        <div class="text-xs text-[var(--ion-color-primary)] font-medium cursor-pointer"
+          (click)="toggleSection('flat_24h')" *ngIf="flat24Bookings.length > 1">
+          {{ expandedSections['flat_24h'] ? 'ย่อรายการ' : 'ดูรายการทั้งหมด' }}
+        </div>
       </div>
-      <div *ngIf="flat24Bookings.length === 0" class="text-center text-gray-400 text-sm p-2.5">
-        - ไม่พบรายการ -
+      <div *ngIf="flat24Bookings.length === 0"
+        class="flex flex-col items-center justify-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100">
+        <ion-icon name="time-outline" class="text-3xl mb-2 opacity-40"></ion-icon>
+        <span class="text-xs">ไม่พบรายการเหมาจ่าย</span>
       </div>
-      <div *ngFor="let item of flat24Bookings"
+      <div *ngFor="let item of (expandedSections['flat_24h'] ? flat24Bookings : (flat24Bookings | slice:0:1))"
         class="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-4 overflow-hidden border border-gray-100">
         <div class="p-4 pb-3">
           <div class="flex justify-between items-start mb-4">
@@ -150,9 +175,11 @@
                 class="text-xs text-gray-500 mb-0.5 flex items-center gap-1 before:content-[''] before:inline-block before:w-3 before:h-3 before:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%3Cpath%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22%20d=%22M256%2048c-79.5%200-144%2061.39-144%20137%200%2087%2096%20224.87%20131.25%20272.49a15.77%2015.77%200%200025.5%200C304%20409.89%20400%20272.07%20400%20185c0-75.61-64.5-137-144-137z%22/%3E%3Ccircle%20cx=%22256%22%20cy=%22192%22%20r=%2248%22%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22/%3E%3C/svg%3E')] before:bg-contain before:bg-no-repeat">
                 {{ item.placeName }}</div>
               <div class="text-xl text-gray-800 font-normal">
-                <span class="font-normal">{{ item.locationDetails.split('|')[0] }} | {{
-                  item.locationDetails.split('|')[1] }}</span>
-                <span class="font-normal"> | {{ item.locationDetails.split('|')[2] }}</span>
+                <span class="font-normal">ตึก {{ item.building }} ชั้น {{ item.floor }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="font-normal">โซน {{ item.zone }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="font-normal">{{ item.slot }}</span>
               </div>
             </div>
             <div class="text-right">
@@ -175,13 +202,19 @@
 
     <!-- 3. Monthly Bookings -->
     <div class="mb-6">
-      <div class="mb-3">
+      <div class="mb-3 flex justify-between items-center">
         <div class="text-sm font-semibold text-black m-0">รายการสมาชิกรายเดือน</div>
+        <div class="text-xs text-[var(--ion-color-primary)] font-medium cursor-pointer"
+          (click)="toggleSection('monthly_regular')" *ngIf="monthlyBookings.length > 1">
+          {{ expandedSections['monthly_regular'] ? 'ย่อรายการ' : 'ดูรายการทั้งหมด' }}
+        </div>
       </div>
-      <div *ngIf="monthlyBookings.length === 0" class="text-center text-gray-400 text-sm p-2.5">
-        - ไม่พบรายการ -
+      <div *ngIf="monthlyBookings.length === 0"
+        class="flex flex-col items-center justify-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100">
+        <ion-icon name="repeat-outline" class="text-3xl mb-2 opacity-40"></ion-icon>
+        <span class="text-xs">ไม่พบรายการรายเดือน</span>
       </div>
-      <div *ngFor="let item of monthlyBookings"
+      <div *ngFor="let item of (expandedSections['monthly_regular'] ? monthlyBookings : (monthlyBookings | slice:0:1))"
         class="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-4 overflow-hidden border border-gray-100 border-[2px] border-[var(--ion-color-primary)]">
         <div class="p-4 pb-3">
           <div class="flex justify-between items-start mb-4">
@@ -201,7 +234,11 @@
                 class="text-xs text-gray-500 mb-0.5 flex items-center gap-1 before:content-[''] before:inline-block before:w-3 before:h-3 before:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%3Cpath%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22%20d=%22M256%2048c-79.5%200-144%2061.39-144%20137%200%2087%2096%20224.87%20131.25%20272.49a15.77%2015.77%200%200025.5%200C304%20409.89%20400%20272.07%20400%20185c0-75.61-64.5-137-144-137z%22/%3E%3Ccircle%20cx=%22256%22%20cy=%22192%22%20r=%2248%22%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22/%3E%3C/svg%3E')] before:bg-contain before:bg-no-repeat">
                 {{ item.placeName }}</div>
               <div class="text-xl text-gray-800 font-normal">
-                <span class="font-normal">{{ item.locationDetails }}</span>
+                <span class="font-normal">ตึก {{ item.building }} ชั้น {{ item.floor }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="font-normal">โซน {{ item.zone }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="font-normal">{{ item.slot }}</span>
               </div>
             </div>
             <div class="text-right">
@@ -224,13 +261,19 @@
 
     <!-- 4. Monthly Night Bookings -->
     <div class="mb-6">
-      <div class="mb-3">
+      <div class="mb-3 flex justify-between items-center">
         <div class="text-sm font-semibold text-black m-0">รายการสมาชิกรายเดือนเฉพาะกลางคืน(18:00-08:00 น.)</div>
+        <div class="text-xs text-[var(--ion-color-primary)] font-medium cursor-pointer"
+          (click)="toggleSection('monthly_night')" *ngIf="nightlyBookings.length > 1">
+          {{ expandedSections['monthly_night'] ? 'ย่อรายการ' : 'ดูรายการทั้งหมด' }}
+        </div>
       </div>
-      <div *ngIf="nightlyBookings.length === 0" class="text-center text-gray-400 text-sm p-2.5">
-        - ไม่พบรายการ -
+      <div *ngIf="nightlyBookings.length === 0"
+        class="flex flex-col items-center justify-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100">
+        <ion-icon name="moon-outline" class="text-3xl mb-2 opacity-40"></ion-icon>
+        <span class="text-xs">ไม่พบรายการรายเดือน (คืน)</span>
       </div>
-      <div *ngFor="let item of nightlyBookings"
+      <div *ngFor="let item of (expandedSections['monthly_night'] ? nightlyBookings : (nightlyBookings | slice:0:1))"
         class="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-4 overflow-hidden border border-gray-100 border-[2px] border-[var(--ion-color-primary)]">
         <div class="p-4 pb-3">
           <div class="flex justify-between items-start mb-4">
@@ -252,9 +295,11 @@
                 class="text-xs text-gray-500 mb-0.5 flex items-center gap-1 before:content-[''] before:inline-block before:w-3 before:h-3 before:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%3Cpath%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22%20d=%22M256%2048c-79.5%200-144%2061.39-144%20137%200%2087%2096%20224.87%20131.25%20272.49a15.77%2015.77%200%200025.5%200C304%20409.89%20400%20272.07%20400%20185c0-75.61-64.5-137-144-137z%22/%3E%3Ccircle%20cx=%22256%22%20cy=%22192%22%20r=%2248%22%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22/%3E%3C/svg%3E')] before:bg-contain before:bg-no-repeat">
                 {{ item.placeName }}</div>
               <div class="text-xl text-gray-800 font-normal">
-                <span class="font-normal">{{ item.locationDetails.split('|')[0] }} | {{
-                  item.locationDetails.split('|')[1] }}</span>
-                <span class="font-normal"> | {{ item.locationDetails.split('|')[2] }}</span>
+                <span class="font-normal">ตึก {{ item.building }} ชั้น {{ item.floor }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="font-normal">โซน {{ item.zone }}</span>
+                <span class="text-gray-300 mx-1">|</span>
+                <span class="font-normal">{{ item.slot }}</span>
               </div>
             </div>
             <div class="text-right">

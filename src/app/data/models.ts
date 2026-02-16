@@ -67,9 +67,15 @@ export interface Booking {
     discountBadge?: string; // e.g. "ลด 15%"
     carBrand: string;     // ยี่ห้อรถ
     licensePlate: string; // ทะเบียนรถ
-    bookingType: 'daily' | 'monthly' | 'flat24' | 'monthly_night'; // Updated types
+    bookingType: 'hourly' | 'monthly_regular' | 'flat_24h' | 'monthly_night' | 'daily' | 'monthly' | 'flat24'; // Updated types (legacy included if needed)
     periodLabel?: string; // For special textual times like "เหมาจ่าย 24 ชั่วโมง" or "1 ธ.ค. - 31 ธ.ค."
     timeDetailLabel?: string; // For explicit time range text if needed
+
+    // Detailed Location Fields for easier UI binding
+    building?: string;
+    floor?: string;
+    zone?: string;
+    slot?: string;
 }
 
 export interface UserProfile {

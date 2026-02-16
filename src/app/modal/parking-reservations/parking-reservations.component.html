@@ -22,25 +22,30 @@
       <button (click)="toggleCrossDay()" class="filter-btn w-fit px-3" [class.bg-blue-50]="isCrossDay"
         [class.border-blue-200]="isCrossDay" [class.text-blue-600]="isCrossDay">
         <ion-icon name="calendar-number-outline" [class.text-blue-600]="isCrossDay"></ion-icon>
-        <span class="font-medium whitespace-nowrap">จองข้ามวัน</span>
+        <span class="font-medium whitespace-nowrap">ข้ามวัน</span>
       </button>
 
-      <button id="type-trigger" class="filter-btn flex-1">
+      <button (click)="openBookingTypeSelector()" class="filter-btn flex-1 justify-start px-2"
+        [class.bg-purple-50]="bookingMode !== 'hourly'" [class.border-purple-200]="bookingMode !== 'hourly'"
+        [class.text-purple-600]="bookingMode !== 'hourly'">
+        <ion-icon [name]="bookingMode === 'hourly' ? 'time-outline' : 'checkmark-circle-outline'"
+          [class.text-purple-600]="bookingMode !== 'hourly'" class="text-gray-500 mr-1"></ion-icon>
+        <div class="flex flex-col items-start overflow-hidden w-full">
+          <span class="text-[10px] text-gray-400 leading-none">รูปแบบ</span>
+          <span class="truncate font-medium text-xs">{{ bookingModeText }}</span>
+        </div>
+      </button>
+
+      <button id="type-trigger" class="filter-btn w-1/4 justify-center" *ngIf="bookingMode === 'hourly'">
         <ion-icon name="car-sport-outline" class="text-primary"></ion-icon>
-        <span class="truncate font-medium">{{ selectedTypeText }}</span>
-        <ion-icon name="chevron-down-outline" class="ml-auto text-gray-300 text-xs"></ion-icon>
+        <!-- <span class="truncate font-medium">{{ selectedTypeText }}</span> -->
+        <ion-icon name="chevron-down-outline" class="ml-1 text-gray-300 text-xs"></ion-icon>
       </button>
 
-      <button id="interval-trigger" class="filter-btn w-1/3 justify-center">
-        <ion-icon name="time-outline" class="text-gray-500"></ion-icon>
-        <span class="font-medium">
-          <ng-container *ngIf="slotInterval === -1">เต็มวัน</ng-container>
-          <ng-container *ngIf="slotInterval === -2">ครึ่งวัน</ng-container>
-          <ng-container *ngIf="slotInterval > 0">
-            {{ slotInterval >= 60 ? (slotInterval/60) + ' ชม.' : slotInterval + ' น.' }}
-          </ng-container>
-        </span>
-        <ion-icon name="chevron-down-outline" class="ml-2 text-gray-300 text-xs"></ion-icon>
+      <button id="interval-trigger" class="filter-btn w-1/4 justify-center" *ngIf="bookingMode === 'hourly'">
+        <ion-icon name="timer-outline" class="text-gray-500"></ion-icon>
+        <!-- Simplified content for space -->
+        <ion-icon name="chevron-down-outline" class="ml-1 text-gray-300 text-xs"></ion-icon>
       </button>
     </div>
 

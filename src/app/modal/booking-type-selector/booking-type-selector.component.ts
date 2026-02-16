@@ -11,7 +11,7 @@ export class BookingTypeSelectorComponent implements OnInit {
 
     bookingTypes = [
         {
-            id: 'daily',
+            id: 'hourly',
             title: 'รายชั่วโมง (ทั่วไป)',
             desc: 'จองตามระยะเวลาจริง เริ่มต้น 20 บ./ชม.',
             icon: 'time-outline',
@@ -19,7 +19,7 @@ export class BookingTypeSelectorComponent implements OnInit {
             badge: null
         },
         {
-            id: 'flat24',
+            id: 'flat_24h',
             title: 'เหมาจ่าย 24 ชม.',
             desc: 'จอดได้ยาว 24 ชั่วโมง ราคาพิเศษ',
             icon: 'sync-circle-outline',
@@ -27,7 +27,7 @@ export class BookingTypeSelectorComponent implements OnInit {
             badge: 'สุดคุ้ม'
         },
         {
-            id: 'monthly',
+            id: 'monthly_regular',
             title: 'สมาชิกรายเดือน',
             desc: 'จอดได้ตลอด 24 ชม. ไม่จำกัดจำนวนครั้ง',
             icon: 'calendar-number-outline',

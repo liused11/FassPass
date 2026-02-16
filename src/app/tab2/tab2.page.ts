@@ -8,6 +8,7 @@ import { ReservationService } from '../services/reservation.service';
   templateUrl: 'tab2.page.html',
   styleUrls: ['tab2.page.scss'],
   standalone: false,
+  // Removed toggleSection from Component metadata as it belongs to the class
 })
 export class Tab2Page implements OnInit {
 
@@ -24,9 +25,9 @@ export class Tab2Page implements OnInit {
 
   categoryOptions = [
     { value: 'all', label: 'รายการทั้งหมด' },
-    { value: 'daily', label: 'รายวัน' },
-    { value: 'flat24', label: 'เหมาจ่าย 24 ชม.' },
-    { value: 'monthly', label: 'รายเดือน' },
+    { value: 'hourly', label: 'รายชั่วโมง' },
+    { value: 'flat_24h', label: 'เหมาจ่าย 24 ชม.' },
+    { value: 'monthly_regular', label: 'รายเดือน' },
     { value: 'monthly_night', label: 'รายเดือน (คืน)' }
   ];
 
@@ -34,16 +35,27 @@ export class Tab2Page implements OnInit {
   selectedStatusSegment: string = 'in_progress'; // 'in_progress' | 'completed' | 'cancelled'
 
   // Arrays for 4 Categories
-  latestBookings: Booking[] = [];
+  hourlyBookings: Booking[] = [];      // Was latestBookings/daily
   flat24Bookings: Booking[] = [];
-  monthlyBookings: Booking[] = [];
-  nightlyBookings: Booking[] = [];
+  monthlyBookings: Booking[] = [];      // monthly_regular
+  nightlyBookings: Booking[] = [];      // monthly_night
+
+  // Expanded states for sections
+  expandedSections: any = {
+    hourly: false,
+    flat_24h: false,
+    monthly_regular: false,
+    monthly_night: false
+  };
 
   // Mock Data
   allBookings: Booking[] = [];
 
   // Subscription for Realtime updates
   reservationsSubscription: any;
+
+  // Loading State
+  isLoading: boolean = false;
 
   constructor(
     private parkingService: ParkingDataService,
@@ -95,8 +107,11 @@ export class Tab2Page implements OnInit {
     });
   }
 
-  async loadRealReservations() {
+  async loadRealReservations(event?: any) {
     try {
+      if (!event) {
+        this.isLoading = true;
+      }
       const reservations = await this.reservationService.getUserReservationsFromEdge();
       console.log('Real reservations loaded:', reservations);
 
@@ -166,6 +181,11 @@ export class Tab2Page implements OnInit {
             placeName = lot ? lot.name : (r.parking_site_id || 'Unknown Location');
           }
 
+          // Map booking_type from DB to model
+          // DB types: hourly, flat_24h, monthly_regular, monthly_night
+          // Fallback to 'hourly' if undefined
+          const bookingType = r.booking_type || 'hourly';
+
           return {
             id: r.id,
             placeName: placeName,
@@ -176,10 +196,16 @@ export class Tab2Page implements OnInit {
             statusLabel: statusLabel,
             price: r.total_amount || 0,
             discountBadge: undefined,
-            carBrand: 'TOYOTA', // Placeholder or fetch from vehicle_id if available
+            carBrand: 'TOYOTA', // Placeholder
             licensePlate: 'กข 1234', // Placeholder
-            bookingType: 'daily', // Assume daily for now
-            periodLabel: undefined
+            bookingType: bookingType,
+            periodLabel: undefined,
+
+            // New fields for cleaner UI
+            building: buildingLabel,
+            floor: floorLabel,
+            zone: zoneLabel,
+            slot: r.slot_id || '-'
           } as Booking;
         });
 
@@ -191,9 +217,17 @@ export class Tab2Page implements OnInit {
       }
     } catch (error) {
       console.error('Error loading real reservations:', error);
-      // Fallback to mock data if call fails? Or show empty?
-      // Current behavior leaves mock data if load fails, which is safer as fallback.
+    } finally {
+      this.isLoading = false;
+      if (event) {
+        event.target.complete();
+      }
     }
+  }
+
+  // Pull to Refresh
+  doRefresh(event: any) {
+    this.loadRealReservations(event);
   }
 
   segmentChanged(event: any) {
@@ -230,25 +264,31 @@ export class Tab2Page implements OnInit {
       // 3. Category Filter
       let catMatch = true;
       if (this.selectedCategory !== 'all') {
-        catMatch = b.bookingType === this.selectedCategory;
+        catMatch = b.bookingType === (this.selectedCategory as any);
       }
 
       return statusMatch && monthMatch && catMatch;
     });
 
     // Valid statuses for display logic
-    this.latestBookings = filtered.filter(b => b.bookingType === 'daily');
-    this.flat24Bookings = filtered.filter(b => b.bookingType === 'flat24');
-    this.monthlyBookings = filtered.filter(b => b.bookingType === 'monthly');
+    // Using new DB types: hourly, flat_24h, monthly_regular, monthly_night
+    this.hourlyBookings = filtered.filter(b => b.bookingType === 'hourly');
+    this.flat24Bookings = filtered.filter(b => b.bookingType === 'flat_24h');
+    this.monthlyBookings = filtered.filter(b => b.bookingType === 'monthly_regular');
     this.nightlyBookings = filtered.filter(b => b.bookingType === 'monthly_night');
   }
 
   // Helper for Tailwind classes based on status
   getStatusClass(item: Booking): string {
-    if (item.status === 'pending_payment') return 'text-[#FFB800]'; // Specific Yellow from image
+    if (item.status === 'pending_payment') return 'text-[#FFB800]';
     if (item.status === 'active') return 'text-[#FFB800]';
     if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]';
     if (item.status === 'completed') return 'text-green-500';
+    if (item.status === 'cancelled') return 'text-red-500';
     return '';
+  }
+
+  toggleSection(section: string) {
+    this.expandedSections[section] = !this.expandedSections[section];
   }
 }

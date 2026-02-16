@@ -63,7 +63,8 @@ export class ReservationService {
         start_time: booking.bookingTime.toISOString(),
         end_time: booking.endTime.toISOString(),
         status: 'pending',
-        vehicle_type: 'car'
+        vehicle_type: 'car',
+        booking_type: booking.bookingType // Add this line
       })
       .select()
       .single();
