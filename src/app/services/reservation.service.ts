@@ -64,7 +64,7 @@ export class ReservationService {
         end_time: booking.endTime.toISOString(),
         status: 'pending',
         vehicle_type: 'car',
-        booking_type: booking.bookingType // Add this line
+        booking_type: this.mapBookingTypeToEnum(booking.bookingType) // Map to DB Enum
       })
       .select()
       .single();
@@ -162,5 +162,15 @@ export class ReservationService {
         }
       )
       .subscribe();
+  }
+  // Helper to map simplified frontend types to legacy DB enum values
+  private mapBookingTypeToEnum(type: string): string {
+    switch (type) {
+      case 'daily': return 'hourly';
+      case 'flat24': return 'flat_24h';
+      case 'monthly': return 'monthly_regular';
+      case 'monthly_night': return 'monthly_night';
+      default: return type; // Fallback to original if already correct or unknown
+    }
   }
 }

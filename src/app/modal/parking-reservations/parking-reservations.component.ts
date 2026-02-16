@@ -56,7 +56,7 @@ export class ParkingReservationsComponent implements OnInit {
   selectedFloorIds: string[] = [];
   selectedZoneNames: string[] = [];
 
-  bookingMode: string = 'hourly';
+  bookingMode: string = 'daily';
   bookingModeText: string = 'รายชั่วโมง (ทั่วไป)';
 
   slotInterval: number = 60; // ค่า -1 = เต็มวัน, -2 = ครึ่งวัน
@@ -245,9 +245,9 @@ export class ParkingReservationsComponent implements OnInit {
 
   updateBookingModeText() {
     switch (this.bookingMode) {
-      case 'hourly': this.bookingModeText = 'รายชั่วโมง (ทั่วไป)'; break;
-      case 'flat_24h': this.bookingModeText = 'เหมาจ่าย 24 ชม.'; break;
-      case 'monthly_regular': this.bookingModeText = 'สมาชิกรายเดือน'; break;
+      case 'daily': this.bookingModeText = 'รายชั่วโมง (ทั่วไป)'; break;
+      case 'flat24': this.bookingModeText = 'เหมาจ่าย 24 ชม.'; break;
+      case 'monthly': this.bookingModeText = 'สมาชิกรายเดือน'; break;
       case 'monthly_night': this.bookingModeText = 'รายเดือน (Night-Only)'; break;
     }
   }
@@ -459,8 +459,8 @@ export class ParkingReservationsComponent implements OnInit {
 
     // ✅ Special modes (Fixed Duration)
     let fixedDuration = 0;
-    if (this.bookingMode === 'flat_24h') fixedDuration = 24 * 60; // 1440 mins
-    else if (this.bookingMode === 'monthly_regular') fixedDuration = 30 * 24 * 60; // 30 days
+    if (this.bookingMode === 'flat24') fixedDuration = 24 * 60; // 1440 mins
+    else if (this.bookingMode === 'monthly') fixedDuration = 30 * 24 * 60; // 30 days
     else if (this.bookingMode === 'monthly_night') fixedDuration = 14 * 60; // 18:00 - 08:00 = 14 hours (simplified)
 
     // ✅ If is Fixed Duration OR Interval Mode (Full/Half Day)
