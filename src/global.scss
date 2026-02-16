@@ -1,4 +1,19 @@
 @use "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+:root {
+  --ion-font-family: 'Inter', sans-serif;
+}
+
+html,
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+* {
+  font-family: 'Inter', sans-serif;
+}
+
 /*
  * App Global CSS
  * ----------------------------------------------------------------------------
@@ -45,19 +60,22 @@
 /* Custom Toast Styles */
 .custom-toast {
   --background: #ffffff;
-  --color: #1f2937; /* gray-800 */
+  --color: #1f2937;
+  /* gray-800 */
   --border-radius: 12px;
   --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --button-color: #6b7280; /* gray-500 */
-  
+  --button-color: #6b7280;
+  /* gray-500 */
+
   font-weight: 500;
-  
+
   &.success-toast {
     --start: 12px;
     --border-width: 0 0 0 6px;
     --border-style: solid;
-    --border-color: #10b981; /* green-500 */
-    
+    --border-color: #10b981;
+    /* green-500 */
+
     ion-icon {
       color: #10b981;
       font-size: 24px;
@@ -69,7 +87,8 @@
     --start: 12px;
     --border-width: 0 0 0 6px;
     --border-style: solid;
-    --border-color: #ef4444; /* red-500 */
+    --border-color: #ef4444;
+    /* red-500 */
 
     ion-icon {
       color: #ef4444;

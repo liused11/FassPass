@@ -125,6 +125,7 @@ export class Tab2Page implements OnInit {
 
           switch (r.status) {
             case 'pending':
+            case 'pending_payment':
               status = 'pending_payment';
               statusLabel = 'รอชำระเงิน';
               break;
@@ -133,10 +134,12 @@ export class Tab2Page implements OnInit {
               statusLabel = 'จองแล้ว';
               break;
             case 'checked_in':
+            case 'active':
               status = 'active';
               statusLabel = 'กำลังจอด';
               break;
             case 'checked_out':
+            case 'completed':
               status = 'completed';
               statusLabel = 'เสร็จสิ้น';
               break;
@@ -144,6 +147,9 @@ export class Tab2Page implements OnInit {
               status = 'cancelled';
               statusLabel = 'ยกเลิกแล้ว';
               break;
+            default:
+              status = r.status;
+              statusLabel = r.status;
           }
 
           // Zone & Location Logic
@@ -190,8 +196,8 @@ export class Tab2Page implements OnInit {
             id: r.id,
             placeName: placeName,
             locationDetails: `ตึก ${buildingLabel} ชั้น ${floorLabel} | โซน ${zoneLabel} | ${r.slot_id || '-'}`,
-            bookingTime: new Date(r.start_time),
-            endTime: new Date(r.end_time),
+            bookingTime: (r.start_time.includes('Z') || r.start_time.includes('+')) ? new Date(r.start_time) : new Date(r.start_time + 'Z'),
+            endTime: (r.end_time.includes('Z') || r.end_time.includes('+')) ? new Date(r.end_time) : new Date(r.end_time + 'Z'),
             status: status,
             statusLabel: statusLabel,
             price: r.total_amount || 0,
@@ -281,9 +287,9 @@ export class Tab2Page implements OnInit {
   // Helper for Tailwind classes based on status
   getStatusClass(item: Booking): string {
     if (item.status === 'pending_payment') return 'text-[#FFB800]';
-    if (item.status === 'active') return 'text-[#FFB800]';
+    if (item.status === 'active') return 'text-green-600'; // Active = Green as requested
     if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]';
-    if (item.status === 'completed') return 'text-green-500';
+    if (item.status === 'completed') return 'text-gray-500'; // Completed = Gray
     if (item.status === 'cancelled') return 'text-red-500';
     return '';
   }
