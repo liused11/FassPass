@@ -28,7 +28,7 @@ export class Tab2Page implements OnInit {
     { value: 'hourly', label: 'รายชั่วโมง' },
     { value: 'flat_24h', label: 'เหมาจ่าย 24 ชม.' },
     { value: 'monthly_regular', label: 'รายเดือน' },
-    { value: 'monthly_night', label: 'รายเดือน (คืน)' }
+
   ];
 
   // Segment for Status
@@ -38,14 +38,13 @@ export class Tab2Page implements OnInit {
   hourlyBookings: Booking[] = [];      // Was latestBookings/daily
   flat24Bookings: Booking[] = [];
   monthlyBookings: Booking[] = [];      // monthly_regular
-  nightlyBookings: Booking[] = [];      // monthly_night
+
 
   // Expanded states for sections
   expandedSections: any = {
     hourly: false,
     flat_24h: false,
     monthly_regular: false,
-    monthly_night: false
   };
 
   // Mock Data
@@ -281,7 +280,7 @@ export class Tab2Page implements OnInit {
     this.hourlyBookings = filtered.filter(b => b.bookingType === 'hourly');
     this.flat24Bookings = filtered.filter(b => b.bookingType === 'flat_24h');
     this.monthlyBookings = filtered.filter(b => b.bookingType === 'monthly_regular');
-    this.nightlyBookings = filtered.filter(b => b.bookingType === 'monthly_night');
+
   }
 
   // Helper for Tailwind classes based on status

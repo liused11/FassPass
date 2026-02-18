@@ -169,7 +169,7 @@ export class ReservationService {
       case 'daily': return 'hourly';
       case 'flat24': return 'flat_24h';
       case 'monthly': return 'monthly_regular';
-      case 'monthly_night': return 'monthly_night';
+
       default: return type; // Fallback to original if already correct or unknown
     }
   }

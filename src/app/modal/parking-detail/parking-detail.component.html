@@ -30,12 +30,7 @@
               [class.border-blue-100]="bookingMode === 'daily'" [class.bg-green-50]="bookingMode === 'flat24'"
               [class.text-green-600]="bookingMode === 'flat24'" [class.border-green-100]="bookingMode === 'flat24'"
               [class.bg-purple-50]="bookingMode === 'monthly'" [class.text-purple-600]="bookingMode === 'monthly'"
-              [class.border-purple-100]="bookingMode === 'monthly'"
-              [class.bg-orange-50]="bookingMode === 'monthly_night'"
-              [class.text-orange-600]="bookingMode === 'monthly_night'"
-              [class.border-orange-100]="bookingMode === 'monthly_night'">
-              {{ getModeLabel() }}
-            </span>
+              [class.border-purple-100]="bookingMode === 'monthly'"> {{ getModeLabel() }} </span>
             <span [class]="isOpenNow ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
               {{ isOpenNow ? 'เปิดอยู่' : 'ปิด' }}
             </span>
@@ -167,10 +162,7 @@
         <ion-item button (click)="selectBookingMode('monthly')" [class.selected-item]="bookingMode === 'monthly'">
           <ion-label>รายเดือน (Monthly)</ion-label>
         </ion-item>
-        <ion-item button (click)="selectBookingMode('monthly_night')"
-          [class.selected-item]="bookingMode === 'monthly_night'">
-          <ion-label>รายเดือน Night (18:00-08:00)</ion-label>
-        </ion-item>
+
       </ion-list>
     </ng-template>
   </ion-popover>
@@ -214,14 +206,14 @@
       <!-- Month Header -->
       <div class="px-4 py-2 text-gray-800 text-base font-bold flex justify-between items-center">
         <!-- Clickable Month Label for Picker -->
-        <button id="date-picker-trigger" [disabled]="bookingMode !== 'monthly' && bookingMode !== 'monthly_night'"
+        <button id="date-picker-trigger" [disabled]="bookingMode !== 'monthly'"
           class="flex items-center gap-1 bg-transparent -ml-2 px-2 py-1 rounded-lg hover:bg-gray-50">
           <span>{{ currentMonthLabel }}</span>
           <ion-icon name="caret-down-outline" class="text-xs text-gray-400"
-            *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'"></ion-icon>
+            *ngIf="bookingMode === 'monthly'"></ion-icon>
         </button>
 
-        <div class="flex gap-1" *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'">
+        <div class="flex gap-1" *ngIf="bookingMode === 'monthly'">
           <!-- Navigation for Calendar -->
           <button
             class="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 border border-gray-100"
@@ -238,7 +230,7 @@
 
       <!-- Date Picker Popover -->
       <ion-popover trigger="date-picker-trigger" dismissOnSelect="true" class="date-picker-popover"
-        *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'">
+        *ngIf="bookingMode === 'monthly'">
         <ng-template>
           <ion-datetime presentation="month-year" [value]="currentDisplayedDate.toISOString()" [min]="minDate"
             (ionChange)="onMonthSelected($event)" color="primary"></ion-datetime>
@@ -246,8 +238,7 @@
       </ion-popover>
 
       <!-- DAILY/HOURLY/24H VIEW: Horizontal Scroll -->
-      <div class="flex overflow-x-auto px-4 pb-2 gap-3 no-scrollbar items-center"
-        *ngIf="bookingMode !== 'monthly' && bookingMode !== 'monthly_night'">
+      <div class="flex overflow-x-auto px-4 pb-2 gap-3 no-scrollbar items-center" *ngIf="bookingMode !== 'monthly'">
         <button *ngFor="let day of displayDays; let i = index"
           class="flex flex-col items-center justify-center min-w-[80px] h-[64px] rounded-xl transition-all duration-200 border relative overflow-hidden"
           [class.bg-blue-600]="selectedDateIndex === i" [class.border-blue-600]="selectedDateIndex === i"
@@ -263,8 +254,7 @@
       </div>
 
       <!-- MONTHLY VIEW: Grid Calendar (1-31) -->
-      <div class="grid grid-cols-7 gap-1 px-4 pb-2 mb-2"
-        *ngIf="bookingMode === 'monthly' || bookingMode === 'monthly_night'">
+      <div class="grid grid-cols-7 gap-1 px-4 pb-2 mb-2" *ngIf="bookingMode === 'monthly'">
         <!-- Headers -->
         <div class="text-[10px] text-gray-400 text-center font-normal"
           *ngFor="let d of ['อา','จ','อ','พ','พฤ','ศ','ส']">{{d}}</div>
@@ -289,8 +279,7 @@
     </div>
 
     <!-- Time Selection (Only for Selected Day, Hide for Monthly as they pick Date directly) -->
-    <div id="time-selection-section" class="px-4 mt-6 mb-6"
-      *ngIf="bookingMode !== 'monthly' && bookingMode !== 'monthly_night'">
+    <div id="time-selection-section" class="px-4 mt-6 mb-6" *ngIf="bookingMode !== 'monthly'">
 
       <ng-container *ngFor="let dayIndex of dayIndices">
         <ng-container *ngIf="displayDays[dayIndex] as currentDay">

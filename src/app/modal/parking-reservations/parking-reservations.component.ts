@@ -248,7 +248,7 @@ export class ParkingReservationsComponent implements OnInit {
       case 'daily': this.bookingModeText = 'รายชั่วโมง (ทั่วไป)'; break;
       case 'flat24': this.bookingModeText = 'เหมาจ่าย 24 ชม.'; break;
       case 'monthly': this.bookingModeText = 'สมาชิกรายเดือน'; break;
-      case 'monthly_night': this.bookingModeText = 'รายเดือน (Night-Only)'; break;
+
     }
   }
 
@@ -461,7 +461,7 @@ export class ParkingReservationsComponent implements OnInit {
     let fixedDuration = 0;
     if (this.bookingMode === 'flat24') fixedDuration = 24 * 60; // 1440 mins
     else if (this.bookingMode === 'monthly') fixedDuration = 30 * 24 * 60; // 30 days
-    else if (this.bookingMode === 'monthly_night') fixedDuration = 14 * 60; // 18:00 - 08:00 = 14 hours (simplified)
+
 
     // ✅ If is Fixed Duration OR Interval Mode (Full/Half Day)
     if (this.slotInterval < 0 || fixedDuration > 0) {

@@ -77,7 +77,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
   @Input() lot!: ParkingLot;
   @Input() initialType: string = 'normal';
-  @Input() bookingMode: 'daily' | 'monthly' | 'flat24' | 'monthly_night' = 'daily';
+  @Input() bookingMode: 'daily' | 'monthly' | 'flat24' = 'daily';
 
   availableSites: ParkingLot[] = [];
   weeklySchedule: DailySchedule[] = [];
@@ -274,13 +274,13 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.displayDays = [];
     // Use currentDisplayedDate for Monthly, today for others (unless we want navigable daily?) 
     // Usually Daily starts from Today.
-    const baseDate = (this.bookingMode === 'monthly' || this.bookingMode === 'monthly_night') ? this.currentDisplayedDate : new Date();
+    const baseDate = (this.bookingMode === 'monthly') ? this.currentDisplayedDate : new Date();
 
     // Thai Days (Full Names)
     const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
-    if (this.bookingMode === 'monthly' || this.bookingMode === 'monthly_night') {
+    if (this.bookingMode === 'monthly') {
       // --- MONTHLY MODE: REAL CALENDAR VIEW ---
       this.currentMonthLabel = `${thaiMonths[baseDate.getMonth()]} ${baseDate.getFullYear() + 543}`;
 
@@ -381,22 +381,22 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         const currentDayKey = dayKeys[dayIndex];
 
         if (this.lot && this.lot.schedule) {
-             const schedule = this.lot.schedule.find(s => s.days.includes(currentDayKey));
-             if (schedule) {
-                 isOpen = true;
-                 const [oH, oM] = schedule.open_time.split(':').map(Number);
-                 const [cH, cM] = schedule.close_time.split(':').map(Number);
-                 startH = oH; startM = oM;
-                 endH = cH; endM = cM;
-                 timeLabel = `${schedule.open_time.slice(0,5)} - ${schedule.close_time.slice(0,5)}`;
-             }
+          const schedule = this.lot.schedule.find(s => s.days.includes(currentDayKey));
+          if (schedule) {
+            isOpen = true;
+            const [oH, oM] = schedule.open_time.split(':').map(Number);
+            const [cH, cM] = schedule.close_time.split(':').map(Number);
+            startH = oH; startM = oM;
+            endH = cH; endM = cM;
+            timeLabel = `${schedule.open_time.slice(0, 5)} - ${schedule.close_time.slice(0, 5)}`;
+          }
         } else {
-            // Fallback if no schedule but maybe open_time/close_time exists in parsed hours? 
-            // Or assume open if available?
-            // For now, if no schedule, default to 08:00 - 20:00 as fallback
-             isOpen = true;
-             timeLabel = '08:00 - 20:00';
-             startH = 8; endH = 20;
+          // Fallback if no schedule but maybe open_time/close_time exists in parsed hours? 
+          // Or assume open if available?
+          // For now, if no schedule, default to 08:00 - 20:00 as fallback
+          isOpen = true;
+          timeLabel = '08:00 - 20:00';
+          startH = 8; endH = 20;
         }
 
         const slots: TimeSlot[] = [];
@@ -408,7 +408,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         const totalOpenMinutes = Math.floor((closingTime.getTime() - startTime.getTime()) / 60000);
 
         if (!isOpen) {
-           // Closed logic handled below by empty slots
+          // Closed logic handled below by empty slots
         } else {
 
           // --- ADAPTED LOGIC FOR BOOKING MODES ---
@@ -852,7 +852,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     if (popover) popover.dismiss();
   }
 
-  async selectBookingMode(mode: 'daily' | 'monthly' | 'flat24' | 'monthly_night') {
+  async selectBookingMode(mode: 'daily' | 'monthly' | 'flat24') {
     // 1. Dismiss any open popovers immediately
     const popovers = document.querySelectorAll('ion-popover');
     if (popovers.length > 0) {
@@ -890,7 +890,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     const sDate = this.startSlot.dateTime;
 
     // --- ADAPTED SUMMARY FOR MODES ---
-    if (this.bookingMode === 'monthly' || this.bookingMode === 'monthly_night') {
+    if (this.bookingMode === 'monthly') {
       // Monthly: Show Start - End Date same as Logic
       // Logic: Start -> Start + 1 Month
       const eDate = new Date(sDate);
@@ -947,7 +947,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   getModeLabel(): string {
     switch (this.bookingMode) {
       case 'monthly': return 'รายเดือน';
-      case 'monthly_night': return 'รายเดือน Night';
+
       case 'flat24': return 'เหมา 24 ชม.';
       default: return 'รายชั่วโมง';
     }
@@ -989,12 +989,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       finalStart.setHours(0, 0, 0, 0);
       finalEnd.setHours(23, 59, 59, 999);
     }
-    else if (this.bookingMode === 'monthly_night') {
-      finalStart.setHours(18, 0, 0, 0);
-      finalEnd = new Date(finalStart);
-      finalEnd.setMonth(finalStart.getMonth() + 1);
-      finalEnd.setHours(8, 0, 0, 0);
-    }
+
     else if (this.bookingMode === 'flat24') {
       finalEnd = new Date(finalStart.getTime() + (24 * 60 * 60 * 1000));
     } else {
@@ -1107,7 +1102,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   calculatePrice(start: Date, end: Date): number {
     // Mock Pricing Logic
     const hours = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-    if (this.bookingMode === 'monthly' || this.bookingMode === 'monthly_night') return 1500;
+    if (this.bookingMode === 'monthly') return 1500;
     if (this.bookingMode === 'flat24') return 200;
     return hours * 20; // 20 THB/hr
   }
@@ -1166,15 +1161,15 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     const today = new Date().getDay();
     const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    
+
     this.weeklySchedule = [];
-    
+
     for (let i = 0; i < 7; i++) {
       const dayIndex = (today + i) % 7;
       const dayKey = dayKeys[dayIndex];
-      
+
       let timeRange = 'ปิดบริการ';
-      
+
       if (this.lot && this.lot.schedule) {
         const schedule = this.lot.schedule.find(s => s.days.includes(dayKey));
         if (schedule) {

@@ -34,14 +34,7 @@ export class BookingTypeSelectorComponent implements OnInit {
             color: 'tertiary',
             badge: null
         },
-        {
-            id: 'monthly_night',
-            title: 'รายเดือน (Night-Only)',
-            desc: 'เฉพาะช่วงเวลา 18:00 - 08:00 น.',
-            icon: 'moon-outline',
-            color: 'warning',
-            badge: 'ราคาประหยัด'
-        }
+
     ];
 
     constructor(private modalCtrl: ModalController) { }
