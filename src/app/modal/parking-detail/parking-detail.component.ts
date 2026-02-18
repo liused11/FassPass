@@ -798,8 +798,19 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         // ✅ Update the selected slot's remaining count to match the SUM of floor availability
         // This ensures the "366" (daily avg) becomes "363" (actual range availability)
         const totalRangeAvailable = this.floorData.reduce((sum, f) => sum + (f.totalAvailable || 0), 0);
-        if (this.startSlot) {
-          this.startSlot.remaining = totalRangeAvailable;
+
+        if (this.startSlot && this.endSlot) {
+          const startT = this.startSlot.dateTime.getTime();
+          const endT = this.endSlot.dateTime.getTime();
+
+          this.displayDays.forEach(day => {
+            day.slots.forEach(s => {
+              const sTime = s.dateTime.getTime();
+              if (sTime >= startT && sTime <= endT) {
+                s.remaining = totalRangeAvailable;
+              }
+            });
+          });
         }
 
         // Default Select First Floor
