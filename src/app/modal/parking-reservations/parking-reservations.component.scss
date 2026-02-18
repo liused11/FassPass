@@ -129,8 +129,14 @@ ion-footer {
 
 // --- Calendar Grid Buttons ---
 .slot-btn {
-  height: 44px;
-  border-radius: 10px;
+  // flex: 1; // Removed fixed height approach
+  flex-direction: column; // Allow stacking time + status
+  gap: 2px;
+  height: auto;
+  min-height: 52px;
+  padding: 6px 2px;
+
+  border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: white;
   color: #1f2937;

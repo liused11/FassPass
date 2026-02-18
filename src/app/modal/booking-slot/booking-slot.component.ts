@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController } from '@ionic/angular';
-import { CheckBookingComponent } from '../check-booking/check-booking.component';
+import { ParkingService } from '../../services/parking.service';
 
 interface ParkingSlot {
   id: string;
@@ -51,7 +51,10 @@ export class BookingSlotComponent implements OnInit {
   zoneGroups: ZoneGroup[] = [];
   selectedSlot: ParkingSlot | null = null;
 
-  constructor(private modalCtrl: ModalController) { }
+  constructor(
+    private modalCtrl: ModalController,
+    private parkingService: ParkingService
+  ) { }
 
   ngOnInit() {
     if (this.data) {
@@ -99,7 +102,7 @@ export class BookingSlotComponent implements OnInit {
     }
 
     this.generateSlots();
-    this.filterSlots();
+    // this.filterSlots(); // Called inside generateSlots after data load
   }
 
   updateZones() {
@@ -128,25 +131,85 @@ export class BookingSlotComponent implements OnInit {
     return '';
   }
 
-  generateSlots() {
+  async generateSlots() {
     this.allSlots = [];
-    Object.keys(this.zonesMap).forEach(floor => {
-      const floorZones = this.zonesMap[floor];
-      floorZones.forEach(zone => {
-        const totalSlotsPerZone = 12;
-        for (let i = 1; i <= totalSlotsPerZone; i++) {
-          // Deterministic pattern: Every 3rd slot is booked (indexes 3, 6, 9, 12, etc.)
-          const isBooked = (i % 3 === 0);
-          this.allSlots.push({
-            id: `${floor}-${zone}-${i}`,
-            label: `${zone.replace('Zone ', '')}${i.toString().padStart(2, '0')}`,
-            status: isBooked ? 'booked' : 'available',
-            floor: floor,
-            zone: zone,
-          });
-        }
-      });
-    });
+
+    if (!this.data || !this.data.siteId || !this.data.startSlot || !this.data.endSlot) {
+      console.warn('Missing data for slot generation');
+      return;
+    }
+
+    const buildingId = this.data.siteId;
+    const startTime = this.data.startSlot.dateTime;
+    const endTime = this.data.endSlot.dateTime;
+
+    console.log(`[BookingSlot] Generating slots for Building: ${buildingId}, Time: ${startTime.toISOString()} - ${endTime.toISOString()}`);
+
+    try {
+      const slots = await this.fetchRealSlots(buildingId);
+      const occupiedSlotIds = await this.fetchOccupiedSlots(buildingId, startTime, endTime);
+
+      this.allSlots = slots.map((s: any) => ({
+        id: s.id,
+        label: s.name, // e.g. "A01"
+        status: occupiedSlotIds.includes(s.id) ? 'booked' : 'available',
+        floor: s.floor_name, // Mapped from DB
+        zone: s.zone_name    // Mapped from DB
+      }));
+
+      console.log(`[BookingSlot] Generated ${this.allSlots.length} slots from real data`);
+      console.log(`[BookingSlot] Occupied Slots: ${occupiedSlotIds.length}`, occupiedSlotIds);
+
+      this.filterSlots();
+
+    } catch (err) {
+      console.error('Error generating slots from real data:', err);
+    }
+  }
+
+  // Helper to get all slots for the building
+  async fetchRealSlots(buildingId: string): Promise<any[]> {
+    const supabase = this.parkingService.supabaseClient;
+
+    const { data: slotsData, error: slotsError } = await supabase
+      .from('slots')
+      .select(`
+        id, 
+        name, 
+        zones!inner (name),
+        floors!inner (name)
+      `)
+      .eq('floors.building_id', buildingId);
+
+    if (slotsError) {
+      console.error('Error fetching slots:', slotsError);
+      throw slotsError;
+    }
+
+    return (slotsData || []).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      zone_name: s.zones?.name || 'Unknown Zone',
+      floor_name: s.floors?.name || 'Unknown Floor'
+    }));
+  }
+
+  async fetchOccupiedSlots(buildingId: string, start: Date, end: Date): Promise<string[]> {
+    const supabase = this.parkingService.supabaseClient;
+
+    // Use standard overlap check: (StartA < EndB) and (EndA > StartB)
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('slot_id')
+      .in('status', ['pending', 'confirmed', 'checked_in', 'active', 'pending_payment'])
+      .lt('start_time', end.toISOString())
+      .gt('end_time', start.toISOString());
+
+    if (error) {
+      console.error('Error fetching occupied slots:', error);
+      throw error;
+    }
+    return (data || []).map((r: any) => r.slot_id);
   }
 
   filterSlots() {

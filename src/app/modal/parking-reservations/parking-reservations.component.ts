@@ -396,7 +396,12 @@ export class ParkingReservationsComponent implements OnInit {
         // === ปกติ (ตาม Interval) ===
         let currentBtnTime = new Date(startTime);
         while (currentBtnTime < closingTime) {
-          this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, this.slotInterval);
+          // Use dailyAvailable as the base for slot availability
+          // We can't know per-slot availability without real API, but we can use the daily average.
+          // OR simply pass the full dailyAvailable number if it represents "Available spots right now".
+          // Since this is future/time-based, "Real Availability" is complex. 
+          // But for now, let's use the calculated dailyAvailable from lines 312-318.
+          this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, this.slotInterval, dailyAvailable);
           currentBtnTime.setMinutes(currentBtnTime.getMinutes() + this.slotInterval);
         }
       }
@@ -410,7 +415,7 @@ export class ParkingReservationsComponent implements OnInit {
   }
 
   // Helper สำหรับสร้าง Slot ปกติและครึ่งวัน
-  private createSingleSlot(slots: TimeSlot[], targetDate: Date, timeObj: Date, capacity: number, duration: number) {
+  private createSingleSlot(slots: TimeSlot[], targetDate: Date, timeObj: Date, capacity: number, duration: number, availableCount: number = 100) {
     const startH = timeObj.getHours();
     const startM = timeObj.getMinutes();
 
@@ -424,8 +429,8 @@ export class ParkingReservationsComponent implements OnInit {
     const isPast = timeObj < new Date();
     let remaining = 0;
     if (!isPast) {
-      // Deterministic: Always 100
-      remaining = 100;
+      // Use the passed available count
+      remaining = availableCount;
     }
     slots.push({
       id: `${targetDate.toISOString()}-${timeStr}`,

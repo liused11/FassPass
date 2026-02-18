@@ -21,10 +21,10 @@ export class ParkingService {
   getSiteBuildings(siteId: string, lat: number = 0, lng: number = 0, userId: string | null = null): Observable<ParkingLot[]> {
     const rpcName = 'get_site_buildings';
     const params = {
-        p_site_id: siteId,
-        p_lat: lat,
-        p_lng: lng,
-        p_user_id: userId
+      p_site_id: siteId,
+      p_lat: lat,
+      p_lng: lng,
+      p_user_id: userId
     };
 
     return from(
@@ -45,7 +45,7 @@ export class ParkingService {
       }),
       catchError(err => {
         console.error('Available Edge Function Call Failed:', err);
-        return of([]); 
+        return of([]);
       })
     );
   }
@@ -80,10 +80,10 @@ export class ParkingService {
    * Fetches time slot availability for a building.
    */
   getBuildingTimeSlots(
-    buildingId: string, 
-    startTime: Date, 
-    endTime: Date, 
-    intervalMinutes: number = 60, 
+    buildingId: string,
+    startTime: Date,
+    endTime: Date,
+    intervalMinutes: number = 60,
     vehicleType: string = 'car'
   ): Observable<any[]> {
     const rpcName = 'get_building_slots_availability';
@@ -132,5 +132,8 @@ export class ParkingService {
         return of(null);
       })
     );
+  }
+  get supabaseClient() {
+    return this.supabase.client;
   }
 }
