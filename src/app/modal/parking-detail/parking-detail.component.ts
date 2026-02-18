@@ -222,8 +222,30 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
   selectInterval(minutes: number) {
     this.slotInterval = minutes;
-    this.resetTimeSelection();
+    // Capture old time
+    const oldTime = this.startSlot ? this.startSlot.dateTime.getTime() : null;
+
+    this.resetTimeSelection(false);
     this.generateTimeSlots();
+
+    // Try to restore selection
+    if (oldTime) {
+      // Find matching slot in NEW slots
+      let newSlot: TimeSlot | undefined;
+      for (const day of this.displayDays) {
+        newSlot = day.slots.find(s => s.dateTime.getTime() === oldTime);
+        if (newSlot) break;
+      }
+
+      if (newSlot) {
+        this.startSlot = newSlot;
+        this.endSlot = newSlot;
+        // Trigger UI update and Load Detail
+        this.updateSelectionUI();
+        this.loadAvailability(true);
+      }
+    }
+
     const popover = document.querySelector('ion-popover.interval-popover') as any;
     if (popover) popover.dismiss();
   }
@@ -454,9 +476,12 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
               }
 
               this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, duration);
-              // FIXED: Always increment by 60 mins (1 hour) to allow overlapping slots (e.g. 4-hour duration starting at 13:00, 14:00 etc.)
-              // Instead of jumping by duration (which prevented selecting 14:00 if 13:00 was start of block)
-              currentBtnTime.setMinutes(currentBtnTime.getMinutes() + 60);
+
+              // Increment Step:
+              // For 'daily' (Hourly/4h), step by the interval itself to create distinct rounds (8-12, 12-16)
+              // For 'flat24', step by 60 mins to allow flexible start times (8-8, 9-9)
+              const step = this.bookingMode === 'flat24' ? 60 : this.slotInterval;
+              currentBtnTime.setMinutes(currentBtnTime.getMinutes() + step);
             }
           }
         }
@@ -693,6 +718,13 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       next: (data) => {
         console.log('Real Availability Data:', data);
         this.floorData = data; // API matches structure roughly
+
+        // ✅ Update the selected slot's remaining count to match the SUM of floor availability
+        // This ensures the "366" (daily avg) becomes "363" (actual range availability)
+        const totalRangeAvailable = this.floorData.reduce((sum, f) => sum + (f.totalAvailable || 0), 0);
+        if (this.startSlot) {
+          this.startSlot.remaining = totalRangeAvailable;
+        }
 
         // Default Select First Floor
         if (this.floorData.length > 0) {

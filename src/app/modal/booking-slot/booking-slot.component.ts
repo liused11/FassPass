@@ -60,7 +60,16 @@ export class BookingSlotComponent implements OnInit {
     if (this.data) {
       this.siteName = this.data.siteName || 'Unknown Site';
       if (this.data.startSlot && this.data.endSlot) {
-        this.timeString = `${this.data.startSlot.timeText} - ${this.data.endSlot.timeText}`;
+        // Fix: Calculate actual end time using duration
+        const startTimeStr = this.data.startSlot.timeText.split(' - ')[0];
+        const duration = this.data.endSlot.duration || 60;
+        const endTimeDate = new Date(this.data.startSlot.dateTime.getTime() + duration * 60000);
+
+        const endH = endTimeDate.getHours().toString().padStart(2, '0');
+        const endM = endTimeDate.getMinutes().toString().padStart(2, '0');
+        const endTimeStr = `${endH}:${endM}`;
+
+        this.timeString = `${startTimeStr} - ${endTimeStr}`;
       }
 
       if (this.data.selectedFloors && this.data.selectedFloors !== 'any') {
@@ -141,7 +150,15 @@ export class BookingSlotComponent implements OnInit {
 
     const buildingId = this.data.siteId;
     const startTime = this.data.startSlot.dateTime;
-    const endTime = this.data.endSlot.dateTime;
+
+    // Fix: Calculate actual end time by adding duration to START time (or adjust endSlot logic)
+    // The user states data.endSlot.dateTime is the START of the last block.
+    // So actual End Time = EndSlot.StartTime + EndSlot.Duration
+    // Or if EndSlot IS the end time? 
+    // The user says "this.data.endSlot.dateTime มันคือ 'เวลาเริ่มต้น' ของบล็อกสุดท้าย"
+    // So we must add duration.
+    const duration = this.data.endSlot.duration || 60;
+    const endTime = new Date(this.data.endSlot.dateTime.getTime() + duration * 60000);
 
     console.log(`[BookingSlot] Generating slots for Building: ${buildingId}, Time: ${startTime.toISOString()} - ${endTime.toISOString()}`);
 
