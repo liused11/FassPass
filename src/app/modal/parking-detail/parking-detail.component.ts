@@ -33,6 +33,7 @@ interface TimeSlot {
   isSelected: boolean;
   isInRange: boolean;
   remaining: number;
+  originalRemaining?: number; // Store raw availability from API
   duration?: number;
 }
 
@@ -549,24 +550,51 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   fetchTimeSlotAvailability() {
-    if (!this.lot || !this.parkingApiService) return;
+    if (!this.lot || !this.parkingApiService || this.displayDays.length === 0) return;
 
-    const startDate = new Date(this.displayDays[0].date);
+    // Default to the first day's date
+    let startDate = new Date(this.displayDays[0].date);
+
+    // Try to find the very first slot to use as accurate start time
+    // This is crucial for intervals > 60 mins (e.g. 4 hours) to align the API generation series
+    // with the UI slots. If UI slots start at 08:00, API should start at 08:00 too.
+    const firstDayWithSlots = this.displayDays.find(d => d.slots.length > 0);
+    if (firstDayWithSlots && firstDayWithSlots.slots.length > 0) {
+      startDate = new Date(firstDayWithSlots.slots[0].dateTime);
+    } else {
+      // Fallback: Set to midnight of the first day to catch most standard slots
+      startDate.setHours(0, 0, 0, 0);
+    }
+
     const lastDay = this.displayDays[this.displayDays.length - 1].date;
     const endDate = new Date(lastDay);
     endDate.setDate(endDate.getDate() + 1); // Cover the full last day
+    endDate.setHours(23, 59, 59, 999);
 
     // Determine interval from booking mode
     let interval = this.slotInterval;
-    if (this.bookingMode === 'flat24') interval = 60; // Fetch hourly for flat24 too? Or larger?
-    if (interval <= 0) interval = 60; // Default fallback
+
+    if (this.bookingMode === 'flat24') {
+      interval = 60; // Fetch hourly for flat24 too? Or larger?
+    } else if (interval < 0) {
+      // For Full Day (-1) or Half Day (-2), use the duration of the generated slots
+      // This ensures the API checks the full required duration (e.g. 12 hours) 
+      // instead of just 1 hour availability at the start time.
+      if (firstDayWithSlots && firstDayWithSlots.slots.length > 0) {
+        interval = firstDayWithSlots.slots[0].duration || 720;
+      } else {
+        interval = 720; // Default 12 hours if no slots found yet
+      }
+    }
+
+    if (interval <= 0) interval = 60; // Safety fallback
 
     const buildingId = this.lot.id; // Correct ID usage?
     // Check if selectedLot.id is actually the building ID or site ID?
     // In getSiteBuildings, likely building.id.
 
     // Convert vehicle type? The component might calculate this.
-    const vehicleType = 'car'; // Use a real value if stored in component
+    const vehicleType = this.selectedType === 'motorcycle' ? 'motorcycle' : (this.selectedType === 'ev' ? 'ev' : 'car');
 
     this.parkingApiService.getBuildingTimeSlots(buildingId, startDate, endDate, interval, vehicleType)
       .subscribe(data => {
@@ -574,27 +602,43 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         // data: { slot_time: string, available_count: number, ... }[]
 
         // Create a lookup map for speed
+        // ✅ 1. ใช้ Map ที่เก็บ Key เป็น ISO String เพื่อความเป็นกลางทาง Timezone
         const availabilityMap = new Map<string, number>();
-        data.forEach(row => {
+        data.forEach((row: any) => {
           // Normalize time string to match slot.dateTime.toISOString() or similar comparison
           // User updated RPC to return 't_start' and aligned times
           const timeVal = row.t_start || row.slot_time;
           if (timeVal) {
-            const t = new Date(timeVal).getTime();
-            availabilityMap.set(t.toString(), row.available_count);
+            // แปลงเป็น ISO String และล้างวินาที/มิลลิวินาทีให้สะอาด
+            const d = new Date(timeVal);
+            d.setSeconds(0, 0);
+            availabilityMap.set(d.toISOString(), row.available_count);
           }
         });
 
         // Update slots
+        // ✅ 2. อัปเดต UI โดยการเทียบ Key ในรูปแบบเดียวกัน
         this.displayDays.forEach(day => {
           day.slots.forEach(slot => {
-            const t = slot.dateTime.getTime().toString();
-            if (availabilityMap.has(t)) {
-              slot.remaining = availabilityMap.get(t) || 0;
+            const slotD = new Date(slot.dateTime);
+            slotD.setSeconds(0, 0);
+            const slotIsoKey = slotD.toISOString();
+
+            if (availabilityMap.has(slotIsoKey)) {
+              const rawVal = availabilityMap.get(slotIsoKey) || 0;
+              slot.remaining = rawVal;
+              slot.originalRemaining = rawVal;
+              // ตรวจสอบว่ามีที่ว่างและยังไม่เลยเวลาปัจจุบัน
               slot.isAvailable = slot.remaining > 0 && slot.dateTime > new Date();
+            } else {
+              // หากไม่เจอใน Map ให้ถือว่าไม่มีข้อมูล หรือไม่ว่าง (หรือใช้ค่า Default เดิม 0)
+              // slot.remaining = 0; // Optional: Force 0 if missing?
             }
           });
         });
+
+        // Update UI to reflect minimum availability for selected range
+        this.updateSelectionUI();
       });
   }
 
@@ -673,20 +717,44 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
 
   updateSelectionUI() {
+    let slotsInRange: TimeSlot[] = [];
+
     this.displayDays.forEach(day => {
       day.slots.forEach(s => {
-        // Safe check for nulls
+        // 1. Restore original availability if available (to clear previous calculations)
+        if (s.originalRemaining !== undefined) {
+          s.remaining = s.originalRemaining;
+        }
+
+        // 2. Determine Selection State
         const isStart = !!this.startSlot && s.id === this.startSlot.id;
         const isEnd = !!this.endSlot && s.id === this.endSlot.id;
         s.isSelected = isStart || isEnd;
 
+        // 3. Determine Range State
         if (this.startSlot && this.endSlot) {
-          // Check range using raw time values
-          s.isInRange = s.dateTime.getTime() > this.startSlot.dateTime.getTime() &&
-            s.dateTime.getTime() < this.endSlot.dateTime.getTime();
+          const sTime = s.dateTime.getTime();
+          const startT = this.startSlot.dateTime.getTime();
+          const endT = this.endSlot.dateTime.getTime();
 
-          // Explicitly exclude start/end from in-range visual (they have their own Selected style)
-          if (s.id === this.startSlot.id || s.id === this.endSlot.id) {
+          // Collect slots strictly within the selected range [Start, End] for min calculation
+          // FIX: For continuous time ranges, the end slot marks the END of the booking period.
+          // We should check slots from Start up to (but not including) End, OR include End if it's the only slot.
+          // Currently UI treats EndSlot as the last INCLUSIVE 1-hour block if selection mode is range.
+          // IF the user selects 9:00 and 10:00 (Range 9:00 - 11:00), we need 9:00 and 10:00 slots.
+          // IF the user selects 9:00 only (Range 9:00 - 10:00), we need 9:00 slot.
+
+          // Logic: Include slot if it falls within the range. 
+          // Since our slots represent blocks (e.g. 9:00 is 9-10), we usually include start and end slots in the set.
+          if (sTime >= startT && sTime <= endT) {
+            slotsInRange.push(s);
+          }
+
+          // Visual In-Range flag (exclusive of start/end usually)
+          s.isInRange = sTime > startT && sTime < endT;
+
+          // Explicitly exclude start/end from in-range visual style
+          if (isStart || isEnd) {
             s.isInRange = false;
           }
         } else {
@@ -694,6 +762,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         }
       });
     });
+
+    // 4. Calculate Minimum Availability in Range and Update Display
+    if (slotsInRange.length > 0) {
+      const minAvailable = Math.min(...slotsInRange.map(s => s.remaining));
+      slotsInRange.forEach(s => {
+        s.remaining = minAvailable;
+      });
+    }
   }
 
   // --- Mock Data Generation ---

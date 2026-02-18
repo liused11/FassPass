@@ -190,9 +190,12 @@
         <ion-list-header>ความถี่ช่องจอด</ion-list-header>
         <ion-item button (click)="selectInterval(60)" [class.selected-item]="slotInterval === 60">1 ชั่วโมง</ion-item>
         <ion-item button (click)="selectInterval(240)" [class.selected-item]="slotInterval === 240">4 ชั่วโมง</ion-item>
+
         <div class="w-full h-[1px] bg-gray-100 my-1"></div>
+
         <ion-item button (click)="selectInterval(-2)" [class.selected-item]="slotInterval === -2">ครึ่งวัน</ion-item>
         <ion-item button (click)="selectInterval(-1)" [class.selected-item]="slotInterval === -1">เต็มวัน</ion-item>
+
       </ion-list>
     </ng-template>
   </ion-popover>
