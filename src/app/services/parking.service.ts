@@ -84,7 +84,8 @@ export class ParkingService {
     startTime: Date,
     endTime: Date,
     intervalMinutes: number = 60,
-    vehicleType: string = 'car'
+    vehicleType: string = 'car',
+    durationMinutes: number | null = null // New Argument
   ): Observable<any[]> {
     const rpcName = 'get_building_slots_availability';
     const params = {
@@ -92,7 +93,8 @@ export class ParkingService {
       p_start_time: startTime.toISOString(),
       p_end_time: endTime.toISOString(),
       p_interval_minutes: intervalMinutes,
-      p_vehicle_type: vehicleType
+      p_vehicle_type: vehicleType,
+      p_duration_minutes: durationMinutes
     };
 
     return from(

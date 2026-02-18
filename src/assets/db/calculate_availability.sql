@@ -126,11 +126,12 @@ ALTER FUNCTION "public"."get_building_availability"("p_building_id" "text", "p_s
 -- Returns availability count for each time interval
 -- Logic: Loop intervals -> Count (Total - Occupied), Shared Pool
 -- =============================================
-CREATE OR REPLACE FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text") RETURNS TABLE("slot_time" timestamp with time zone, "total_capacity" bigint, "reserved_count" bigint, "available_count" bigint)
+CREATE OR REPLACE FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text", "p_duration_minutes" integer DEFAULT NULL) RETURNS TABLE("slot_time" timestamp with time zone, "total_capacity" bigint, "reserved_count" bigint, "available_count" bigint)
     LANGUAGE "plpgsql"
     AS $$
 DECLARE
   v_vehicle_code INT;
+  v_duration_interval INTERVAL;
 BEGIN
   -- Map text input to integer code
   IF p_vehicle_type = 'motorcycle' THEN v_vehicle_code := 0;
@@ -138,8 +139,8 @@ BEGIN
   ELSE v_vehicle_code := 1; -- default 'car'
   END IF;
 
-  -- Force start time to beginning of the hour to ensure clean slots (e.g., 00:00, 01:00)
-  p_start_time := date_trunc('hour', p_start_time);
+  -- Use provided duration or fallback to interval (step)
+  v_duration_interval := (COALESCE(p_duration_minutes, p_interval_minutes) || ' minutes')::INTERVAL;
 
   RETURN QUERY
   WITH 
@@ -155,6 +156,7 @@ BEGIN
     FROM slots s
     JOIN floors f ON s.floor_id = f.id
     WHERE f.building_id = p_building_id
+    AND s.status = 'available' -- Only count currently functioning slots
     AND (
       p_vehicle_type IS NULL 
       OR s.vehicle_type_code = v_vehicle_code 
@@ -166,10 +168,10 @@ BEGIN
   slot_reservations AS (
     SELECT 
       ts.t_start,
-      COUNT(r_filtered.id) AS reserved_qty
+      COUNT(DISTINCT r_filtered.slot_id) AS reserved_qty -- Count DISTINCT slots occupied
     FROM time_series ts
     LEFT JOIN (
-      SELECT r.start_time, r.end_time, r.id
+      SELECT r.start_time, r.end_time, r.id, r.slot_id
       FROM reservations r
       JOIN slots s ON r.slot_id = s.id
       JOIN floors f ON s.floor_id = f.id
@@ -181,7 +183,7 @@ BEGIN
       )
       AND r.status IN ('pending', 'checked_in', 'confirmed', 'pending_payment', 'active')
     ) r_filtered ON 
-      (r_filtered.start_time < (ts.t_start + (p_interval_minutes || ' minutes')::INTERVAL)
+      (r_filtered.start_time < (ts.t_start + v_duration_interval)  -- Check overlap with FULL DURATION
       AND r_filtered.end_time > ts.t_start)
     GROUP BY ts.t_start
   )
@@ -198,4 +200,4 @@ BEGIN
 
 END;
 $$;
-ALTER FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text", "p_duration_minutes" integer) OWNER TO "postgres";

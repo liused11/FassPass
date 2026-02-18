@@ -315,7 +315,7 @@
 
                   <span class="text-xs font-semibold leading-tight">{{ slot.timeText }}</span>
                   <span class="text-[11px] font-normal opacity-60" *ngIf="slot.isAvailable">
-                    {{ bookingMode === 'flat24' ? 'ว่าง 5' : 'ว่าง ' + slot.remaining }}
+                    {{ 'ว่าง ' + slot.remaining }}
                   </span>
                 </button>
               </div>

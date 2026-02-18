@@ -554,21 +554,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     // Default to the first day's date
     let startDate = new Date(this.displayDays[0].date);
-
-    // Try to find the very first slot to use as accurate start time
-    // This is crucial for intervals > 60 mins (e.g. 4 hours) to align the API generation series
-    // with the UI slots. If UI slots start at 08:00, API should start at 08:00 too.
-    const firstDayWithSlots = this.displayDays.find(d => d.slots.length > 0);
-    if (firstDayWithSlots && firstDayWithSlots.slots.length > 0) {
-      startDate = new Date(firstDayWithSlots.slots[0].dateTime);
-    } else {
-      // Fallback: Set to midnight of the first day to catch most standard slots
-      startDate.setHours(0, 0, 0, 0);
-    }
+    // Force start date to midnight to ensure consistent, aligned time series generation (00:00, 01:00...)
+    startDate.setHours(0, 0, 0, 0);
 
     const lastDay = this.displayDays[this.displayDays.length - 1].date;
     const endDate = new Date(lastDay);
-    endDate.setDate(endDate.getDate() + 1); // Cover the full last day
+    // Extend end date by 2 days to ensure we cover the full duration of bookings 
+    // starting on the last day (e.g. 24h flat rate extending into the next day)
+    endDate.setDate(endDate.getDate() + 2);
     endDate.setHours(23, 59, 59, 999);
 
     // Determine interval from booking mode
@@ -580,6 +573,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       // For Full Day (-1) or Half Day (-2), use the duration of the generated slots
       // This ensures the API checks the full required duration (e.g. 12 hours) 
       // instead of just 1 hour availability at the start time.
+      const firstDayWithSlots = this.displayDays.find(d => d.slots.length > 0);
       if (firstDayWithSlots && firstDayWithSlots.slots.length > 0) {
         interval = firstDayWithSlots.slots[0].duration || 720;
       } else {
@@ -589,14 +583,29 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     if (interval <= 0) interval = 60; // Safety fallback
 
-    const buildingId = this.lot.id; // Correct ID usage?
+    const buildingId = this.lot.id;
     // Check if selectedLot.id is actually the building ID or site ID?
     // In getSiteBuildings, likely building.id.
 
     // Convert vehicle type? The component might calculate this.
     const vehicleType = this.selectedType === 'motorcycle' ? 'motorcycle' : (this.selectedType === 'ev' ? 'ev' : 'car');
 
-    this.parkingApiService.getBuildingTimeSlots(buildingId, startDate, endDate, interval, vehicleType)
+    // Pass 'duration' explicitly for overlapping checks (e.g. 1440 for flat24)
+    // For normal daily mode, interval == duration usually.
+    let durationToCheck = interval;
+    if (this.bookingMode === 'flat24') {
+      durationToCheck = 1440;
+    } else if (interval < 0) {
+      // Full day / Half day logic
+      const firstDayWithSlots = this.displayDays.find(d => d.slots.length > 0); // Re-declare or ensure scope
+      if (firstDayWithSlots && firstDayWithSlots.slots.length > 0) {
+        durationToCheck = firstDayWithSlots.slots[0].duration || 720;
+      } else {
+        durationToCheck = 720;
+      }
+    }
+
+    this.parkingApiService.getBuildingTimeSlots(buildingId, startDate, endDate, interval, vehicleType, durationToCheck)
       .subscribe(data => {
         // Map data to slots
         // data: { slot_time: string, available_count: number, ... }[]
@@ -618,22 +627,44 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
         // Update slots
         // ✅ 2. อัปเดต UI โดยการเทียบ Key ในรูปแบบเดียวกัน
+        const intervalMs = interval * 60000;
+
         this.displayDays.forEach(day => {
           day.slots.forEach(slot => {
-            const slotD = new Date(slot.dateTime);
-            slotD.setSeconds(0, 0);
-            const slotIsoKey = slotD.toISOString();
+            const slotTime = slot.dateTime.getTime();
 
+            // Generate aligned key: Find the interval bucket that contains this slot
+            // Since SQL generated series from Midnight with 'interval' steps, we align to that.
+            // Using local time offset logic might be needed if Midnight is local, but Date.getTime() is UTC.
+            // Assuming the series generation in SQL (timestamp with time zone) and JS match.
+            // Simplest alignment: Round down to nearest interval from the base StartDate (Midnight)
+            // But simplified: Round down to nearest interval modulus.
+
+            // To be safe against timezone shifts, we align to the 'startDate' (Timezone aware midnight) we defined earlier
+            const timeSinceStart = slotTime - startDate.getTime();
+            const alignedOffset = Math.floor(timeSinceStart / intervalMs) * intervalMs;
+            const alignedTime = new Date(startDate.getTime() + alignedOffset);
+
+            const slotIsoKey = alignedTime.toISOString();
+
+            let minAvailable = 0;
+            // Direct lookup: The API now returns the correct 'min available' (bottleneck capacity) 
+            // for the requested duration starting at this time.
             if (availabilityMap.has(slotIsoKey)) {
-              const rawVal = availabilityMap.get(slotIsoKey) || 0;
-              slot.remaining = rawVal;
-              slot.originalRemaining = rawVal;
-              // ตรวจสอบว่ามีที่ว่างและยังไม่เลยเวลาปัจจุบัน
-              slot.isAvailable = slot.remaining > 0 && slot.dateTime > new Date();
+              minAvailable = availabilityMap.get(slotIsoKey) || 0;
             } else {
-              // หากไม่เจอใน Map ให้ถือว่าไม่มีข้อมูล หรือไม่ว่าง (หรือใช้ค่า Default เดิม 0)
-              // slot.remaining = 0; // Optional: Force 0 if missing?
+              // Fallback: If aligned key missing (e.g. due to slightly different TZ handling), try exact slot time
+              const exactD = new Date(slot.dateTime);
+              exactD.setSeconds(0, 0);
+              if (availabilityMap.has(exactD.toISOString())) {
+                minAvailable = availabilityMap.get(exactD.toISOString()) || 0;
+              }
             }
+
+            slot.remaining = minAvailable;
+            slot.originalRemaining = minAvailable;
+            // ตรวจสอบว่ามีที่ว่างและยังไม่เลยเวลาปัจจุบัน
+            slot.isAvailable = slot.remaining > 0 && slot.dateTime > new Date();
           });
         });
 
