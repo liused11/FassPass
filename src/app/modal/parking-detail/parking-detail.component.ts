@@ -658,13 +658,13 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     if (this.startSlot && this.endSlot) {
       this.loadAvailability();
 
-      // Auto-Scroll to Location Section
-      setTimeout(() => {
-        const el = document.getElementById('location-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 300);
+      // Auto-Scroll removed
+      // setTimeout(() => {
+      //   const el = document.getElementById('location-section');
+      //   if (el) {
+      //     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      //   }
+      // }, 300);
     } else {
       this.floorData = [];
     }

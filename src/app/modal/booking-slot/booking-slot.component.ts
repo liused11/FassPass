@@ -31,21 +31,17 @@ export class BookingSlotComponent implements OnInit {
   siteName: string = '';
   timeString: string = '';
 
-  floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
+  floors: string[] = [];
   zones: string[] = [];
 
-  selectedFloor: string = 'Floor 1';
+  selectedFloor: string = '';
 
   // เก็บรายการโซนที่เลือก (Multiple Choice)
   selectedZones: string[] = [];
 
   allowedZones: string[] = [];
 
-  zonesMap: { [key: string]: string[] } = {
-    'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
-    'Floor 2': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
-    'Floor 3': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
-  };
+  zonesMap: { [key: string]: string[] } = {};
 
   allSlots: ParkingSlot[] = [];
   zoneGroups: ZoneGroup[] = [];
@@ -131,12 +127,7 @@ export class BookingSlotComponent implements OnInit {
   }
 
   getZoneDistanceInfo(zoneName: string): string {
-    const zone = zoneName.replace('Zone ', '').trim();
-    if (zone === 'A') return 'ใกล้ทางเข้าที่สุด';
-    if (zone === 'B') return 'ใกล้ทางเข้า';
-    if (zone === 'C') return 'ระยะเดินปานกลาง';
-    if (zone === 'D') return 'ระยะเดินไกล';
-    if (zone === 'E') return 'ไกลที่สุด';
+    // Return empty string or perhaps fetch description from DB later
     return '';
   }
 
@@ -165,6 +156,41 @@ export class BookingSlotComponent implements OnInit {
     try {
       const slots = await this.fetchRealSlots(buildingId);
       const occupiedSlotIds = await this.fetchOccupiedSlots(buildingId, startTime, endTime);
+
+      // --- DYNAMIC DATA EXTRACTION ---
+      // 1. Extract Unique Floors
+      const uniqueFloors = [...new Set(slots.map((s: any) => s.floor_name))].sort();
+      this.floors = uniqueFloors;
+
+      // 2. Build Dynamic Zones Map
+      this.zonesMap = {};
+      slots.forEach((s: any) => {
+        const f = s.floor_name;
+        const z = s.zone_name;
+        if (!this.zonesMap[f]) {
+          this.zonesMap[f] = [];
+        }
+        if (!this.zonesMap[f].includes(z)) {
+          this.zonesMap[f].push(z);
+        }
+      });
+
+      // Sort zones for each floor
+      Object.keys(this.zonesMap).forEach(key => {
+        this.zonesMap[key].sort();
+      });
+
+      // 3. Update Selection Defaults (if not already set or invalid)
+      if (this.floors.length > 0) {
+        if (!this.floors.includes(this.selectedFloor)) {
+          this.selectedFloor = this.floors[0];
+        }
+      } else {
+        this.selectedFloor = '';
+      }
+
+      this.updateZones();
+      // Note: updateZones() resets selectedZones to ALL if not manually set, which is desired.
 
       this.allSlots = slots.map((s: any) => ({
         id: s.id,

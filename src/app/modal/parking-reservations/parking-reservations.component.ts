@@ -5,6 +5,7 @@ import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
 import { CheckBookingComponent } from '../check-booking/check-booking.component';
 import { BookingTypeSelectorComponent } from '../booking-type-selector/booking-type-selector.component';
 import { ParkingDataService } from '../../services/parking-data.service';
+import { ParkingService } from '../../services/parking.service'; // New Service
 import { Booking } from '../../data/models';
 
 interface DaySection {
@@ -40,12 +41,7 @@ export class ParkingReservationsComponent implements OnInit {
   @Input() preSelectedFloor: string = '';
   @Input() preSelectedZone: string = '';
 
-  mockSites = [
-    { id: 'lib_complex', name: 'อาคารหอสมุด (Library)' },
-    { id: 'ev_station_1', name: 'สถานีชาร์จ EV (ตึก S11)' },
-    { id: 'moto_dorm', name: 'โรงจอดมอไซค์ หอพักชาย' },
-    { id: 'eng_building', name: 'ตึกวิศวกรรมศาสตร์' }
-  ];
+  // Removed mockSites = [...]
   currentSiteName: string = '';
   isSpecificSlot: boolean = false;
   isCrossDay: boolean = false; //  New state for Cross Day toggle
@@ -61,11 +57,7 @@ export class ParkingReservationsComponent implements OnInit {
 
   slotInterval: number = 60; // ค่า -1 = เต็มวัน, -2 = ครึ่งวัน
 
-  zonesMap: { [key: string]: string[] } = {
-    'Floor 1': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
-    'Floor 2': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'],
-    'Floor 3': ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E']
-  };
+  // Removed zonesMap = {...}
   availableFloors: string[] = [];
   availableZones: string[] = [];
 
@@ -77,7 +69,8 @@ export class ParkingReservationsComponent implements OnInit {
     private modalCtrl: ModalController,
     private toastCtrl: ToastController,
     private router: Router,
-    private parkingService: ParkingDataService
+    private parkingService: ParkingDataService,
+    private parkingApiService: ParkingService // Inject RPC Service
   ) { }
 
   ngOnInit() {
@@ -89,16 +82,20 @@ export class ParkingReservationsComponent implements OnInit {
     if (this.preSelectedFloor && this.preSelectedFloor !== 'any') {
       this.availableFloors = this.preSelectedFloor.split(',');
     } else {
+      // Dynamic loading from lot data
       if (this.lot?.floors && this.lot.floors.length > 0) {
         this.availableFloors = this.lot.floors;
       } else {
-        this.availableFloors = ['Floor 1', 'Floor 2'];
+        this.availableFloors = []; // Empty if no data
       }
     }
+
+    // Select all available floors by default if any
     this.selectedFloorIds = [...this.availableFloors];
 
     // --- Init Zones ---
     this.updateAvailableZones();
+    // Select all available zones by default
     this.selectedZoneNames = [...this.availableZones];
 
     this.generateData();
@@ -151,7 +148,12 @@ export class ParkingReservationsComponent implements OnInit {
     if (this.preSelectedZone && this.preSelectedZone !== 'any') {
       this.availableZones = this.preSelectedZone.split(',');
     } else {
-      this.availableZones = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
+      // Dynamic loading from lot data if available, otherwise empty
+      if (this.lot?.zones && this.lot.zones.length > 0) {
+        this.availableZones = this.lot.zones;
+      } else {
+        this.availableZones = []; // Empty, no hardcoding
+      }
     }
   }
 
@@ -362,8 +364,7 @@ export class ParkingReservationsComponent implements OnInit {
         const isPast = startTime < new Date();
         let remaining = 0;
         if (!isPast) {
-          // Deterministic: 100
-          remaining = 100;
+          remaining = dailyAvailable; // Use real data
         }
 
         slots.push({
@@ -383,13 +384,13 @@ export class ParkingReservationsComponent implements OnInit {
 
         // รอบแรก
         const slot1Time = new Date(startTime);
-        this.createSingleSlot(slots, targetDate, slot1Time, dailyCapacity, halfDuration);
+        this.createSingleSlot(slots, targetDate, slot1Time, dailyCapacity, halfDuration, dailyAvailable);
 
         // รอบสอง
         const slot2Time = new Date(startTime.getTime() + halfDuration * 60000);
         // เช็คว่าไม่เกินเวลาปิด
         if (slot2Time < closingTime) {
-          this.createSingleSlot(slots, targetDate, slot2Time, dailyCapacity, halfDuration);
+          this.createSingleSlot(slots, targetDate, slot2Time, dailyCapacity, halfDuration, dailyAvailable);
         }
 
       } else {
@@ -412,10 +413,90 @@ export class ParkingReservationsComponent implements OnInit {
       });
     }
     this.updateSelectionUI();
+
+    // FETCH REAL AVAILABILITY AFTER GENERATING STRUCTURE
+    this.loadRealtimeAvailability();
+  }
+
+  loadRealtimeAvailability() {
+    if (!this.lot?.id || this.displayDays.length === 0) return;
+
+    const startDate = new Date(this.displayDays[0].date);
+    const lastDate = new Date(this.displayDays[this.displayDays.length - 1].date);
+    const endDate = new Date(lastDate);
+    endDate.setDate(endDate.getDate() + 1); // Cover full last day
+
+    // Calculate effective interval for API
+    let apiInterval = this.slotInterval;
+
+    // Helper to estimate open duration if needed
+    // We'll use the first day's scheduling or default 12h (720m) if -1/-2
+    if (this.slotInterval < 0) {
+      // Estimate from first generated day that is open
+      const openDay = this.displayDays.find(d => d.slots.length > 0);
+      let duration = 720; // Default 12h
+      if (openDay && openDay.slots.length > 0) {
+        // Sum of durations of first day? Or check first slot duration?
+        // For Full Day (-1), we have 1 slot. Duration is full day.
+        // For Half Day (-2), we have 2 slots. Duration is half day.
+        // We can take openDay.slots[0].duration
+        duration = openDay.slots[0].duration || 720;
+      }
+      apiInterval = duration;
+    }
+
+    if (apiInterval <= 0) apiInterval = 60; // Safety
+
+    // Assuming we treat vehicleType as selectedType
+    const vehicleType = this.selectedType === 'motorcycle' ? 'motorcycle' : (this.selectedType === 'ev' ? 'ev' : 'car');
+
+    this.parkingApiService.getBuildingTimeSlots(
+      this.lot.id,
+      startDate,
+      endDate,
+      apiInterval,
+      vehicleType
+    ).subscribe({
+      next: (data) => {
+        // ✅ 1. ใช้ Map ที่เก็บ Key เป็น ISO String เพื่อความเป็นกลางทาง Timezone
+        const availabilityMap = new Map<string, number>();
+
+        data.forEach((row: any) => {
+          const tStart = row.slot_time || row.t_start;
+          if (tStart) {
+            // แปลงเป็น ISO String และล้างวินาที/มิลลิวินาทีให้สะอาด
+            const d = new Date(tStart);
+            d.setSeconds(0, 0);
+            availabilityMap.set(d.toISOString(), row.available_count);
+          }
+        });
+
+        // ✅ 2. อัปเดต UI โดยการเทียบ Key ในรูปแบบเดียวกัน
+        this.displayDays.forEach(day => {
+          day.slots.forEach(slot => {
+            const slotD = new Date(slot.dateTime);
+            slotD.setSeconds(0, 0);
+            const slotIsoKey = slotD.toISOString();
+
+            if (availabilityMap.has(slotIsoKey)) {
+              const realVal = availabilityMap.get(slotIsoKey) || 0;
+              slot.remaining = realVal;
+              // ตรวจสอบว่ามีที่ว่างและยังไม่เลยเวลาปัจจุบัน
+              slot.isAvailable = realVal > 0 && slot.dateTime > new Date();
+            } else {
+              // หากไม่เจอใน Map ให้ถือว่าไม่มีข้อมูล หรือไม่ว่าง (หรือใช้ค่า Default เดิม)
+              slot.remaining = 0;
+              slot.isAvailable = false;
+            }
+          });
+        });
+      },
+      error: (err) => console.error('Error fetching real availability:', err)
+    });
   }
 
   // Helper สำหรับสร้าง Slot ปกติและครึ่งวัน
-  private createSingleSlot(slots: TimeSlot[], targetDate: Date, timeObj: Date, capacity: number, duration: number, availableCount: number = 100) {
+  private createSingleSlot(slots: TimeSlot[], targetDate: Date, timeObj: Date, capacity: number, duration: number, availableCount: number = 0) {
     const startH = timeObj.getHours();
     const startM = timeObj.getMinutes();
 
