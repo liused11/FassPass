@@ -174,9 +174,13 @@ export class Tab2Page implements OnInit {
               // "1-1-2-1-1" -> Floor is parts[2] (2)
               floorLabel = parts[2];
 
-              // "1-1-1-2-1" -> Zone is parts[3] (2 -> B)
-              if (parts[3] === '1') zoneLabel = 'A';
-              else if (parts[3] === '2') zoneLabel = 'B';
+              // "1-1-1-2-1" -> Zone is parts[3] (1-24 -> A-Z)
+              const zoneNum = parseInt(parts[3], 10);
+              if (!isNaN(zoneNum) && zoneNum >= 1 && zoneNum <= 26) {
+                zoneLabel = String.fromCharCode(64 + zoneNum);
+              } else {
+                zoneLabel = parts[3]; // Fallback
+              }
             }
           }
 
@@ -191,12 +195,48 @@ export class Tab2Page implements OnInit {
           // Fallback to 'hourly' if undefined
           const bookingType = r.booking_type || 'hourly';
 
+          const bookingDate = (r.start_time.includes('Z') || r.start_time.includes('+')) ? new Date(r.start_time) : new Date(r.start_time + 'Z');
+          const endDate = (r.end_time.includes('Z') || r.end_time.includes('+')) ? new Date(r.end_time) : new Date(r.end_time + 'Z');
+
+          let periodLabel: string | undefined = undefined;
+
+          if (bookingType === 'monthly_regular' || bookingType === 'monthly_night') {
+            // For monthly, show "20 Feb - 20 Mar"
+            // We calculate the end date relative to start date + 1 month roughly
+            // Or rely on the Date object formatting if we trust the month increment
+            const startStr = bookingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+            // Logic: Add 1 month to bookingDate for the end display, 
+            // or use endDate if it is already correct. 
+            // The user request: "plus 1 month".
+            const calculatedEndDate = new Date(bookingDate);
+            calculatedEndDate.setMonth(calculatedEndDate.getMonth() + 1);
+
+            const endStr = calculatedEndDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            periodLabel = `${startStr} - ${endStr}`;
+          }
+
+          let dateLabel: string | undefined = undefined;
+          // Check if cross-day booking for hourly/flat24h to update date display
+          if (bookingType === 'hourly' || bookingType === 'flat_24h' || bookingType === 'daily') {
+            const isSameDay = bookingDate.getDate() === endDate.getDate() &&
+              bookingDate.getMonth() === endDate.getMonth() &&
+              bookingDate.getFullYear() === endDate.getFullYear();
+
+            if (!isSameDay) {
+              // Format: "21 Feb - 22 Feb"
+              const startStr = bookingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              const endStr = endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              dateLabel = `${startStr} - ${endStr}`;
+            }
+          }
+
           return {
             id: r.id,
             placeName: placeName,
             locationDetails: `ตึก ${buildingLabel} ชั้น ${floorLabel} | โซน ${zoneLabel} | ${r.slot_id || '-'}`,
-            bookingTime: (r.start_time.includes('Z') || r.start_time.includes('+')) ? new Date(r.start_time) : new Date(r.start_time + 'Z'),
-            endTime: (r.end_time.includes('Z') || r.end_time.includes('+')) ? new Date(r.end_time) : new Date(r.end_time + 'Z'),
+            bookingTime: bookingDate,
+            endTime: endDate,
             status: status,
             statusLabel: statusLabel,
             price: r.total_amount || 0,
@@ -204,19 +244,28 @@ export class Tab2Page implements OnInit {
             carBrand: 'TOYOTA', // Placeholder
             licensePlate: 'กข 1234', // Placeholder
             bookingType: bookingType,
-            periodLabel: undefined,
+            periodLabel: periodLabel,
 
             // New fields for cleaner UI
             building: buildingLabel,
             floor: floorLabel,
             zone: zoneLabel,
-            slot: r.slot_id || '-'
+            slot: r.slot_id || '-',
+            vehicleType: r.vehicle_type,
+            carId: r.car_id,
+            dateLabel: dateLabel,
+            reservedAt: (r.reserved_at && (r.reserved_at.includes('Z') || r.reserved_at.includes('+'))) ? new Date(r.reserved_at) : (r.reserved_at ? new Date(r.reserved_at + 'Z') : new Date())
           } as Booking;
         });
 
         // Use ONLY real data as requested. If empty, show empty.
         this.allBookings = mappedBookings;
-        this.allBookings.sort((a, b) => b.bookingTime.getTime() - a.bookingTime.getTime());
+        // Sort by reservedAt (latest first)
+        this.allBookings.sort((a, b) => {
+          const timeA = a.reservedAt ? a.reservedAt.getTime() : 0;
+          const timeB = b.reservedAt ? b.reservedAt.getTime() : 0;
+          return timeB - timeA;
+        });
 
         this.updateFilter();
       }

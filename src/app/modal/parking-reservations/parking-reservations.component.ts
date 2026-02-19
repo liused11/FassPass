@@ -42,6 +42,7 @@ export class ParkingReservationsComponent implements OnInit {
   @Input() preSelectedZone: string = '';
 
   // Removed mockSites = [...]
+  availableSites: any[] = []; // Real sites
   currentSiteName: string = '';
   isSpecificSlot: boolean = false;
   isCrossDay: boolean = false; //  New state for Cross Day toggle
@@ -77,6 +78,11 @@ export class ParkingReservationsComponent implements OnInit {
     this.currentSiteName = this.lot?.name || 'Unknown';
     this.selectedType = this.preSelectedType;
     this.updateTypeText();
+
+    // Load available sites
+    this.parkingService.parkingLots$.subscribe(lots => {
+      this.availableSites = lots;
+    });
 
     // --- Init Floors ---
     if (this.preSelectedFloor && this.preSelectedFloor !== 'any') {
@@ -192,8 +198,29 @@ export class ParkingReservationsComponent implements OnInit {
   // ------------------------------------------------
 
   selectSite(site: any) {
+    console.log('Switching to site:', site.name);
+    this.lot = site; // Update the current lot
     this.currentSiteName = site.name;
+
+    // Reset selections
     this.resetSelection();
+
+    // Update Floors based on new lot
+    if (this.lot?.floors && this.lot.floors.length > 0) {
+      this.availableFloors = this.lot.floors;
+    } else {
+      this.availableFloors = [];
+    }
+    this.selectedFloorIds = [...this.availableFloors];
+
+    // Update Zones based on new lot
+    this.updateAvailableZones();
+    this.selectedZoneNames = [...this.availableZones];
+
+    // Regenerate data
+    this.generateData();
+
+    // Dismiss popover
     const popover = document.querySelector('ion-popover#site-popover') as any;
     if (popover) popover.dismiss();
   }

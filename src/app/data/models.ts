@@ -76,6 +76,10 @@ export interface Booking {
     floor?: string;
     zone?: string;
     slot?: string;
+    vehicleType?: string;
+    carId?: string;
+    dateLabel?: string;
+    reservedAt?: Date;
 }
 
 export interface UserProfile {

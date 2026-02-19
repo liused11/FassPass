@@ -16,7 +16,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-// ✅ ลบ :active transform scale ออก เพื่อไม่ให้กระพริบ/ยุบตัว
+//  ลบ :active transform scale ออก เพื่อไม่ให้กระพริบ/ยุบตัว
 button {
   outline: none;
   -webkit-tap-highlight-color: transparent; // ลบไฮไลท์สีเทาบนมือถือเวลาแตะ

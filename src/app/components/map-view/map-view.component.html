@@ -36,7 +36,7 @@
       </div>
 
       <ion-note *ngIf="searchError" color="danger" class="search-feedback">
-        ⚠️ {{ searchError }}
+         {{ searchError }}
       </ion-note>
       <ion-note
         *ngIf="!isSearching && searchResults.length === 0 && currentSearchQuery"

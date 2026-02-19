@@ -89,13 +89,21 @@
           <!-- Top Row -->
           <div class="flex justify-between items-start mb-4">
             <!-- TL: Status -->
-            <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
-              <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
+                <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
+              </div>
+              <div class="text-xs text-gray-500 font-normal pl-6 mt-0.5" *ngIf="item.vehicleType">
+                {{ item.vehicleType === 'car' ? 'รถยนต์' : (item.vehicleType === 'motorcycle' ? 'รถจักรยานยนต์' :
+                item.vehicleType) }}
+                <span *ngIf="item.carId"> - {{ item.carId }}</span>
+              </div>
             </div>
             <!-- TR: Time -->
             <div class="text-right">
-              <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">{{ item.bookingTime |
-                date:'EEE d MMM' }}</div>
+              <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">
+                {{ item.dateLabel ? item.dateLabel : (item.bookingTime | date:'EEE d MMM') }}
+              </div>
               <div class="text-[13px] text-gray-800 whitespace-pre-line">{{ item.bookingTime | date:'HH:mm' }} - {{
                 item.endTime | date:'HH:mm' }} น.</div>
             </div>
@@ -162,13 +170,21 @@
           <!-- Top Row -->
           <div class="flex justify-between items-start mb-4">
             <!-- TL: Status -->
-            <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
-              <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
+                <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
+              </div>
+              <div class="text-xs text-gray-500 font-normal pl-6 mt-0.5" *ngIf="item.vehicleType">
+                {{ item.vehicleType === 'car' ? 'รถยนต์' : (item.vehicleType === 'motorcycle' ? 'รถจักรยานยนต์' :
+                item.vehicleType) }}
+                <span *ngIf="item.carId"> - {{ item.carId }}</span>
+              </div>
             </div>
             <!-- TR: Time -->
             <div class="text-right">
-              <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">{{ item.bookingTime |
-                date:'EEE d MMM' }}</div>
+              <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">
+                {{ item.dateLabel ? item.dateLabel : (item.bookingTime | date:'EEE d MMM') }}
+              </div>
               <div class="text-[13px] text-gray-800 whitespace-pre-line">
                 {{ item.periodLabel ? item.periodLabel : (item.bookingTime | date:'HH:mm') + ' - ' + (item.endTime |
                 date:'HH:mm') + ' น.' }}
@@ -236,13 +252,21 @@
           <!-- Top Row -->
           <div class="flex justify-between items-start mb-4">
             <!-- TL: Status -->
-            <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
-              <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
+                <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
+              </div>
+              <div class="text-xs text-gray-500 font-normal pl-6 mt-0.5" *ngIf="item.vehicleType">
+                {{ item.vehicleType === 'car' ? 'รถยนต์' : (item.vehicleType === 'motorcycle' ? 'รถจักรยานยนต์' :
+                item.vehicleType) }}
+                <span *ngIf="item.carId"> - {{ item.carId }}</span>
+              </div>
             </div>
             <!-- TR: Time -->
             <div class="text-right">
-              <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">{{ item.bookingTime |
-                date:'EEE d MMM' }}</div>
+              <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">
+                {{ item.dateLabel ? item.dateLabel : (item.bookingTime | date:'EEE d MMM') }}
+              </div>
               <div class="text-[13px] text-gray-800 whitespace-pre-line">
                 {{ item.periodLabel ? item.periodLabel : (item.bookingTime | date:'HH:mm') + ' - ' + (item.endTime |
                 date:'HH:mm') + ' น.' }}

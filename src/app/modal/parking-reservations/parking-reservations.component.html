@@ -13,6 +13,16 @@
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
+  <ion-popover trigger="site-trigger" id="site-popover" dismissOnSelect="true" class="menu-popover">
+    <ng-template>
+      <ion-list lines="none">
+        <ion-list-header>เปลี่ยนอาคาร</ion-list-header>
+        <ion-item *ngFor="let s of availableSites" button (click)="selectSite(s)">
+          <ion-label class="ion-text-wrap">{{ s.name }}</ion-label>
+        </ion-item>
+      </ion-list>
+    </ng-template>
+  </ion-popover>
 </ion-header>
 
 <ion-content class="bg-[#f8f9fa]">
