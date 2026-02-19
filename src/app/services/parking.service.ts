@@ -97,11 +97,17 @@ export class ParkingService {
       p_duration_minutes: durationMinutes
     };
 
+    console.log(`[ParkingService] Calling RPC: ${rpcName}`, params);
+
     return from(
       this.supabase.client.rpc(rpcName, params)
     ).pipe(
       map(response => {
-        if (response.error) throw response.error;
+        if (response.error) {
+          console.error(`[ParkingService] RPC Error:`, response.error);
+          throw response.error;
+        }
+        console.log(`[ParkingService] RPC Success. Data length:`, response.data?.length);
         return response.data || [];
       }),
       catchError(err => {

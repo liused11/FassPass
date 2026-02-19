@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '../../services/supabase.service';
@@ -83,6 +83,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   availableSites: ParkingLot[] = [];
   weeklySchedule: DailySchedule[] = [];
   isOpenNow = false;
+  todayCloseTime: string = '20:00'; // Default
 
   selectedType = 'normal';
 
@@ -126,12 +127,45 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     private uiEventService: UiEventService,
     private router: Router,
     private supabaseService: SupabaseService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
+    // Subscribe to ParkingDataService (Keep as backup or for other components)
     this.parkingDataService.parkingLots$.subscribe(sites => {
-      this.availableSites = sites;
+      if (this.availableSites.length === 0) {
+        this.availableSites = sites;
+      }
     });
+
+    // --- CRITICAL FIX: Fetch Real Data from RPC ---
+    // The initial 'lot' input might lack schedule data if it came from a simplified source.
+    // We explicitly fetch the site buildings via the proper Service (Edge Function/RPC) 
+    // to guarantee we have the 'schedule' field populated.
+    if (this.lot && this.lot.id) {
+      const siteId = this.lot.id.split('-')[0];
+      this.parkingApiService.getSiteBuildings(siteId).subscribe(realSites => {
+        if (realSites && realSites.length > 0) {
+          console.log('Refreshed Site Data from RPC:', realSites);
+          this.availableSites = realSites;
+
+          // Update current lot with fresh data (containing schedule)
+          const freshLot = realSites.find(s => s.id === this.lot.id);
+          if (freshLot) {
+            console.log('Updated ' + this.lot.name + ' with fresh schedule:', freshLot.schedule);
+            this.lot = freshLot;
+
+            // Re-run initialization with correct data
+            this.checkOpenStatus();
+            this.generateWeeklySchedule();
+            this.generateTimeSlots();
+
+            // Refresh Realtime Data
+            this.refreshRealtimeData();
+          }
+        }
+      });
+    }
 
     if (this.initialType && this.lot.supportedTypes.includes(this.initialType)) {
       this.selectedType = this.initialType;
@@ -142,7 +176,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.checkOpenStatus();
     this.generateWeeklySchedule();
 
-    // Generate Time Slots initially
+    // Generate Time Slots initially (will be regenerated when RPC returns)
     this.generateTimeSlots();
 
     // Subscribe to Realtime Updates (Reservations Table)
@@ -247,8 +281,10 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       }
     }
 
-    const popover = document.querySelector('ion-popover.interval-popover') as any;
-    if (popover) popover.dismiss();
+    const popovers = document.querySelectorAll('ion-popover');
+    popovers.forEach((p: any) => p.dismiss());
+
+    this.cdr.detectChanges();
   }
 
 
@@ -257,8 +293,10 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.crossDayCount = count;
     this.resetTimeSelection();
     // Dismiss popover
-    const popover = document.querySelector('ion-popover.cross-day-popover') as any;
-    if (popover) popover.dismiss();
+    const popovers = document.querySelectorAll('ion-popover');
+    popovers.forEach((p: any) => p.dismiss());
+
+    this.cdr.detectChanges();
 
     // Auto-scroll logic similar to before
     if (this.crossDayCount > 1) {
@@ -294,6 +332,8 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   generateTimeSlots() {
+    console.log('Generating slots for:', this.lot?.name, 'Mode:', this.bookingMode);
+
     this.displayDays = [];
     // Use currentDisplayedDate for Monthly, today for others (unless we want navigable daily?) 
     // Usually Daily starts from Today.
@@ -403,7 +443,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const currentDayKey = dayKeys[dayIndex];
 
-        if (this.lot && this.lot.schedule) {
+        if (this.lot && this.lot.schedule && this.lot.schedule.length > 0) {
           const schedule = this.lot.schedule.find(s => s.days.includes(currentDayKey));
           if (schedule) {
             isOpen = true;
@@ -412,15 +452,18 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
             startH = oH; startM = oM;
             endH = cH; endM = cM;
             timeLabel = `${schedule.open_time.slice(0, 5)} - ${schedule.close_time.slice(0, 5)}`;
+          } else {
+            // Schedule exists but not for this day -> Closed
+            isOpen = false;
           }
         } else {
-          // Fallback if no schedule but maybe open_time/close_time exists in parsed hours? 
-          // Or assume open if available?
-          // For now, if no schedule, default to 08:00 - 20:00 as fallback
+          // Fallback: 24 Hours
           isOpen = true;
-          timeLabel = '08:00 - 20:00';
-          startH = 8; endH = 20;
+          timeLabel = '24 ชั่วโมง';
+          startH = 0; endH = 24;
         }
+
+        console.log(`Day: ${dayName} (${currentDayKey}), IsOpen: ${isOpen}, Time: ${timeLabel}`);
 
         const slots: TimeSlot[] = [];
         const startTime = new Date(targetDate);
@@ -554,8 +597,21 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     // Default to the first day's date
     let startDate = new Date(this.displayDays[0].date);
-    // Force start date to midnight to ensure consistent, aligned time series generation (00:00, 01:00...)
+
+    // Force start date to midnight initially
     startDate.setHours(0, 0, 0, 0);
+
+    // ADJUST START TIME TO MATCH BUILDING OPEN TIME
+    // This ensures the generated time series (p_start_time + n * interval) matches the actual slot times
+    if (this.lot && this.lot.schedule) {
+      const daysKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayKey = daysKey[startDate.getDay()];
+      const schedule = this.lot.schedule.find(s => s.days.includes(dayKey));
+      if (schedule && schedule.open_time) {
+        const [h, m] = schedule.open_time.split(':').map(Number);
+        startDate.setHours(h, m, 0, 0);
+      }
+    }
 
     const lastDay = this.displayDays[this.displayDays.length - 1].date;
     const endDate = new Date(lastDay);
@@ -982,6 +1038,10 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
   // --- General ---
   selectSite(site: ParkingLot) {
+    console.log('--- [ParkingDetail] Switching Site ---');
+    console.log('New Site:', site.name, site.id);
+    console.log('Full Site Data:', site);
+
     this.lot = site;
     if (this.lot.supportedTypes.length > 0 && !this.lot.supportedTypes.includes(this.selectedType)) {
       this.selectedType = this.lot.supportedTypes[0];
@@ -989,17 +1049,26 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.checkOpenStatus();
     this.generateWeeklySchedule();
     this.resetTimeSelection();
+    // Ensure we start fresh
+    this.selectedDateIndex = 0;
     this.generateTimeSlots();
-    const popover = document.querySelector('ion-popover.detail-popover') as any;
-    if (popover) popover.dismiss();
+
+    const popovers = document.querySelectorAll('ion-popover');
+    popovers.forEach((p: any) => p.dismiss());
+
+    this.cdr.detectChanges();
   }
 
   selectType(type: string) {
     this.selectedType = type;
     this.resetTimeSelection();
     this.generateTimeSlots();
-    const popover = document.querySelector('ion-popover.detail-popover') as any;
-    if (popover) popover.dismiss();
+
+    // Dismiss popovers
+    const popovers = document.querySelectorAll('ion-popover');
+    popovers.forEach((p: any) => p.dismiss());
+
+    this.cdr.detectChanges();
   }
 
   async selectBookingMode(mode: 'daily' | 'monthly' | 'flat24') {
@@ -1267,37 +1336,58 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   pad(num: number): string { return num < 10 ? '0' + num : num.toString(); }
   dismiss() { this.modalCtrl.dismiss(); }
   checkOpenStatus() {
-    if (!this.lot || !this.lot.schedule || this.lot.schedule.length === 0) {
-      // Fallback
-      this.isOpenNow = this.lot.status === 'available' || this.lot.status === 'low';
-      return;
-    }
-
+    this.todayCloseTime = '';
     const now = new Date();
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDayName = days[now.getDay()];
 
-    // Find schedule for today
-    const todaySchedule = this.lot.schedule.find(s => s.days.includes(currentDayName));
+    let openH = 8, openM = 0;
+    let closeH = 20, closeM = 0;
+    let isTodayClosed = false;
 
-    if (todaySchedule) {
-      const [openH, openM] = todaySchedule.open_time.split(':').map(Number);
-      const [closeH, closeM] = todaySchedule.close_time.split(':').map(Number);
+    // 1. Determine Hours
+    if (this.lot && this.lot.schedule && this.lot.schedule.length > 0) {
+      // Have schedule data
+      const todaySchedule = this.lot.schedule.find(s => s.days.includes(currentDayName));
+      if (todaySchedule) {
+        [openH, openM] = todaySchedule.open_time.split(':').map(Number);
+        [closeH, closeM] = todaySchedule.close_time.split(':').map(Number);
+        this.todayCloseTime = todaySchedule.close_time.slice(0, 5);
+      } else {
+        // Schedule exists but not for today -> Closed
+        isTodayClosed = true;
+      }
+    } else {
+      // No schedule -> Fallback to 24 Hours
+      openH = 0; openM = 0;
+      closeH = 24; closeM = 0;
+      this.todayCloseTime = '24:00';
+    }
 
+    // 2. Check Open Status
+    if (isTodayClosed) {
+      this.isOpenNow = false;
+      this.todayCloseTime = ''; // Closed
+    } else {
       const openTime = new Date(now);
       openTime.setHours(openH, openM, 0, 0);
 
       const closeTime = new Date(now);
-      closeTime.setHours(closeH, closeM, 0, 0);
+
+      // Handle 24:00 (Next Day 00:00)
+      if (closeH === 24) {
+        closeTime.setDate(closeTime.getDate() + 1);
+        closeTime.setHours(0, 0, 0, 0);
+      } else {
+        closeTime.setHours(closeH, closeM, 0, 0);
+      }
 
       this.isOpenNow = now >= openTime && now < closeTime;
-    } else {
-      this.isOpenNow = false; // Closed today
     }
   }
 
-  getCurrentCapacity(): number { return (this.lot.capacity as any)[this.selectedType] || 0; }
-  getCurrentAvailable(): number { return (this.lot.available as any)[this.selectedType] || 0; }
+  getCurrentCapacity(): number { return (this.lot?.capacity as any)?.[this.selectedType] || 0; }
+  getCurrentAvailable(): number { return (this.lot?.available as any)?.[this.selectedType] || 0; }
   getTypeName(type: string): string {
     switch (type) {
       case 'normal': return 'รถทั่วไป';

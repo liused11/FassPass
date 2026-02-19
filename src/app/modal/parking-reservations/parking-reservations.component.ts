@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { ModalController, ToastController } from '@ionic/angular';
 import { BookingSlotComponent } from '../booking-slot/booking-slot.component';
@@ -71,7 +71,8 @@ export class ParkingReservationsComponent implements OnInit {
     private toastCtrl: ToastController,
     private router: Router,
     private parkingService: ParkingDataService,
-    private parkingApiService: ParkingService // Inject RPC Service
+    private parkingApiService: ParkingService, // Inject RPC Service
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
@@ -198,7 +199,10 @@ export class ParkingReservationsComponent implements OnInit {
   // ------------------------------------------------
 
   selectSite(site: any) {
-    console.log('Switching to site:', site.name);
+    console.log('Switching to site:', site.name, 'ID:', site.id);
+    console.log('Site Data:', site);
+    console.log('---> Site Changed to:', site.name); // Explicit log per user request
+
     this.lot = site; // Update the current lot
     this.currentSiteName = site.name;
 
@@ -220,9 +224,11 @@ export class ParkingReservationsComponent implements OnInit {
     // Regenerate data
     this.generateData();
 
-    // Dismiss popover
-    const popover = document.querySelector('ion-popover#site-popover') as any;
-    if (popover) popover.dismiss();
+    // Dismiss all popovers
+    const popovers = document.querySelectorAll('ion-popover');
+    popovers.forEach((p: any) => p.dismiss());
+
+    this.cdr.detectChanges();
   }
 
   selectType(type: string) {
@@ -446,7 +452,11 @@ export class ParkingReservationsComponent implements OnInit {
   }
 
   loadRealtimeAvailability() {
-    if (!this.lot?.id || this.displayDays.length === 0) return;
+    console.log('loadRealtimeAvailability called for lot:', this.lot?.id);
+    if (!this.lot?.id || this.displayDays.length === 0) {
+      console.warn('Cannot load availability: Missing lot ID or displayDays is empty');
+      return;
+    }
 
     const startDate = new Date(this.displayDays[0].date);
     const lastDate = new Date(this.displayDays[this.displayDays.length - 1].date);
@@ -477,6 +487,8 @@ export class ParkingReservationsComponent implements OnInit {
     // Assuming we treat vehicleType as selectedType
     const vehicleType = this.selectedType === 'motorcycle' ? 'motorcycle' : (this.selectedType === 'ev' ? 'ev' : 'car');
 
+    console.log(`Fetching availability for ${this.lot.id} from ${startDate.toISOString()} to ${endDate.toISOString()} with interval ${apiInterval}`);
+
     this.parkingApiService.getBuildingTimeSlots(
       this.lot.id,
       startDate,
@@ -485,6 +497,7 @@ export class ParkingReservationsComponent implements OnInit {
       vehicleType
     ).subscribe({
       next: (data) => {
+        console.log('Realtime availability data received:', data);
         // ✅ 1. ใช้ Map ที่เก็บ Key เป็น ISO String เพื่อความเป็นกลางทาง Timezone
         const availabilityMap = new Map<string, number>();
 
@@ -517,6 +530,8 @@ export class ParkingReservationsComponent implements OnInit {
             }
           });
         });
+        console.log('Updated slots with realtime availability.');
+        this.cdr.detectChanges();
       },
       error: (err) => console.error('Error fetching real availability:', err)
     });

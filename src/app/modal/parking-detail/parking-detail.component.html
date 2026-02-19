@@ -34,7 +34,9 @@
             <span [class]="isOpenNow ? 'text-green-600 font-medium' : 'text-red-600 font-medium'">
               {{ isOpenNow ? 'เปิดอยู่' : 'ปิด' }}
             </span>
-            <span class="text-gray-400 text-xs">• ปิด {{ lot.schedule?.[0]?.close_time || '00:00' }}</span>
+            <span class="text-gray-400 text-xs" *ngIf="todayCloseTime">
+              {{ todayCloseTime === '24:00' ? '• เปิด 24 ชม.' : '• ปิด ' + todayCloseTime }}
+            </span>
           </div>
         </div>
 
