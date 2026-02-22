@@ -113,7 +113,6 @@
 
           <div class="flex justify-between items-start mb-3 gap-2">
             <div class="flex-1 min-w-0">
-              <div class="text-[#666] text-sm mb-2 truncate">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
               <div class="flex items-center gap-2 mb-1">
                 <div
                   class="border border-black rounded-md px-1 py-1 bg-white leading-none w-[80px] sm:w-[90px] h-[48px] sm:h-[50px] flex flex-col items-center justify-center shrink-0">
@@ -145,9 +144,15 @@
                 <span class="text-[#888] text-xs">อัพเดทล่าสุด {{ vehicle.lastUpdate }}</span>
               </div>
             </div>
-            <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer hover:opacity-80"
-              (click)="editVehicle(vehicle)">
-              แก้ไข <ion-icon name="arrow-forward" class="text-base"></ion-icon>
+            <div class="flex items-center gap-4">
+              <div class="text-red-500 text-sm flex items-center gap-1 font-bold cursor-pointer hover:opacity-80"
+                (click)="confirmDeleteVehicle(vehicle); $event.stopPropagation()">
+                ลบ <ion-icon name="trash" class="text-base"></ion-icon>
+              </div>
+              <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer hover:opacity-80"
+                (click)="editVehicle(vehicle); $event.stopPropagation()">
+                แก้ไข <ion-icon name="arrow-forward" class="text-base"></ion-icon>
+              </div>
             </div>
           </div>
         </div>
@@ -206,22 +211,23 @@
         <div class="absolute -top-3 right-4 bg-[#1a73e8] text-white px-3 py-1 rounded text-xs font-bold z-10">เลือกแล้ว
         </div>
 
-        <div class="flex p-4 justify-between">
-          <div class="flex-1">
-            <div class="text-[#666] text-xs mb-2">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
-            <div class="flex items-center gap-3 mb-1">
+        <div class="flex p-4 justify-between items-start gap-2">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
               <div
-                class="border border-black rounded-md px-1 py-1 bg-white leading-none min-w-[90px] h-[50px] flex flex-col items-center justify-center">
-                <div class="font-bold text-base leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
-                <div class="font-bold text-xl leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
-                </div>
+                class="border border-black rounded-md px-1 py-1 bg-white leading-none w-[80px] sm:w-[90px] h-[48px] sm:h-[50px] flex flex-col items-center justify-center shrink-0">
+                <div class="font-bold text-sm sm:text-base leading-none">{{
+                  getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
+                <div class="font-bold text-lg sm:text-xl leading-none mt-0.5">{{
+                  getLicensePlateParts(vehicle.licensePlate)[1] }}</div>
               </div>
-              <div class="text-sm font-bold text-black whitespace-nowrap">{{ vehicle.province }}</div>
+              <div class="text-sm sm:text-base font-bold text-black flex-1 line-clamp-2 leading-tight break-words">{{
+                vehicle.province }}</div>
             </div>
-            <div class="text-[#888] text-sm uppercase">{{ vehicle.model }}</div>
+            <div class="text-[#888] text-xs sm:text-sm font-medium uppercase mt-2 truncate">{{ vehicle.model }}</div>
           </div>
-          <div class="w-[120px] h-[80px]">
-            <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg" />
+          <div class="w-[100px] sm:w-[120px] h-[70px] sm:h-[80px] shrink-0">
+            <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg shadow-sm" />
           </div>
         </div>
 
@@ -233,9 +239,15 @@
             <span class="text-[#1a73e8] font-bold text-sm" *ngIf="vehicle.isDefault">พร้อมใช้งาน</span>
             <span class="text-[#888] text-xs ml-2">อัพเดทล่าสุด {{ vehicle.lastUpdate }}</span>
           </div>
-          <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer"
-            (click)="editVehicle(vehicle)">
-            แก้ไข <ion-icon name="arrow-forward"></ion-icon>
+          <div class="flex items-center gap-4">
+            <div class="text-red-500 text-sm flex items-center gap-1 font-bold cursor-pointer"
+              (click)="confirmDeleteVehicle(vehicle); $event.stopPropagation()">
+              ลบ <ion-icon name="trash"></ion-icon>
+            </div>
+            <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer"
+              (click)="editVehicle(vehicle); $event.stopPropagation()">
+              แก้ไข <ion-icon name="arrow-forward"></ion-icon>
+            </div>
           </div>
         </div>
       </div>
@@ -245,29 +257,35 @@
       <!-- Other Vehicles List -->
       <div class="mx-4 mb-4 bg-white border border-gray-300 rounded-xl p-4 shadow-sm" *ngFor="let vehicle of vehicles"
         [class.hidden]="vehicle.isDefault" (click)="selectVehicle(vehicle.id)">
-        <div class="flex items-center gap-4 mb-3">
-          <div class="w-[110px] h-[75px]">
-            <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg" />
+        <div class="flex justify-between items-start gap-3 mb-3">
+          <div class="w-[100px] sm:w-[110px] h-[70px] sm:h-[75px] shrink-0">
+            <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg shadow-sm" />
           </div>
-          <div class="flex-1">
-            <div class="text-[#888] text-xs mb-1.5">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
-            <div class="flex items-center gap-3 mb-1">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
               <div
-                class="border border-black rounded-md px-1 py-1 bg-white leading-none min-w-[90px] h-[50px] flex flex-col items-center justify-center">
-                <div class="font-bold text-base leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
-                <div class="font-bold text-xl leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
+                class="border border-black rounded-md px-1 py-1 bg-white leading-none w-[80px] shrink-0 h-[48px] flex flex-col items-center justify-center">
+                <div class="font-bold text-sm leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}</div>
+                <div class="font-bold text-lg leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
                 </div>
               </div>
-              <span class="text-sm font-bold text-black whitespace-nowrap">{{ vehicle.province }}</span>
+              <div class="text-sm font-bold text-black flex-1 line-clamp-2 leading-tight break-words">{{
+                vehicle.province }}</div>
             </div>
-            <div class="text-[#666] text-sm uppercase">{{ vehicle.model }}</div>
+            <div class="text-[#666] text-xs uppercase mt-1 truncate">{{ vehicle.model }}</div>
           </div>
         </div>
         <div class="flex justify-between items-center text-xs">
           <span class="text-[#888]" *ngIf="vehicle.lastUpdate">แก้ไขเมื่อ {{ vehicle.lastUpdate }}</span>
-          <div class="text-[#1a73e8] flex items-center gap-1 font-bold cursor-pointer"
-            (click)="editVehicle(vehicle); $event.stopPropagation()">
-            แก้ไข <ion-icon name="arrow-forward"></ion-icon>
+          <div class="flex items-center gap-4">
+            <div class="text-red-500 text-sm flex items-center gap-1 font-bold cursor-pointer"
+              (click)="confirmDeleteVehicle(vehicle); $event.stopPropagation()">
+              ลบ <ion-icon name="trash"></ion-icon>
+            </div>
+            <div class="text-[#1a73e8] flex items-center gap-1 font-bold cursor-pointer"
+              (click)="editVehicle(vehicle); $event.stopPropagation()">
+              แก้ไข <ion-icon name="arrow-forward"></ion-icon>
+            </div>
           </div>
         </div>
       </div>

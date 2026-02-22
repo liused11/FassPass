@@ -123,8 +123,7 @@ export class AddVehicleModalComponent implements OnInit {
         image: this.selectedImage || 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg', // Fallback
         isDefault: this.isEditMode ? this.editVehicle?.isDefault : false,
         status: this.isEditMode ? this.editVehicle?.status : 'active',
-        lastUpdate: 'เพิ่งเพิ่ม',
-        rank: this.isEditMode ? this.editVehicle?.rank : 99 // Will be assigned by service if new
+        lastUpdate: 'เพิ่งเพิ่ม'
       };
 
       if (this.isEditMode && this.editVehicle?.id) {

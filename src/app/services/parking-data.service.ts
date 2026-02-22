@@ -123,8 +123,7 @@ export class ParkingDataService {
         const { data, error } = await this.supabaseService.client
             .from('cars')
             .select('*')
-            .eq('user_id', userId)
-            .order('rank', { ascending: true }); // Order by rank
+            .eq('user_id', userId);
 
         if (error) {
             console.error('Error loading user vehicles:', error);
@@ -142,8 +141,7 @@ export class ParkingDataService {
                 image: item.image,
                 isDefault: item.is_default,
                 status: item.status,
-                lastUpdate: this.formatThaiDateTime(item.updated_at || item.created_at), // Use real DB time
-                rank: item.rank
+                lastUpdate: this.formatThaiDateTime(item.updated_at || item.created_at) // Use real DB time
             }));
             this.vehiclesSubject.next(vehicles);
         } else {
@@ -179,74 +177,58 @@ export class ParkingDataService {
     // --- Vehicle Management ---
 
     async addVehicle(vehicle: Partial<Vehicle>) {
-        console.log('[ParkingDataService] Adding vehicle:', vehicle);
+        const currentVehicles = this.vehiclesSubject.value;
 
-        // Get current user ID
+        // Ensure user is loaded
         const userId = this.reservationService.getTestUserId();
 
-        if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
-            console.warn('[ParkingDataService] Warning: Using test/default User ID.');
-        }
+        // Pass the user_id directly if missing, just in case
+        const payload = {
+            ...vehicle,
+            user_id: userId
+        };
 
-        // 1. Calculate Next Rank from DB to avoid collision (length+1 is unsafe if items deleted)
-        const { data: maxRankData, error: rankError } = await this.supabaseService.client
-            .from('cars')
-            .select('rank')
-            .eq('user_id', userId)
-            .order('rank', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        try {
+            // Call the Edge Function instead of doing client-side insert
+            const { data, error } = await this.supabaseService.client.functions.invoke('add-vehicle', {
+                body: { vehicle: payload },
+            });
 
-        let nextRank = 1;
-        if (maxRankData) {
-            nextRank = (maxRankData.rank || 0) + 1;
-        }
-        console.log('[ParkingDataService] Calculated Next Rank:', nextRank);
-
-        // 2. Insert new vehicle
-        const { data, error } = await this.supabaseService.client
-            .from('cars')
-            .insert([{
-                user_id: userId,
-                model: vehicle.model,
-                license_plate: vehicle.licensePlate,
-                province: vehicle.province,
-                color: vehicle.color || null, // Add color
-                image: vehicle.image,
-                is_default: vehicle.isDefault || false,
-                status: vehicle.status || 'active',
-                rank: nextRank
-            }])
-            .select()
-            .single();
-
-        if (error) {
-            console.error('[ParkingDataService] Error adding vehicle:', error);
-            // Check for duplicate key error (PGRST110 or 23505)
-            if (error.code === '23505') {
-                console.error('[ParkingDataService] Duplicate data found (License Plate or Rank).');
+            if (error) {
+                console.error('[ParkingDataService] Edge function returned error:', error);
+                const functionError: any = error;
+                if (functionError.context && typeof functionError.context.json === 'function') {
+                    const errorBody = await functionError.context.json().catch(() => ({}));
+                    console.error('[ParkingDataService] Edge function error body:', errorBody);
+                    throw new Error(errorBody.error || error.message);
+                }
+                throw error;
             }
-            throw error;
-        }
 
-        console.log('[ParkingDataService] Vehicle added successfully:', data);
+            // The edge function returns the inserted row
+            const newCarRecord = data;
 
-        // 3. Update local state
-        if (data) {
+            // Map back to frontend Vehicle model
             const newVehicle: Vehicle = {
-                id: data.id,
-                model: data.model,
-                licensePlate: data.license_plate,
-                province: data.province,
-                color: data.color, // Add color
-                image: data.image,
-                isDefault: data.is_default,
-                status: data.status,
-                lastUpdate: this.formatThaiDateTime(new Date().toISOString()), // Current time as placeholder if we don't return updated_at from DB
-                rank: data.rank
+                id: newCarRecord.id,
+                model: newCarRecord.model,
+                licensePlate: newCarRecord.license_plate,
+                province: newCarRecord.province,
+                color: newCarRecord.color,
+                image: newCarRecord.image,
+                isDefault: newCarRecord.is_default,
+                status: newCarRecord.status || 'active',
+                lastUpdate: this.formatThaiDateTime(newCarRecord.created_at) // Or updated_at
             };
-            const currentVehicles = this.vehiclesSubject.value;
-            this.vehiclesSubject.next([...currentVehicles, newVehicle]);
+
+            const updated = [...currentVehicles, newVehicle];
+            this.vehiclesSubject.next(updated);
+
+            return newVehicle;
+
+        } catch (error) {
+            console.error('[ParkingDataService] Error calling add-vehicle fn:', error);
+            throw error;
         }
     }
 
@@ -260,7 +242,7 @@ export class ParkingDataService {
             color: updatedVehicle.color,
             image: updatedVehicle.image,
             is_default: updatedVehicle.isDefault,
-            status: updatedVehicle.status,
+            // status removed - not in DB
             updated_at: new Date().toISOString() // Set current time for updated_at
         };
 
@@ -335,10 +317,27 @@ export class ParkingDataService {
         }
     }
 
-    deleteVehicle(id: number | string) {
-        const currentVehicles = this.vehiclesSubject.value.filter(v => v.id !== id);
-        this.vehiclesSubject.next(currentVehicles);
-        // Ideally, we should also delete from backend
+    async deleteVehicle(id: number | string) {
+        try {
+            const { error } = await this.supabaseService.client
+                .from('cars')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('[ParkingDataService] Error deleting vehicle from DB:', error);
+                throw error;
+            }
+
+            // Update local state after successful DB deletion
+            const currentVehicles = this.vehiclesSubject.value.filter(v => v.id !== id);
+            this.vehiclesSubject.next(currentVehicles);
+
+            console.log(`[ParkingDataService] Vehicle ${id} deleted successfully.`);
+        } catch (error) {
+            console.error('[ParkingDataService] Failed to delete vehicle:', error);
+            throw error;
+        }
     }
 
     // --- Parking Lot Management ---

@@ -100,7 +100,6 @@ export interface Vehicle {
     isDefault: boolean;
     status: string;
     lastUpdate: string;
-    rank: number;
     color?: string; // Added color field
 }
 
