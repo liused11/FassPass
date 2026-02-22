@@ -101,6 +101,7 @@ export interface Vehicle {
     status: string;
     lastUpdate: string;
     color?: string; // Added color field
+    type?: string;  // Added type field
 }
 
 export interface SettingItem {

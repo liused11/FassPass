@@ -49,6 +49,14 @@
         <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('type')">กรุณาเลือกประเภทรถ</span>
       </div>
 
+      <!-- Custom Vehicle Type (Shown if 'other' is selected) -->
+      <div class="form-group slide-down-animation" *ngIf="vehicleForm.get('type')?.value === 'other'">
+        <label class="font-bold text-sm text-gray-800 mb-2 block">โปรดระบุประเภทรถยนต์ของคุณ</label>
+        <input type="text" formControlName="customType" placeholder="เช่น รถกระบะ, รถตู้"
+          class="w-full h-12 border border-gray-200 rounded-xl px-3 bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors shadow-sm">
+        <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('customType')">กรุณาระบุประเภทรถของคุณ</span>
+      </div>
+
       <!-- Brand & Model -->
       <div class="grid grid-cols-2 gap-3">
         <div class="form-group">
@@ -64,6 +72,14 @@
             </div>
           </div>
           <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('brand')">กรุณาเลือกยี่ห้อ</span>
+
+          <!-- Custom Brand (Shown if 'other' is selected) -->
+          <div class="mt-3 slide-down-animation" *ngIf="vehicleForm.get('brand')?.value === 'อื่นๆ'">
+            <label class="font-bold text-sm text-gray-800 mb-2 block">โปรดระบุยี่ห้อ</label>
+            <input type="text" formControlName="customBrand" placeholder="ระบุยี่ห้อรถ"
+              class="w-full h-12 border border-blue-300 rounded-xl px-3 bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors shadow-sm">
+            <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('customBrand')">กรุณาระบุยี่ห้อของคุณ</span>
+          </div>
         </div>
 
         <div class="form-group">

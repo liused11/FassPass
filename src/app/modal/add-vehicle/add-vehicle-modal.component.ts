@@ -20,12 +20,13 @@ export class AddVehicleModalComponent implements OnInit {
   vehicleTypes = [
     { value: 'car', label: 'รถยนต์ทั่วไป', icon: 'car-sport' },
     { value: 'ev', label: 'รถไฟฟ้า (EV)', icon: 'flash' },
-    { value: 'motorcycle', label: 'รถจักรยานยนต์', icon: 'bicycle' }
+    { value: 'motorcycle', label: 'รถจักรยานยนต์', icon: 'bicycle' },
+    { value: 'other', label: 'อื่นๆ', icon: 'ellipsis-horizontal' }
   ];
 
   brands = [
     'Toyota', 'Honda', 'Nissan', 'Mazda', 'Mitsubishi', 'Isuzu',
-    'Suzuki', 'Ford', 'MG', 'BMW', 'Mercedes-Benz', 'BYD', 'GWM', 'Tesla'
+    'Suzuki', 'Ford', 'MG', 'BMW', 'Mercedes-Benz', 'BYD', 'GWM', 'Tesla', 'อื่นๆ'
   ];
 
   provinces = [
@@ -47,7 +48,9 @@ export class AddVehicleModalComponent implements OnInit {
   ) {
     this.vehicleForm = this.fb.group({
       type: ['car', Validators.required],
+      customType: [''], // Optional, required contextually via UI
       brand: ['', Validators.required],
+      customBrand: [''], // Optional, required contextually via UI
       model: ['', Validators.required],
       color: ['', Validators.required],
       licensePlate: ['', [Validators.required, Validators.pattern(/^[0-9ก-ฮ]{1,3}[0-9ก-ฮ]{1,2} [0-9]{1,4}$/)]], // Basic Thai plate regex
@@ -64,16 +67,34 @@ export class AddVehicleModalComponent implements OnInit {
       let brand = '';
       let modelPart = this.editVehicle.model || '';
 
-      // Basic splitting logic (assumes first word is brand, rest is model)
+      // Parse prepended custom type (if present) like "[รถบัส] Honda Civic"
+      let parsedType = 'car';
+      const typeMatch = modelPart.match(/^\[(.*?)\]\s?(.*)/);
+      if (typeMatch) {
+        parsedType = typeMatch[1]; // e.g. "รถบัส"
+        modelPart = typeMatch[2]; // e.g. "Honda Civic"
+      }
+
+      // Basic splitting logic for brand and model
       if (modelPart.includes(' ')) {
         const parts = modelPart.split(' ');
         brand = parts[0];
         modelPart = parts.slice(1).join(' ');
+      } else {
+        brand = modelPart;
+        modelPart = '';
       }
 
+      // Determine initialType based on parsedType and vehicle_type_code (if we had it, fallback to parsing)
+      const isKnownType = ['car', 'ev', 'motorcycle'].includes(parsedType);
+      const initialType = isKnownType ? parsedType : 'other';
+      const initialCustomType = isKnownType ? '' : parsedType;
+
       this.vehicleForm.patchValue({
-        type: 'car', // Assume car for now or derive from data
-        brand: brand,
+        type: initialType,
+        customType: initialCustomType,
+        brand: this.brands.includes(brand) ? brand : (brand ? 'อื่นๆ' : ''),
+        customBrand: this.brands.includes(brand) ? '' : brand,
         model: modelPart,
         color: this.editVehicle.color || '',
         licensePlate: this.editVehicle.licensePlate || '',
@@ -114,9 +135,33 @@ export class AddVehicleModalComponent implements OnInit {
       console.log('[AddVehicleModal] Form is valid');
       const formValue = this.vehicleForm.value;
 
+      // Extract actual type and brand, using custom inputs if 'other' is selected
+      const actualType = formValue.type === 'other' ? formValue.customType : formValue.type;
+      const actualBrand = formValue.brand === 'อื่นๆ' ? formValue.customBrand : formValue.brand;
+
+      // Ensure custom values are not empty if 'other' is selected
+      if (formValue.type === 'other' && !actualType) {
+        this.vehicleForm.get('customType')?.setErrors({ required: true });
+        this.vehicleForm.get('customType')?.markAsTouched();
+        return; // Stop submission
+      }
+
+      if (formValue.brand === 'อื่นๆ' && !actualBrand) {
+        this.vehicleForm.get('customBrand')?.setErrors({ required: true });
+        this.vehicleForm.get('customBrand')?.markAsTouched();
+        return; // Stop submission
+      }
+
+      // Compose the model string prepending the actual custom type
+      const finalModelName = `${actualBrand} ${formValue.model}`.trim();
+      const dbModelString = actualType && !['car', 'ev', 'motorcycle'].includes(actualType)
+        ? `[${actualType}] ${finalModelName}`
+        : finalModelName;
+
       // Construct Vehicle Object
       const newVehicle: Partial<Vehicle> = {
-        model: `${formValue.brand} ${formValue.model}`,
+        type: actualType, // Keep it for local usage, but it won't be sent to DB
+        model: dbModelString,
         licensePlate: formValue.licensePlate, // Send clean plate, province is separate
         province: formValue.province,
         color: formValue.color, // Add color

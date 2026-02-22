@@ -95,6 +95,17 @@ CREATE TYPE "public"."activity_status" AS ENUM (
 ALTER TYPE "public"."activity_status" OWNER TO "postgres";
 
 
+CREATE TYPE "public"."booking_type" AS ENUM (
+    'hourly',
+    'flat_24h',
+    'monthly_regular',
+    'monthly_night'
+);
+
+
+ALTER TYPE "public"."booking_type" OWNER TO "postgres";
+
+
 CREATE TYPE "public"."reservation_status" AS ENUM (
     'pending',
     'checked_in',
@@ -355,11 +366,12 @@ $$;
 ALTER FUNCTION "public"."get_building_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_vehicle_type" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text") RETURNS TABLE("slot_time" timestamp with time zone, "total_capacity" bigint, "reserved_count" bigint, "available_count" bigint)
+CREATE OR REPLACE FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text", "p_duration_minutes" integer DEFAULT NULL::integer) RETURNS TABLE("slot_time" timestamp with time zone, "total_capacity" bigint, "reserved_count" bigint, "available_count" bigint)
     LANGUAGE "plpgsql"
     AS $$
 DECLARE
   v_vehicle_code INT;
+  v_duration_interval INTERVAL;
 BEGIN
   -- Map text input to integer code
   IF p_vehicle_type = 'motorcycle' THEN v_vehicle_code := 0;
@@ -367,8 +379,8 @@ BEGIN
   ELSE v_vehicle_code := 1; -- default 'car'
   END IF;
 
-  -- Force start time to beginning of the hour to ensure clean slots (e.g., 00:00, 01:00)
-  p_start_time := date_trunc('hour', p_start_time);
+  -- Use provided duration or fallback to interval (step)
+  v_duration_interval := (COALESCE(p_duration_minutes, p_interval_minutes) || ' minutes')::INTERVAL;
 
   RETURN QUERY
   WITH 
@@ -384,6 +396,7 @@ BEGIN
     FROM slots s
     JOIN floors f ON s.floor_id = f.id
     WHERE f.building_id = p_building_id
+    AND s.status = 'available' -- Only count currently functioning slots
     AND (
       p_vehicle_type IS NULL 
       OR s.vehicle_type_code = v_vehicle_code 
@@ -395,10 +408,10 @@ BEGIN
   slot_reservations AS (
     SELECT 
       ts.t_start,
-      COUNT(r_filtered.id) AS reserved_qty
+      COUNT(DISTINCT r_filtered.slot_id) AS reserved_qty -- Count DISTINCT slots occupied
     FROM time_series ts
     LEFT JOIN (
-      SELECT r.start_time, r.end_time, r.id
+      SELECT r.start_time, r.end_time, r.id, r.slot_id
       FROM reservations r
       JOIN slots s ON r.slot_id = s.id
       JOIN floors f ON s.floor_id = f.id
@@ -410,7 +423,7 @@ BEGIN
       )
       AND r.status IN ('pending', 'checked_in', 'confirmed', 'pending_payment', 'active')
     ) r_filtered ON 
-      (r_filtered.start_time < (ts.t_start + (p_interval_minutes || ' minutes')::INTERVAL)
+      (r_filtered.start_time < (ts.t_start + v_duration_interval)  -- Check overlap with FULL DURATION
       AND r_filtered.end_time > ts.t_start)
     GROUP BY ts.t_start
   )
@@ -429,7 +442,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text", "p_duration_minutes" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_site_availability"("p_site_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_vehicle_type" "text" DEFAULT 'car'::"text") RETURNS "jsonb"
@@ -698,6 +711,50 @@ $$;
 ALTER FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb" DEFAULT NULL::"jsonb", "p_new_data" "jsonb" DEFAULT NULL::"jsonb", "p_meta" "jsonb" DEFAULT NULL::"jsonb") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+
+  insert into activity_logs (
+    log_type,
+    action,
+    user_id,
+    user_name,
+    category,
+    status,
+    entity_type,
+    entity_id,
+    detail,
+    changes,
+    old_data,
+    new_data,
+    meta
+  )
+  values (
+    p_log_type,
+    p_action,
+    p_user_id,
+    p_user_name,
+    p_category,
+    p_status,
+    p_entity_type,
+    p_entity_id,
+    p_detail,
+    p_changes,
+    p_old_data,
+    p_new_data,
+    p_meta
+  );
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."save_events_and_update_version"("p_aggregate_id" "uuid", "p_expected_version" integer, "p_new_version" integer, "p_events" "jsonb") RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$
@@ -918,6 +975,236 @@ $_$;
 
 ALTER FUNCTION "public"."update_config_with_log"("p_entity_type" "text", "p_entity_id" "text", "p_updates" "jsonb", "p_user_id" "uuid", "p_user_name" "text") OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "jsonb", "p_user_id" "uuid", "p_user_name" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+declare
+  v_entity jsonb;
+  v_entity_type text;
+  v_entity_id text;
+  v_updates jsonb;
+  old_data jsonb;
+  new_data jsonb;
+  v_changes jsonb;
+  v_key text;
+begin
+
+  if p_payload->'entities' is null then
+    raise exception 'Invalid payload: entities missing';
+  end if;
+
+  ----------------------------------------------------------------
+  -- LOOP EACH ENTITY
+  ----------------------------------------------------------------
+
+  for v_entity in
+    select * from jsonb_array_elements(p_payload->'entities')
+  loop
+
+    v_entity_type := v_entity->>'entity_type';
+    v_entity_id   := v_entity->>'entity_id';
+    v_updates     := v_entity->'updates';
+
+    if v_entity_type is null or v_entity_id is null then
+      raise exception 'Invalid entity structure';
+    end if;
+
+    ----------------------------------------------------------------
+    -- BUILDINGS
+    ----------------------------------------------------------------
+    if v_entity_type = 'buildings' then
+
+      select to_jsonb(b) into old_data
+      from buildings b
+      where b.id = v_entity_id
+      for update;
+
+      if old_data is null then
+        raise exception 'Building not found: %', v_entity_id;
+      end if;
+
+      update buildings
+      set
+        name              = coalesce(v_updates->>'name', name),
+        lat               = coalesce((v_updates->>'lat')::float8, lat),
+        lng               = coalesce((v_updates->>'lng')::float8, lng),
+        map_x             = coalesce((v_updates->>'map_x')::integer, map_x),
+        map_y             = coalesce((v_updates->>'map_y')::integer, map_y),
+        price_per_hour    = coalesce((v_updates->>'price_per_hour')::numeric, price_per_hour),
+        schedule_config   = coalesce((v_updates->'schedule_config')::jsonb, schedule_config),
+        open_time         = coalesce((v_updates->>'open_time')::time, open_time),
+        close_time        = coalesce((v_updates->>'close_time')::time, close_time),
+        price_info        = coalesce(v_updates->>'price_info', price_info),
+        price_value       = coalesce((v_updates->>'price_value')::integer, price_value),
+        user_types        = coalesce(v_updates->>'user_types', user_types),
+        address           = coalesce(v_updates->>'address', address),
+        is_active         = coalesce((v_updates->>'is_active')::boolean, is_active),
+        capacity          = coalesce((v_updates->>'capacity')::integer, capacity)
+      where id = v_entity_id;
+
+      select to_jsonb(b) into new_data
+      from buildings b
+      where b.id = v_entity_id;
+
+
+    ----------------------------------------------------------------
+    -- FLOORS
+    ----------------------------------------------------------------
+    elsif v_entity_type = 'floors' then
+
+      select to_jsonb(f) into old_data
+      from floors f
+      where f.id = v_entity_id
+      for update;
+
+      if old_data is null then
+        raise exception 'Floor not found: %', v_entity_id;
+      end if;
+
+      update floors
+      set
+        name        = coalesce(v_updates->>'name', name),
+        level_order = coalesce((v_updates->>'level_order')::integer, level_order)
+      where id = v_entity_id;
+
+      select to_jsonb(f) into new_data
+      from floors f
+      where f.id = v_entity_id;
+
+
+    ----------------------------------------------------------------
+    -- ZONES
+    ----------------------------------------------------------------
+    elsif v_entity_type = 'zones' then
+
+      select to_jsonb(z) into old_data
+      from zones z
+      where z.id = v_entity_id
+      for update;
+
+      if old_data is null then
+        raise exception 'Zone not found: %', v_entity_id;
+      end if;
+
+      update zones
+      set
+        name = coalesce(v_updates->>'name', name)
+      where id = v_entity_id;
+
+      select to_jsonb(z) into new_data
+      from zones z
+      where z.id = v_entity_id;
+
+
+    ----------------------------------------------------------------
+    -- SLOTS
+    ----------------------------------------------------------------
+    elsif v_entity_type = 'slots' then
+
+      select to_jsonb(s) into old_data
+      from slots s
+      where s.id = v_entity_id
+      for update;
+
+      if old_data is null then
+        raise exception 'Slot not found: %', v_entity_id;
+      end if;
+
+      update slots
+      set
+        name               = coalesce(v_updates->>'name', name),
+        slot_number        = coalesce((v_updates->>'slot_number')::integer, slot_number),
+        status             = coalesce(v_updates->>'status', status),
+        details            = coalesce(v_updates->>'details', details),
+        vehicle_type       = coalesce(v_updates->>'vehicle_type', vehicle_type),
+        vehicle_type_code  = coalesce((v_updates->>'vehicle_type_code')::integer, vehicle_type_code),
+        version            = coalesce((v_updates->>'version')::integer, version)
+      where id = v_entity_id;
+
+      select to_jsonb(s) into new_data
+      from slots s
+      where s.id = v_entity_id;
+
+    else
+      raise exception 'Unsupported entity type: %', v_entity_type;
+    end if;
+
+
+    ----------------------------------------------------------------
+    -- คำนวณ diff เฉพาะ field ที่เปลี่ยนจริง
+    ----------------------------------------------------------------
+    v_changes := '{}'::jsonb;
+
+    for v_key in
+      select jsonb_object_keys(v_updates)
+    loop
+      if old_data->v_key is distinct from new_data->v_key then
+        v_changes := v_changes || jsonb_build_object(
+          v_key,
+          jsonb_build_object(
+            'old', old_data->v_key,
+            'new', new_data->v_key
+          )
+        );
+      end if;
+    end loop;
+
+    ----------------------------------------------------------------
+    -- insert log เฉพาะเมื่อมีการเปลี่ยนจริง
+    ----------------------------------------------------------------
+    if v_changes <> '{}'::jsonb then
+      perform insert_activity_log(
+        'revision',
+        'update_' || v_entity_type,
+        p_user_id,
+        p_user_name,
+        'normal',
+        'success',
+        v_entity_type,
+        v_entity_id,
+        format('Updated %s', v_entity_type),
+        v_changes,
+        old_data,
+        new_data,
+        jsonb_build_object(
+          'entity_type', v_entity_type,
+          'entity_id', v_entity_id
+        )
+      );
+    end if;
+
+  end loop;
+
+exception when others then
+
+  perform insert_activity_log(
+    'activity',
+    'update_failed',
+    p_user_id,
+    p_user_name,
+    'abnormal',
+    'error',
+    null,
+    null,
+    'Bulk update failed',
+    null,
+    null,
+    null,
+    jsonb_build_object(
+      'error', sqlerrm,
+      'payload', p_payload
+    )
+  );
+
+  raise;
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "jsonb", "p_user_id" "uuid", "p_user_name" "text") OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
@@ -937,6 +1224,9 @@ CREATE TABLE IF NOT EXISTS "public"."activity_logs" (
     "detail" "text",
     "changes" "jsonb",
     "meta" "jsonb",
+    "old_data" "jsonb",
+    "new_data" "jsonb",
+    "site_id" "text" NOT NULL,
     CONSTRAINT "revision_requires_entity_id" CHECK (((("log_type" = 'revision'::"public"."activity_log_type") AND ("entity_id" IS NOT NULL)) OR ("log_type" = 'activity'::"public"."activity_log_type"))),
     CONSTRAINT "revision_requires_entity_type" CHECK (((("log_type" = 'revision'::"public"."activity_log_type") AND ("entity_type" IS NOT NULL)) OR ("log_type" = 'activity'::"public"."activity_log_type")))
 );
@@ -958,35 +1248,6 @@ ALTER SEQUENCE "public"."activity_logs_id_seq" OWNER TO "postgres";
 
 ALTER SEQUENCE "public"."activity_logs_id_seq" OWNED BY "public"."activity_logs"."id";
 
-
-
-CREATE TABLE IF NOT EXISTS "public"."admin_users" (
-    "id" "uuid" NOT NULL,
-    "name" "text",
-    "email" "text",
-    "phone" "text",
-    "role" "text",
-    "status" "text",
-    "department" "text",
-    "access_expire" "date",
-    "created_at" timestamp without time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."admin_users" OWNER TO "postgres";
-
-
-CREATE TABLE IF NOT EXISTS "public"."alerts" (
-    "id" "uuid" DEFAULT "gen_random_uuid"(),
-    "source" "text",
-    "message" "text",
-    "level" "text",
-    "resolved" boolean DEFAULT false,
-    "created_at" timestamp without time zone DEFAULT "now"()
-);
-
-
-ALTER TABLE "public"."alerts" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."buildings" (
@@ -1019,7 +1280,6 @@ CREATE TABLE IF NOT EXISTS "public"."cars" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
     "license_plate" character varying NOT NULL,
-    "brand" character varying,
     "model" character varying,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
@@ -1027,9 +1287,9 @@ CREATE TABLE IF NOT EXISTS "public"."cars" (
     "vehicle_type_code" smallint DEFAULT 1,
     "image" "text",
     "is_default" boolean DEFAULT false,
-    "status" "text" DEFAULT ''::"text",
     "rank" integer DEFAULT 0,
     "province" "text" DEFAULT 'กรุงเทพฯ'::"text",
+    "color" "text",
     CONSTRAINT "cars_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2])))
 );
 
@@ -1169,6 +1429,7 @@ CREATE TABLE IF NOT EXISTS "public"."reservations" (
     "vehicle_type" "public"."vehicle_type" DEFAULT 'car'::"public"."vehicle_type" NOT NULL,
     "car_id" "uuid",
     "vehicle_type_code" smallint DEFAULT 1,
+    "booking_type" "public"."booking_type" DEFAULT 'hourly'::"public"."booking_type",
     CONSTRAINT "reservations_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2])))
 );
 
@@ -1314,23 +1575,23 @@ ALTER TABLE ONLY "public"."activity_logs"
 
 
 
-ALTER TABLE ONLY "public"."admin_users"
-    ADD CONSTRAINT "admin_users_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."buildings"
     ADD CONSTRAINT "buildings_pkey" PRIMARY KEY ("id");
 
 
 
 ALTER TABLE ONLY "public"."cars"
-    ADD CONSTRAINT "cars_license_plate_key" UNIQUE ("license_plate");
+    ADD CONSTRAINT "cars_license_plate_province_uniq" UNIQUE ("license_plate", "province");
 
 
 
 ALTER TABLE ONLY "public"."cars"
     ADD CONSTRAINT "cars_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."cars"
+    ADD CONSTRAINT "cars_user_rank_uniq" UNIQUE ("user_id", "rank");
 
 
 
@@ -1435,7 +1696,15 @@ CREATE INDEX "activity_logs_user_id_idx" ON "public"."activity_logs" USING "btre
 
 
 
+CREATE INDEX "idx_activity_site_time" ON "public"."activity_logs" USING "btree" ("site_id", "time" DESC);
+
+
+
 CREATE INDEX "idx_buildings_lat_lng" ON "public"."buildings" USING "btree" ("lat", "lng");
+
+
+
+CREATE INDEX "idx_cars_user_id" ON "public"."cars" USING "btree" ("user_id");
 
 
 
@@ -1494,6 +1763,11 @@ ALTER TABLE ONLY "public"."buildings"
 
 ALTER TABLE ONLY "public"."cars"
     ADD CONSTRAINT "cars_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."activity_logs"
+    ADD CONSTRAINT "fk_activity_site" FOREIGN KEY ("site_id") REFERENCES "public"."parking_sites"("id") ON DELETE RESTRICT;
 
 
 
@@ -3055,9 +3329,9 @@ GRANT ALL ON FUNCTION "public"."get_building_availability"("p_building_id" "text
 
 
 
-GRANT ALL ON FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text", "p_duration_minutes" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text", "p_duration_minutes" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_building_slots_availability"("p_building_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_interval_minutes" integer, "p_vehicle_type" "text", "p_duration_minutes" integer) TO "service_role";
 
 
 
@@ -3082,6 +3356,12 @@ GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."acti
 GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "uuid", "p_detail" "text", "p_changes" "jsonb", "p_meta" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "service_role";
 
 
 
@@ -3165,6 +3445,12 @@ GRANT ALL ON FUNCTION "public"."update_config_with_log"("p_entity_type" "text", 
 
 
 
+GRANT ALL ON FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "service_role";
+
+
+
 
 
 
@@ -3195,18 +3481,6 @@ GRANT ALL ON TABLE "public"."activity_logs" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."activity_logs_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."activity_logs_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."activity_logs_id_seq" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."admin_users" TO "anon";
-GRANT ALL ON TABLE "public"."admin_users" TO "authenticated";
-GRANT ALL ON TABLE "public"."admin_users" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."alerts" TO "anon";
-GRANT ALL ON TABLE "public"."alerts" TO "authenticated";
-GRANT ALL ON TABLE "public"."alerts" TO "service_role";
 
 
 
