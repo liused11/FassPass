@@ -294,15 +294,45 @@ export class ParkingDataService {
         }
     }
 
-    setDefaultVehicle(id: number | string) {
+    async setDefaultVehicle(id: number | string) {
+        // 1. Update local state immediately for fast UI response
         const currentVehicles = this.vehiclesSubject.value;
         const updated = currentVehicles.map(v => ({
             ...v,
-            isDefault: v.id === id,
-            status: v.id === id ? 'พร้อมใช้งาน' : ''
+            isDefault: v.id === id
         }));
         this.vehiclesSubject.next(updated);
-        // Ideally, we should also update this in the backend
+
+        // 2. Persist to Backend
+        try {
+            const userId = this.reservationService.getTestUserId();
+
+            // Set all vehicles for this user to is_default = false
+            await this.supabaseService.client
+                .from('cars')
+                .update({ is_default: false })
+                .eq('user_id', userId);
+
+            // Set the selected vehicle to is_default = true
+            const { error: setTrueError } = await this.supabaseService.client
+                .from('cars')
+                .update({ is_default: true, updated_at: new Date().toISOString() })
+                .eq('id', id);
+
+            if (setTrueError) throw setTrueError;
+
+            console.log(`[ParkingDataService] Vehicle ${id} set to default successfully in DB.`);
+
+        } catch (error) {
+            console.error('[ParkingDataService] Error setting default vehicle to DB:', error);
+            // Revert on failure
+            const reverted = currentVehicles.map(v => ({
+                ...v,
+                isDefault: v.id === id ? false : v.isDefault
+            }));
+            this.vehiclesSubject.next(reverted);
+            throw error;
+        }
     }
 
     deleteVehicle(id: number | string) {

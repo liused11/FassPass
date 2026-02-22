@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ModalController, ToastController } from '@ionic/angular';
+import { AlertController, ModalController, ToastController } from '@ionic/angular';
 import { SettingItem, UserProfile, Vehicle } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { GENERAL_SETTINGS, OTHER_SETTINGS } from '../data/app-settings';
@@ -22,20 +22,55 @@ export class Tab3Page implements OnInit {
   constructor(
     private parkingService: ParkingDataService,
     private modalCtrl: ModalController,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
+    private alertCtrl: AlertController // Add AlertController
   ) { }
 
   ngOnInit() {
     this.parkingService.userProfile$.subscribe(p => { if (p) this.userProfile = p; });
-    this.parkingService.vehicles$.subscribe(v => this.vehicles = v);
+    this.parkingService.vehicles$.subscribe(v => {
+      // Sort vehicles: Default vehicle first, then order by rank
+      this.vehicles = [...v].sort((a, b) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return (a.rank || 0) - (b.rank || 0);
+      });
+    });
   }
 
   segmentChanged(event: any) {
     this.selectedSegment = event.detail.value;
   }
 
-  selectVehicle(vehicleId: number | string) {
-    this.parkingService.setDefaultVehicle(vehicleId);
+  async selectVehicle(vehicleId: number | string) {
+    const selectedCar = this.vehicles.find(v => v.id === vehicleId);
+    if (!selectedCar || selectedCar.isDefault) return; // Prevent re-selecting the same car
+
+    const alert = await this.alertCtrl.create({
+      header: 'ตั้งเป็นยานพาหนะหลัก',
+      message: `คุณต้องการตั้งรถทะเบียน <strong>${selectedCar.licensePlate}</strong> เป็นยานพาหนะหลักหรือไม่?`,
+      buttons: [
+        {
+          text: 'ยกเลิก',
+          role: 'cancel',
+          cssClass: 'text-gray-500'
+        },
+        {
+          text: 'ยืนยัน',
+          role: 'confirm',
+          handler: async () => {
+            try {
+              await this.parkingService.setDefaultVehicle(vehicleId);
+              this.showToast('ตั้งค่าเป็นยานพาหนะหลักเรียบร้อย', 'success');
+            } catch (e) {
+              this.showToast('เกิดข้อผิดพลาด ไม่สามารถตั้งค่าได้', 'error');
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
   }
 
   async addVehicle() {
