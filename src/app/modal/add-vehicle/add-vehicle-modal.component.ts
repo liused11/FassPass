@@ -1,5 +1,4 @@
-
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Vehicle } from '../../data/models';
@@ -12,7 +11,10 @@ import { Vehicle } from '../../data/models';
 })
 export class AddVehicleModalComponent implements OnInit {
 
+  @Input() editVehicle?: Vehicle; // Add Input to accept vehicle for editing
+
   vehicleForm: FormGroup;
+  isEditMode: boolean = false;
 
   // Mock Data for Selectors
   vehicleTypes = [
@@ -22,7 +24,7 @@ export class AddVehicleModalComponent implements OnInit {
   ];
 
   brands = [
-    'Toyota', 'Honda', 'Nissan', 'Mazda', 'Mitsubishi', 'Isuzu', 
+    'Toyota', 'Honda', 'Nissan', 'Mazda', 'Mitsubishi', 'Isuzu',
     'Suzuki', 'Ford', 'MG', 'BMW', 'Mercedes-Benz', 'BYD', 'GWM', 'Tesla'
   ];
 
@@ -54,8 +56,33 @@ export class AddVehicleModalComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Default image based on type
-    this.updateDefaultImage();
+    if (this.editVehicle) {
+      this.isEditMode = true;
+      this.selectedImage = this.editVehicle.image || null;
+
+      // Attempt to split model into brand and model part if they were concatenated
+      let brand = '';
+      let modelPart = this.editVehicle.model || '';
+
+      // Basic splitting logic (assumes first word is brand, rest is model)
+      if (modelPart.includes(' ')) {
+        const parts = modelPart.split(' ');
+        brand = parts[0];
+        modelPart = parts.slice(1).join(' ');
+      }
+
+      this.vehicleForm.patchValue({
+        type: 'car', // Assume car for now or derive from data
+        brand: brand,
+        model: modelPart,
+        color: this.editVehicle.color || '',
+        licensePlate: this.editVehicle.licensePlate || '',
+        province: this.editVehicle.province || 'กรุงเทพมหานคร'
+      });
+    } else {
+      // Default image based on type
+      this.updateDefaultImage();
+    }
   }
 
   onFileSelected(event: any) {
@@ -71,7 +98,7 @@ export class AddVehicleModalComponent implements OnInit {
 
   updateDefaultImage() {
     if (this.selectedImage) return; // User uploaded overrides default
-    
+
     // Simple placeholder logic
     const type = this.vehicleForm.get('type')?.value;
     // In real app, map to assets. For now use placeholder.
@@ -86,7 +113,7 @@ export class AddVehicleModalComponent implements OnInit {
     if (this.vehicleForm.valid) {
       console.log('[AddVehicleModal] Form is valid');
       const formValue = this.vehicleForm.value;
-      
+
       // Construct Vehicle Object
       const newVehicle: Partial<Vehicle> = {
         model: `${formValue.brand} ${formValue.model}`,
@@ -94,17 +121,21 @@ export class AddVehicleModalComponent implements OnInit {
         province: formValue.province,
         color: formValue.color, // Add color
         image: this.selectedImage || 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg', // Fallback
-        isDefault: false,
-        status: 'active',
+        isDefault: this.isEditMode ? this.editVehicle?.isDefault : false,
+        status: this.isEditMode ? this.editVehicle?.status : 'active',
         lastUpdate: 'เพิ่งเพิ่ม',
-        rank: 99 // Will be assigned by service
+        rank: this.isEditMode ? this.editVehicle?.rank : 99 // Will be assigned by service if new
       };
+
+      if (this.isEditMode && this.editVehicle?.id) {
+        newVehicle.id = this.editVehicle.id;
+      }
 
       this.modalCtrl.dismiss(newVehicle, 'confirm');
     } else {
       console.warn('[AddVehicleModal] Form is invalid');
       this.vehicleForm.markAllAsTouched();
-      
+
       // Log errors
       Object.keys(this.vehicleForm.controls).forEach(key => {
         const controlErrors = this.vehicleForm.get(key)?.errors;

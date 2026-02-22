@@ -91,7 +91,8 @@
         </div>
         <h3 class="text-base font-bold text-gray-600">ยังไม่มียานพาหนะ</h3>
         <p class="text-sm text-gray-500 mb-4">เพิ่มรถของคุณเพื่อเริ่มใช้งาน</p>
-        <ion-button (click)="addVehicle()" size="small" class="font-bold [--background:#1a73e8] [--border-radius:8px]">
+        <ion-button (click)="addVehicle()" [disabled]="vehicles.length >= 3" size="small"
+          class="font-bold [--background:#1a73e8] [--border-radius:8px]">
           <ion-icon name="add-outline" slot="start"></ion-icon>
           เพิ่มยานพาหนะ
         </ion-button>
@@ -109,22 +110,26 @@
             เลือกแล้ว
           </div>
 
-          <div class="flex justify-between items-start mb-3">
-            <div class="flex-1 pr-2">
-              <div class="text-[#666] text-sm mb-2">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
-              <div class="flex items-center gap-3 mb-1">
+          <div class="flex justify-between items-start mb-3 gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="text-[#666] text-sm mb-2 truncate">ยานพาหนะลำดับที่ {{ vehicle.rank }}</div>
+              <div class="flex items-center gap-2 mb-1">
                 <div
-                  class="border border-black rounded-md px-1 py-1 bg-white leading-none min-w-[90px] h-[50px] flex flex-col items-center justify-center">
-                  <div class="font-bold text-base leading-none">{{ getLicensePlateParts(vehicle.licensePlate)[0] }}
+                  class="border border-black rounded-md px-1 py-1 bg-white leading-none w-[80px] sm:w-[90px] h-[48px] sm:h-[50px] flex flex-col items-center justify-center shrink-0">
+                  <div class="font-bold text-sm sm:text-base leading-none">{{
+                    getLicensePlateParts(vehicle.licensePlate)[0] }}
                   </div>
-                  <div class="font-bold text-xl leading-none mt-0.5">{{ getLicensePlateParts(vehicle.licensePlate)[1] }}
+                  <div class="font-bold text-lg sm:text-xl leading-none mt-0.5">{{
+                    getLicensePlateParts(vehicle.licensePlate)[1] }}
                   </div>
                 </div>
-                <div class="text-base font-bold text-black whitespace-nowrap">{{ vehicle.province }}</div>
+                <div class="text-sm sm:text-base font-bold text-black flex-1 line-clamp-2 leading-tight break-words">
+                  {{ vehicle.province }}
+                </div>
               </div>
-              <div class="text-[#888] text-sm font-medium uppercase mt-2">{{ vehicle.model }}</div>
+              <div class="text-[#888] text-xs sm:text-sm font-medium uppercase mt-2 truncate">{{ vehicle.model }}</div>
             </div>
-            <div class="w-[120px] h-[80px] shrink-0">
+            <div class="w-[100px] sm:w-[120px] h-[70px] sm:h-[80px] shrink-0">
               <img [src]="vehicle.image" alt="Vehicle" class="w-full h-full object-cover rounded-lg shadow-sm" />
             </div>
           </div>
@@ -141,7 +146,8 @@
                 <span class="text-[#888] text-xs">อัพเดทล่าสุด {{ vehicle.lastUpdate }}</span>
               </div>
             </div>
-            <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer hover:opacity-80">
+            <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer hover:opacity-80"
+              (click)="editVehicle(vehicle)">
               แก้ไข <ion-icon name="arrow-forward" class="text-base"></ion-icon>
             </div>
           </div>
@@ -229,7 +235,8 @@
             <span class="text-[#1a73e8] font-bold text-sm" *ngIf="vehicle.status === 'พร้อมใช้งาน'">พร้อมใช้งาน</span>
             <span class="text-[#888] text-xs ml-2">อัพเดทล่าสุด {{ vehicle.lastUpdate }}</span>
           </div>
-          <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer">
+          <div class="text-[#1a73e8] text-sm flex items-center gap-1 font-bold cursor-pointer"
+            (click)="editVehicle(vehicle)">
             แก้ไข <ion-icon name="arrow-forward"></ion-icon>
           </div>
         </div>
@@ -260,7 +267,8 @@
         </div>
         <div class="flex justify-between items-center text-xs">
           <span class="text-[#888]" *ngIf="vehicle.lastUpdate">แก้ไขเมื่อ {{ vehicle.lastUpdate }}</span>
-          <div class="text-[#1a73e8] flex items-center gap-1 font-bold">
+          <div class="text-[#1a73e8] flex items-center gap-1 font-bold cursor-pointer"
+            (click)="editVehicle(vehicle); $event.stopPropagation()">
             แก้ไข <ion-icon name="arrow-forward"></ion-icon>
           </div>
         </div>
@@ -269,8 +277,11 @@
 
     <!-- Add New Vehicle Button -->
     <div class="py-4">
-      <ion-button expand="block" class="mx-4 font-bold text-base h-12 [--background:#1a73e8] [--border-radius:8px]"
-        (click)="addVehicle()">
+      <div class="mx-4 mb-2 text-center text-xs text-red-500 font-medium" *ngIf="vehicles.length >= 3">
+        * ไม่สามารถเพิ่มยานพาหนะได้ (สูงสุด 3 คัน)
+      </div>
+      <ion-button expand="block" [disabled]="vehicles.length >= 3"
+        class="mx-4 font-bold text-base h-12 [--background:#1a73e8] [--border-radius:8px]" (click)="addVehicle()">
         <ion-icon name="add-circle-outline" slot="start"></ion-icon>
         เพิ่มยานพาหนะใหม่
       </ion-button>

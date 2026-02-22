@@ -45,7 +45,7 @@ export class ParkingDataService {
             console.error('Error loading parking lots:', error);
             // Fallback to empty array on error
             if (this.parkingLotsSubject.value.length === 0) {
-                 this.parkingLotsSubject.next([]);
+                this.parkingLotsSubject.next([]);
             }
             return;
         }
@@ -85,7 +85,7 @@ export class ParkingDataService {
             }));
             this.parkingLotsSubject.next(parkingLots);
         } else {
-             this.parkingLotsSubject.next([]);
+            this.parkingLotsSubject.next([]);
         }
     }
 
@@ -128,7 +128,7 @@ export class ParkingDataService {
 
         if (error) {
             console.error('Error loading user vehicles:', error);
-             // Fallback to empty if error
+            // Fallback to empty if error
             this.vehiclesSubject.next([]);
             return;
         }
@@ -142,13 +142,13 @@ export class ParkingDataService {
                 image: item.image,
                 isDefault: item.is_default,
                 status: item.status,
-                lastUpdate: '', // DB doesn't have formatted date string, leave empty or format updated_at
+                lastUpdate: this.formatThaiDateTime(item.updated_at || item.created_at), // Use real DB time
                 rank: item.rank
             }));
             this.vehiclesSubject.next(vehicles);
         } else {
-             // If DB is empty, use empty
-             this.vehiclesSubject.next([]);
+            // If DB is empty, use empty
+            this.vehiclesSubject.next([]);
         }
     }
 
@@ -180,12 +180,12 @@ export class ParkingDataService {
 
     async addVehicle(vehicle: Partial<Vehicle>) {
         console.log('[ParkingDataService] Adding vehicle:', vehicle);
-        
+
         // Get current user ID
-        const userId = this.reservationService.getTestUserId(); 
-        
+        const userId = this.reservationService.getTestUserId();
+
         if (!userId || userId === '00000000-0000-0000-0000-000000000000') {
-             console.warn('[ParkingDataService] Warning: Using test/default User ID.');
+            console.warn('[ParkingDataService] Warning: Using test/default User ID.');
         }
 
         // 1. Calculate Next Rank from DB to avoid collision (length+1 is unsafe if items deleted)
@@ -209,8 +209,8 @@ export class ParkingDataService {
             .insert([{
                 user_id: userId,
                 model: vehicle.model,
-                license_plate: vehicle.licensePlate, 
-                province: vehicle.province, 
+                license_plate: vehicle.licensePlate,
+                province: vehicle.province,
                 color: vehicle.color || null, // Add color
                 image: vehicle.image,
                 is_default: vehicle.isDefault || false,
@@ -233,7 +233,7 @@ export class ParkingDataService {
 
         // 3. Update local state
         if (data) {
-             const newVehicle: Vehicle = {
+            const newVehicle: Vehicle = {
                 id: data.id,
                 model: data.model,
                 licensePlate: data.license_plate,
@@ -242,7 +242,7 @@ export class ParkingDataService {
                 image: data.image,
                 isDefault: data.is_default,
                 status: data.status,
-                lastUpdate: 'Just now',
+                lastUpdate: this.formatThaiDateTime(new Date().toISOString()), // Current time as placeholder if we don't return updated_at from DB
                 rank: data.rank
             };
             const currentVehicles = this.vehiclesSubject.value;
@@ -250,10 +250,48 @@ export class ParkingDataService {
         }
     }
 
-    updateVehicle(updatedVehicle: Vehicle) {
-        const currentVehicles = this.vehiclesSubject.value;
-        const updated = currentVehicles.map(v => v.id === updatedVehicle.id ? updatedVehicle : v);
-        this.vehiclesSubject.next(updated);
+    async updateVehicle(updatedVehicle: Vehicle) {
+        console.log('[ParkingDataService] Updating vehicle back to DB:', updatedVehicle);
+
+        const updateData = {
+            model: updatedVehicle.model,
+            license_plate: updatedVehicle.licensePlate,
+            province: updatedVehicle.province,
+            color: updatedVehicle.color,
+            image: updatedVehicle.image,
+            is_default: updatedVehicle.isDefault,
+            status: updatedVehicle.status,
+            updated_at: new Date().toISOString() // Set current time for updated_at
+        };
+
+        const { data, error } = await this.supabaseService.client
+            .from('cars')
+            .update(updateData)
+            .eq('id', updatedVehicle.id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[ParkingDataService] Error updating vehicle:', error);
+            throw error;
+        }
+
+        console.log('[ParkingDataService] Vehicle updated successfully in DB:', data);
+
+        // Update successful, reflect the new time locally
+        if (data) {
+            const currentVehicles = this.vehiclesSubject.value;
+            const updated = currentVehicles.map(v => {
+                if (v.id === updatedVehicle.id) {
+                    return {
+                        ...updatedVehicle,
+                        lastUpdate: this.formatThaiDateTime(data.updated_at)
+                    };
+                }
+                return v;
+            });
+            this.vehiclesSubject.next(updated);
+        }
     }
 
     setDefaultVehicle(id: number | string) {
@@ -283,5 +321,30 @@ export class ParkingDataService {
 
     updateProfile(profile: UserProfile) {
         this.userProfileSubject.next(profile);
+    }
+
+    // --- Helper Methods ---
+    private formatThaiDateTime(isoString: string | null | undefined): string {
+        if (!isoString) return 'ไม่ทราบเวลา';
+
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return 'ไม่ทราบเวลา';
+
+        const thaiMonths = [
+            'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+        ];
+
+        const day = date.getDate();
+        const month = thaiMonths[date.getMonth()];
+        const year = date.getFullYear() + 543; // Convert to Buddhist Era
+        let hours = date.getHours().toString();
+        let minutes = date.getMinutes().toString();
+
+        // Pad single digit
+        if (hours.length < 2) hours = '0' + hours;
+        if (minutes.length < 2) minutes = '0' + minutes;
+
+        return `${day} ${month} ${year} เวลา ${hours}:${minutes} น.`;
     }
 }
