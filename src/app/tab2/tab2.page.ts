@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
+import { ModalController, ToastController } from '@ionic/angular';
 import { Booking } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ReservationService } from '../services/reservation.service';
+import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
 
 @Component({
   selector: 'app-tab2',
@@ -34,18 +36,11 @@ export class Tab2Page implements OnInit {
   // Segment for Status
   selectedStatusSegment: string = 'in_progress'; // 'in_progress' | 'completed' | 'cancelled'
 
-  // Arrays for 4 Categories
-  hourlyBookings: Booking[] = [];      // Was latestBookings/daily
-  flat24Bookings: Booking[] = [];
-  monthlyBookings: Booking[] = [];      // monthly_regular
+  // Combined Display Array
+  displayBookings: Booking[] = [];
 
-
-  // Expanded states for sections
-  expandedSections: any = {
-    hourly: false,
-    flat_24h: false,
-    monthly_regular: false,
-  };
+  // Expanded state for the single list
+  isExpanded: boolean = false;
 
   // Mock Data
   allBookings: Booking[] = [];
@@ -58,7 +53,9 @@ export class Tab2Page implements OnInit {
 
   constructor(
     private parkingService: ParkingDataService,
-    private reservationService: ReservationService
+    private reservationService: ReservationService,
+    private modalCtrl: ModalController,
+    private toastCtrl: ToastController
   ) { }
 
   ngOnInit() {
@@ -124,9 +121,12 @@ export class Tab2Page implements OnInit {
 
           switch (r.status) {
             case 'pending':
+              status = 'pending';
+              statusLabel = 'กำลังตรวจสอบรายการ';
+              break;
             case 'pending_payment':
               status = 'pending_payment';
-              statusLabel = 'รอชำระเงิน';
+              statusLabel = 'รอการชำระเงิน';
               break;
             case 'confirmed':
               status = 'confirmed';
@@ -300,7 +300,7 @@ export class Tab2Page implements OnInit {
       // 1. Status Filter
       let statusMatch = false;
       if (this.selectedStatusSegment === 'in_progress') {
-        statusMatch = ['active', 'confirmed', 'pending_payment'].includes(b.status);
+        statusMatch = ['active', 'confirmed', 'pending_payment', 'pending'].includes(b.status);
       } else if (this.selectedStatusSegment === 'cancelled') {
         statusMatch = b.status === 'cancelled';
       } else {
@@ -326,16 +326,37 @@ export class Tab2Page implements OnInit {
       return statusMatch && monthMatch && catMatch;
     });
 
-    // Valid statuses for display logic
-    // Using new DB types: hourly, flat_24h, monthly_regular, monthly_night
-    this.hourlyBookings = filtered.filter(b => b.bookingType === 'hourly');
-    this.flat24Bookings = filtered.filter(b => b.bookingType === 'flat_24h');
-    this.monthlyBookings = filtered.filter(b => b.bookingType === 'monthly_regular');
+    // Sort by bookingTime ascending (closest upcoming time first)
+    filtered.sort((a, b) => new Date(a.bookingTime).getTime() - new Date(b.bookingTime).getTime());
 
+    // Update combined display array
+    this.displayBookings = filtered;
+  }
+
+  // Helpers for Booking Type Label & Class
+  getBookingTypeLabel(type: string | undefined): string {
+    switch (type) {
+      case 'hourly': return 'รายชั่วโมง';
+      case 'flat_24h': return 'เหมาจ่าย 24 ชม.';
+      case 'monthly_regular': return 'รายเดือน';
+      case 'monthly_night': return 'รายเดือน (กลางคืน)';
+      default: return 'ทั่วไป';
+    }
+  }
+
+  getBookingTypeClass(type: string | undefined): string {
+    switch (type) {
+      case 'hourly': return 'bg-blue-50 text-blue-600 border border-blue-100';
+      case 'flat_24h': return 'bg-green-50 text-green-600 border border-green-100';
+      case 'monthly_regular':
+      case 'monthly_night': return 'bg-purple-50 text-purple-600 border border-purple-100';
+      default: return 'bg-gray-50 text-gray-600 border border-gray-100';
+    }
   }
 
   // Helper for Tailwind classes based on status
   getStatusClass(item: Booking): string {
+    if (item.status === 'pending') return 'text-sky-500';
     if (item.status === 'pending_payment') return 'text-[#FFB800]';
     if (item.status === 'active') return 'text-green-600'; // Active = Green as requested
     if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]';
@@ -344,8 +365,8 @@ export class Tab2Page implements OnInit {
     return '';
   }
 
-  toggleSection(section: string) {
-    this.expandedSections[section] = !this.expandedSections[section];
+  toggleExpanded() {
+    this.isExpanded = !this.isExpanded;
   }
 
   // --- Map Navigation ---
@@ -358,6 +379,68 @@ export class Tab2Page implements OnInit {
     // Always use Google Maps
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     window.open(url, '_blank');
+  }
+
+  async handleFooterClick(item: Booking) {
+    if (item.status === 'pending_payment') {
+      // Prepare data for payment modal
+      let data: any = {
+        siteId: item.placeName, // approximate 
+        siteName: item.placeName,
+        selectedType: item.vehicleType || 'normal',
+        selectedFloors: [item.floor],
+        selectedZones: [item.zone],
+        selectedZoneIds: [],
+        selectedSlotId: item.slot, // Ensure it doesn't search for a new slot
+        startSlot: { dateTime: item.bookingTime },
+        endSlot: { dateTime: item.endTime },
+        isSpecificSlot: true,
+        isRandomSystem: false,
+        bookingMode: item.bookingType,
+        price: item.price
+      };
+
+      const modal = await this.modalCtrl.create({
+        component: CheckBookingComponent,
+        componentProps: { data: data },
+        initialBreakpoint: 1,
+        breakpoints: [0, 0.5, 1],
+        backdropDismiss: true,
+        cssClass: 'detail-sheet-modal',
+      });
+      await modal.present();
+
+      const { data: result, role } = await modal.onDidDismiss();
+      if (role === 'confirm' && result && result.confirmed) {
+        try {
+          const newStatus = result.data.status;
+          await this.reservationService.updateReservationStatus(item.id, newStatus);
+
+          const msg = newStatus === 'pending' ? 'แจ้งชำระเงินเรียบร้อย รอตรวจสอบ' : 'เก็บไว้ชำระเงินภายหลัง';
+          const toast = await this.toastCtrl.create({
+            message: msg,
+            duration: 2000,
+            color: 'success',
+            position: 'top'
+          });
+          toast.present();
+
+          // Reload reservations
+          this.loadRealReservations();
+        } catch (err) {
+          console.error('Error updating status', err);
+        }
+      }
+    } else {
+      // Handle "ดูรายละเอียด" view for other statuses
+      const toast = await this.toastCtrl.create({
+        message: 'เปิดหน้ารายละเอียดการจอง: ' + item.id,
+        duration: 2000,
+        color: 'dark',
+        position: 'top'
+      });
+      toast.present();
+    }
   }
 }
 

@@ -16,6 +16,7 @@ export class BookingTypeSelectorComponent implements OnInit {
             desc: 'จองตามระยะเวลาจริง เริ่มต้น 20 บ./ชม.',
             icon: 'time-outline',
             color: 'primary',
+            hexColor: '#3b82f6', // Tailwind blue-500
             badge: null
         },
         {
@@ -24,6 +25,7 @@ export class BookingTypeSelectorComponent implements OnInit {
             desc: 'จอดได้ยาว 24 ชั่วโมง ราคาพิเศษ',
             icon: 'sync-circle-outline',
             color: 'success',
+            hexColor: '#10b981', // Tailwind green-500
             badge: 'สุดคุ้ม'
         },
         {
@@ -32,6 +34,7 @@ export class BookingTypeSelectorComponent implements OnInit {
             desc: 'จอดได้ตลอด 24 ชม. ไม่จำกัดจำนวนครั้ง',
             icon: 'calendar-number-outline',
             color: 'tertiary',
+            hexColor: '#8b5cf6', // Tailwind violet-500
             badge: null
         },
 

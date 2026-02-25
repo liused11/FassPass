@@ -62,7 +62,7 @@ export interface Booking {
     locationDetails: string; // e.g. "ชั้น 1 | โซน B | B04"
     bookingTime: Date;
     endTime: Date;
-    status: 'pending_payment' | 'confirmed' | 'completed' | 'cancelled' | 'active'; // Added 'active' for currently parking
+    status: 'pending' | 'pending_payment' | 'confirmed' | 'completed' | 'cancelled' | 'active'; // Added 'active' for currently parking
     statusLabel?: string; // Optional override for status text
     price: number;
     discountBadge?: string; // e.g. "ลด 15%"

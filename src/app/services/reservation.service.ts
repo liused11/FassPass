@@ -62,7 +62,7 @@ export class ReservationService {
         slot_id: slotId,
         start_time: booking.bookingTime.toISOString(),
         end_time: booking.endTime.toISOString(),
-        status: 'pending',
+        status: booking.status || 'pending',
         vehicle_type: 'car',
         booking_type: this.mapBookingTypeToEnum(booking.bookingType) // Map to DB Enum
       })
@@ -84,6 +84,19 @@ export class ReservationService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    return data;
+  }
+
+  async updateReservationStatus(reservationId: string, status: string) {
+    const { data, error } = await this.supabaseService.client
+      .from('reservations')
+      .update({ status: status })
+      .eq('id', reservationId);
+
+    if (error) {
+      console.error('Error updating reservation status:', error);
+      throw error;
+    }
     return data;
   }
 

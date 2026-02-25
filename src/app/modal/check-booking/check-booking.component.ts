@@ -344,7 +344,7 @@ export class CheckBookingComponent implements OnInit {
       selectedZones: [this.assignedZone],
       totalPrice: this.totalPrice,
       paymentMethod: this.selectedPaymentMethod,
-      status: isPayLater ? 'pending_payment' : 'confirmed'
+      status: isPayLater ? 'pending_payment' : 'pending'
     };
     this.modalCtrl.dismiss({ confirmed: true, data: finalData, action: isPayLater ? 'pay_later' : 'pay_now' }, 'confirm');
   }
