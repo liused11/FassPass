@@ -154,4 +154,16 @@ export class BuildingDetailComponent implements OnInit {
         // but horizontal scroll usually suffices for short term.
         console.log('Change month', offset);
     }
+
+    // --- Map Navigation ---
+    openMap(lat?: number, lng?: number) {
+        if (!lat || !lng) {
+            console.warn('Coordinates not available for this location.');
+            return;
+        }
+
+        // Always use Google Maps
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        window.open(url, '_blank');
+    }
 }

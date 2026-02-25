@@ -1484,4 +1484,16 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     await alert.present();
   }
+
+  // --- Map Navigation ---
+  openMap(lat?: number, lng?: number) {
+    if (!lat || !lng) {
+      console.warn('Coordinates not available for this location.');
+      return;
+    }
+
+    // Always use Google Maps
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, '_blank');
+  }
 }

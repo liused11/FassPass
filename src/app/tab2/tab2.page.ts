@@ -254,7 +254,9 @@ export class Tab2Page implements OnInit {
             vehicleType: r.vehicle_type,
             carId: r.car_id,
             dateLabel: dateLabel,
-            reservedAt: (r.reserved_at && (r.reserved_at.includes('Z') || r.reserved_at.includes('+'))) ? new Date(r.reserved_at) : (r.reserved_at ? new Date(r.reserved_at + 'Z') : new Date())
+            reservedAt: (r.reserved_at && (r.reserved_at.includes('Z') || r.reserved_at.includes('+'))) ? new Date(r.reserved_at) : (r.reserved_at ? new Date(r.reserved_at + 'Z') : new Date()),
+            lat: lot?.lat || lot?.mapX,
+            lng: lot?.lng || lot?.mapY
           } as Booking;
         });
 
@@ -345,4 +347,17 @@ export class Tab2Page implements OnInit {
   toggleSection(section: string) {
     this.expandedSections[section] = !this.expandedSections[section];
   }
+
+  // --- Map Navigation ---
+  openMap(lat?: number, lng?: number) {
+    if (!lat || !lng) {
+      console.warn('Coordinates not available for this booking.');
+      return;
+    }
+
+    // Always use Google Maps
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, '_blank');
+  }
 }
+

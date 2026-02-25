@@ -24,7 +24,7 @@
             </ng-template>
           </ion-popover>
 
-          <div class="text-sm mt-2 flex items-center gap-2">
+          <div class="text-sm mt-2 flex flex-wrap items-center gap-2">
             <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
               [class.bg-blue-50]="bookingMode === 'daily'" [class.text-blue-600]="bookingMode === 'daily'"
               [class.border-blue-100]="bookingMode === 'daily'" [class.bg-green-50]="bookingMode === 'flat24'"
@@ -37,6 +37,12 @@
             <span class="text-gray-400 text-xs" *ngIf="todayCloseTime">
               {{ todayCloseTime === '24:00' ? '• เปิด 24 ชม.' : '• ปิด ' + todayCloseTime }}
             </span>
+          </div>
+          <div class="mt-2" *ngIf="(lot.lat && lot.lng) || (lot.mapX && lot.mapY)">
+            <button (click)="openMap((lot.lat || lot.mapX), (lot.lng || lot.mapY)); $event.stopPropagation();"
+              class="bg-blue-50 hover:bg-blue-100 text-blue-600 rounded px-2 py-1 text-[10px] flex items-center gap-1 font-bold border border-blue-100 uppercase tracking-wider transition-colors w-fit">
+              <ion-icon name="map" class="text-[12px]"></ion-icon> เปิด Google Maps
+            </button>
           </div>
         </div>
 

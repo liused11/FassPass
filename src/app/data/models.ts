@@ -42,6 +42,7 @@ export interface ParkingLot {
     status: 'available' | 'full' | 'closed' | 'low';
     isBookmarked: boolean;
     distance: number;
+    distanceColor?: string; // Color based on distance
     hours: string;
     hasEVCharger: boolean;
     userTypes: string;
@@ -80,6 +81,9 @@ export interface Booking {
     carId?: string;
     dateLabel?: string;
     reservedAt?: Date;
+    // Coordinates for Navigation
+    lat?: number;
+    lng?: number;
 }
 
 export interface UserProfile {

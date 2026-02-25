@@ -21,7 +21,7 @@ import { BuildingDetailComponent } from '../modal/building-detail/building-detai
 
 
 import * as ngeohash from 'ngeohash';
-import { ParkingLot, ScheduleItem } from '../data/models';
+import { ParkingLot, ScheduleItem, UserProfile } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ParkingService } from '../services/parking.service';
 
@@ -41,6 +41,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
+
+  userProfile: UserProfile | null = null;
+
+  // --- User Coordinates (Default) ---
+  userLat = 13.6513;
+  userLon = 100.4955;
 
   // --- Map Variables ---
   private map: any;
@@ -88,6 +94,11 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.uiEventService.refreshParkingData$.subscribe(() => {
       console.log('[Tab1] 🔄 Refresh Event Received. Reloading Data...');
       this.loadRealData();
+    });
+
+    // Subscribe to User Profile
+    this.parkingDataService.userProfile$.subscribe(p => {
+      this.userProfile = p;
     });
 
     this.updateSheetHeightByLevel(this.sheetLevel);
@@ -155,6 +166,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
             this.allParkingLots = realLots;
             this.processScheduleData();
             this.updateParkingStatuses();
+            this.calculateDistances(); // Calculate distance & color here
             this.filterData();
 
             if (this.filteredParkingLots.length === 0) {
@@ -178,13 +190,27 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   filterData() {
     let results = this.allParkingLots;
 
-    // 1. Filter by Location Type (Safe & Case-Insensitive)
-    results = results.filter(lot => (lot.category || '').toLowerCase() === (this.selectedLocation || '').toLowerCase());
+    // 1. Filter by Location Type (Safe & Case-Insensitive, default to 'parking' if undefined)
+    results = results.filter(lot => {
+      const cat = (lot.category || 'parking').toLowerCase();
+      const selectedCat = (this.selectedLocation || 'parking').toLowerCase();
+      return cat === selectedCat;
+    });
 
     // 2. Filter by Vehicle Type (Tab) OR Zone
     if (this.selectedTab !== 'all') {
       if (this.selectedLocation === 'parking') {
-        results = results.filter((lot) => lot.supportedTypes.includes(this.selectedTab));
+        results = results.filter((lot) => {
+          if (lot.supportedTypes && Array.isArray(lot.supportedTypes)) {
+            return lot.supportedTypes.includes(this.selectedTab);
+          }
+          if (lot.capacity) {
+            if (this.selectedTab === 'normal') return lot.capacity.normal > 0;
+            if (this.selectedTab === 'ev') return lot.capacity.ev > 0;
+            if (this.selectedTab === 'motorcycle') return lot.capacity.motorcycle > 0;
+          }
+          return false;
+        });
       } else {
         // Building -> Filter by Zone
         if (this.selectedTab === 'north') {
@@ -274,10 +300,13 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     setTimeout(() => { this.map.invalidateSize(); }, 500);
   }
 
-  private createPinIcon(L: any, color: string) {
-    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="1.5" width="40px" height="40px">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>`;
+  private createPinIcon(L: any, color: string, text: string = '') {
+    const svgContent = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="1.5" width="40px" height="40px">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+        <text x="12" y="11.5" font-family="Arial, sans-serif" font-weight="bold" font-size="7" fill="white" stroke="none" text-anchor="middle">${text}</text>
+      </svg>
+    `;
 
     return L.divIcon({
       html: svgContent,
@@ -297,14 +326,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.markers = [];
 
     // วาด Marker ใหม่
-    this.visibleParkingLots.forEach(lot => {
+    this.visibleParkingLots.forEach((lot, index) => {
       if (lot.lat && lot.lng) {
-        let color = '#6c757d';
-        if (lot.status === 'available') color = '#28a745';
-        else if (lot.status === 'low') color = '#ffc107';
-        else if (lot.status === 'full' || lot.status === 'closed') color = '#dc3545';
+        // ใช้ border line color (distanceColor) หรือสีตั้งต้นถ้าไม่มีจาก API (lot.distanceColor ไม่ควรเป็นว่างถ้าคำนวณผ่าน calculateDistances())
+        const color = lot.distanceColor || '#6c757d';
 
-        const icon = this.createPinIcon(L, color);
+        // ลำดับ (Index + 1)
+        const rankNumber = (index + 1).toString();
+
+        const icon = this.createPinIcon(L, color, rankNumber);
 
         const marker = L.marker([lot.lat, lot.lng], { icon: icon })
           .addTo(this.map)
@@ -332,6 +362,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
       // 1. คำนวณ Geohash (ความละเอียด 7 หลัก)
       this.userGeoHash = ngeohash.encode(lat, lng, 7);
+
+      // --- อัปเดตพิกัด และ คำนวณระยะทาง/สีใหม่ ---
+      this.userLat = lat;
+      this.userLon = lng;
+      this.calculateDistances();
+      this.filterData(); // เพื่ออัปเดต UI หน้าจอทันที
 
       if (this.map) {
         const L = await import('leaflet');
@@ -640,6 +676,60 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  // --- Distance Calculations ---
+  calculateDistances() {
+    this.allParkingLots.forEach(lot => {
+      // Use lot.lat and lot.lng if available, otherwise default to mapX/mapY if they hold coordinates
+      const lotLat = lot.lat || lot.mapX;
+      const lotLng = lot.lng || lot.mapY;
+
+      if (lotLat && lotLng) {
+        // Calculate distance in km
+        const distKm = this.calculateDistance(this.userLat, this.userLon, lotLat, lotLng);
+        // Distance converted to meters
+        lot.distance = Math.round(distKm * 1000);
+      } else {
+        lot.distance = 999999;
+      }
+    });
+
+    // Sort lots by calculated distance
+    this.allParkingLots.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+
+    // Assign gradient color based on sorted rank (Blue to Gray)
+    const validLots = this.allParkingLots.filter(l => l.distance !== 999999);
+    const totalValid = validLots.length;
+
+    this.allParkingLots.forEach((lot, index) => {
+      if (lot.distance === 999999) {
+        lot.distanceColor = 'hsl(214, 0%, 75%)'; // default gray
+      } else {
+        // Calculate transition from Primary Blue (hsl(214, 82%, 51%)) to Gray (hsl(214, 0%, 75%))
+        const ratio = totalValid > 1 ? index / (totalValid - 1) : 0;
+
+        // Saturation fades from 82% to 0% (Gray)
+        const saturation = Math.floor(82 - (ratio * 82));
+
+        // Lightness shifts from 51% (Blue) to 75% (Light Gray)
+        const lightness = Math.floor(51 + (ratio * 24));
+
+        lot.distanceColor = `hsl(214, ${saturation}%, ${lightness}%)`;
+      }
+    });
+  }
+
+  calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   async viewLotDetails(lot: ParkingLot) {
     // 0. Check if it's a building -> Open Building Detail Modal
     if (lot.category === 'building') {
@@ -749,6 +839,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getDisplayCapacity(lot: ParkingLot): number {
+    if (!lot.capacity) return 0;
     if (this.selectedTab === 'all') {
       return (lot.capacity.normal || 0) + (lot.capacity.ev || 0) + (lot.capacity.motorcycle || 0);
     }
@@ -757,6 +848,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getDisplayAvailable(lot: ParkingLot): number {
+    if (!lot.available) return 0;
     if (this.selectedTab === 'all') {
       return (lot.available.normal || 0) + (lot.available.ev || 0) + (lot.available.motorcycle || 0);
     }
