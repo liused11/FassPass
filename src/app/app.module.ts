@@ -10,9 +10,11 @@ import { BookingTypeSelectorComponent } from './modal/booking-type-selector/book
 
 import { HttpClientModule } from '@angular/common/http';
 
+import { AuthModalComponent } from './modal/auth-modal/auth-modal.component';
+
 @NgModule({
   declarations: [AppComponent, BookingTypeSelectorComponent],
-  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule, HttpClientModule],
+  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule, HttpClientModule, AuthModalComponent],
   providers: [{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy }],
   bootstrap: [AppComponent],
 })
