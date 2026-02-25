@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
-import { AlertController } from '@ionic/angular';
+import { Component, OnInit } from '@angular/core';
+import { ModalController } from '@ionic/angular';
+import { AuthService } from './services/auth.service';
+import { LineService } from './services/line.service';
+import { AuthModalComponent } from './modal/auth-modal/auth-modal.component';
 import { ReservationService } from './services/reservation.service';
 
 @Component({
@@ -8,50 +11,59 @@ import { ReservationService } from './services/reservation.service';
   styleUrls: ['app.component.scss'],
   standalone: false,
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   constructor(
-    private alertCtrl: AlertController,
+    private authService: AuthService,
+    private lineService: LineService,
+    private modalCtrl: ModalController,
     private reservationService: ReservationService
-  ) {}
+  ) { }
 
   async ngOnInit() {
-    await this.presentUserIdAlert();
+    await this.lineService.initLiff();
+    await this.checkAuthStatus();
   }
 
-  async presentUserIdAlert() {
-    const alert = await this.alertCtrl.create({
-      header: 'Test Mode: User ID',
-      message: 'Enter User UUID for testing. (Using default if empty)',
+  private async checkAuthStatus() {
+    if (this.isGuestChoice) return;
+
+    let user = await this.authService.getCurrentUser();
+    if (!user) user = await this.authService.signInAnonymously();
+
+    if (user) {
+      this.reservationService.setTestUserId(user.id);
+      const profile = await this.authService.getProfile(user.id);
+      if (!profile || !profile.line_id) {
+        const modal = await this.modalCtrl.create({
+          component: AuthModalComponent,
+          backdropDismiss: false
+        });
+        await modal.present();
+
+        const { data } = await modal.onDidDismiss();
+        if (data?.role === 'guest') {
+          this.isGuestChoice = true;
+        }
+      }
+    }
+  }
+
+  async showAuthLanding() {
+    const modal = await this.modalCtrl.create({
+      component: AuthModalComponent,
       backdropDismiss: false,
-      inputs: [
-        {
-          name: 'userId',
-          type: 'text',
-          placeholder: 'User ID (0000...)',
-          value: '00000000-0000-0000-0000-000000000000' 
-        },
-        {
-          name: 'slotId',
-          type: 'text',
-          placeholder: 'Slot ID (e.g. 1-1-1-1-1)',
-          value: '' 
-        }
-      ],
-      buttons: [
-        {
-          text: 'OK',
-          handler: (data) => {
-            const uid = data.userId || '00000000-0000-0000-0000-000000000000';
-            this.reservationService.setTestUserId(uid);
-            
-            if (data.slotId) {
-                this.reservationService.setTestSlotId(data.slotId);
-            }
-          }
-        }
-      ]
+      cssClass: 'auth-full-screen'
     });
 
-    await alert.present();
+    await modal.present();
+
+    const { data } = await modal.onDidDismiss();
+    if (data?.isLoggedIn) {
+      console.log('User logged in successfully');
+    }
   }
+
+  private isGuestChoice = false;
+
+
 }
