@@ -162,8 +162,8 @@ export class Tab3Page implements OnInit {
       componentProps: {
         currentProfile: this.userProfile // Pass the current profile data to pre-fill the form
       },
-      breakpoints: [0, 0.75, 1],
-      initialBreakpoint: 0.75,
+      breakpoints: [0, 0.55, 1],
+      initialBreakpoint: 0.55,
       cssClass: 'edit-profile-modal'
     });
 

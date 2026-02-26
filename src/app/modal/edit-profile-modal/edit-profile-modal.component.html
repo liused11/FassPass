@@ -56,15 +56,14 @@
       </div>
     </div>
 
+    <!-- Embedded Save Button -->
+    <div class="mt-8 pt-4 pb-6">
+      <ion-button type="submit" expand="block" color="primary" class="h-12 font-bold shadow-sm"
+        style="--border-radius: 12px;">
+        <ion-icon name="save-outline" slot="start" class="text-xl mr-2"></ion-icon>
+        บันทึกข้อมูล
+      </ion-button>
+    </div>
+
   </form>
 </ion-content>
-
-<ion-footer class="ion-no-border bg-white shadow-md">
-  <div class="p-4 pt-2">
-    <button (click)="save()"
-      class="w-full bg-[#0056b3] text-white font-bold py-3.5 rounded-xl shadow-sm active:bg-blue-800 transition-colors flex justify-center items-center gap-2">
-      <ion-icon name="save-outline" class="text-lg"></ion-icon>
-      บันทึกข้อมูล
-    </button>
-  </div>
-</ion-footer>

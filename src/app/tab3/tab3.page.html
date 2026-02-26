@@ -21,19 +21,23 @@
   <div class="px-4 pb-4">
     <div class="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
       <div class="flex items-center">
-        <ion-avatar class="w-[60px] h-[60px] mr-4 border border-black">
-          <img [src]="userProfile.avatar" alt="Avatar" class="w-full h-full object-cover" />
+        <ion-avatar class="w-[60px] h-[60px] mr-4 border border-gray-300 bg-gray-100 flex items-center justify-center">
+          <img *ngIf="userProfile?.avatar; else noAvatar" [src]="userProfile.avatar" alt="Avatar"
+            class="w-full h-full object-cover" />
+          <ng-template #noAvatar>
+            <ion-icon name="person" class="text-3xl text-gray-400"></ion-icon>
+          </ng-template>
         </ion-avatar>
         <div class="flex-1">
-          <h2 class="m-0 text-lg font-bold text-[#0056b3]">{{ userProfile.name }}</h2>
+          <h2 class="m-0 text-lg font-bold text-[#0056b3]">{{ userProfile?.name || 'ผู้เยี่ยมชม' }}</h2>
           <!-- Role Badge -->
-          <div class="mt-1 mb-1">
+          <div class="mt-1 mb-1" *ngIf="userProfile?.role">
             <span
               class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-200">
               {{ userProfile.role }}
             </span>
           </div>
-          <p class="mb-1 text-sm text-[#666]">เบอร์โทร: {{ userProfile.phone }}</p>
+          <p class="mb-1 text-sm text-[#666]">เบอร์โทร: {{ userProfile?.phone || '-' }}</p>
           <div class="flex items-center text-xs text-[#666] cursor-pointer active:opacity-70 transition-opacity"
             (click)="openEditProfile()">
             <span>แก้ไขข้อมูลส่วนตัว</span>

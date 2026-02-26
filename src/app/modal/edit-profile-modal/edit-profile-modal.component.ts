@@ -45,6 +45,7 @@ export class EditProfileModalComponent implements OnInit {
   async save() {
     if (this.profileForm.invalid) {
       this.profileForm.markAllAsTouched();
+      this.showToast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง', 'danger');
       return;
     }
 
