@@ -43,7 +43,7 @@ export class AuthService {
   // Login ผ่าน LINE (เอา Token แลก Session)
   async signInWithLineToken(idToken: string) {
     let { data: { user } } = await this.supabase.auth.getUser();
-    
+
     if (!user) {
       console.log('No session found, initializing anonymous session...');
       user = await this.signInAnonymously();
@@ -53,9 +53,9 @@ export class AuthService {
     if (!currentUid) throw new Error("Could not establish a device anchor (Anonymous UID)");
 
     const { data, error } = await this.supabase.functions.invoke('line-login', {
-      body: { 
+      body: {
         idToken,
-        anonymousUid: currentUid 
+        anonymousUid: currentUid
       }
     });
 
@@ -81,7 +81,7 @@ export class AuthService {
     for (let i = 0; i < MAX_RETRIES; i++) {
       try {
         const { data, error } = await this.supabase.auth.getUser();
-        
+
         if (!error) return data.user;
 
         if (!this.isLockError(error)) {
@@ -99,7 +99,7 @@ export class AuthService {
         return null;
       }
     }
-    
+
     const { data: finalCheck } = await this.supabase.auth.getSession();
     return finalCheck.session?.user || null;
   }
@@ -129,7 +129,7 @@ export class AuthService {
   }
 
   async logicalLogout() {
-    localStorage.removeItem('user_profile'); 
+    localStorage.removeItem('user_profile');
   }
 
   async upgradeGuestToEmail(email: string, password: string) {
@@ -152,7 +152,7 @@ export class AuthService {
       .select('*')
       .eq('id', userId)
       .maybeSingle();
-  
+
     if (error) {
       console.error('Get Profile Error:', error);
       return null;
@@ -212,12 +212,17 @@ export class AuthService {
         .eq('id', userId)
         .select()
         .single();
-      
+
       if (error) throw error;
+
+      // Update the BehaviorSubject so the UI reacts instantly
+      if (data) {
+        this.userProfileSubject.next(data);
+      }
       return data;
     } catch (err) {
       console.error('Update Profile Error:', err);
-      return null;
+      throw err; // Throw the error so the component can show a toast
     }
   }
 

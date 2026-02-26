@@ -6,6 +6,7 @@ import { Tab3Page } from './tab3.page';
 import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
 import { Tab3PageRoutingModule } from './tab3-routing.module';
 import { AddVehicleModalComponent } from '../modal/add-vehicle/add-vehicle-modal.component';
+import { EditProfileModalComponent } from '../modal/edit-profile-modal/edit-profile-modal.component';
 
 @NgModule({
   imports: [
@@ -14,8 +15,9 @@ import { AddVehicleModalComponent } from '../modal/add-vehicle/add-vehicle-modal
     FormsModule,
     ReactiveFormsModule,
     ExploreContainerComponentModule,
-    Tab3PageRoutingModule
+    Tab3PageRoutingModule,
+    EditProfileModalComponent
   ],
   declarations: [Tab3Page, AddVehicleModalComponent]
 })
-export class Tab3PageModule {}
+export class Tab3PageModule { }

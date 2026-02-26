@@ -4,6 +4,7 @@ import { SettingItem, UserProfile, Vehicle } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { GENERAL_SETTINGS, OTHER_SETTINGS } from '../data/app-settings';
 import { AddVehicleModalComponent } from '../modal/add-vehicle/add-vehicle-modal.component';
+import { EditProfileModalComponent } from '../modal/edit-profile-modal/edit-profile-modal.component';
 
 @Component({
   selector: 'app-tab3',
@@ -152,6 +153,28 @@ export class Tab3Page implements OnInit {
         console.error('[Tab3Page] Failed to edit vehicle:', error);
         await this.showToast('เกิดข้อผิดพลาด ไม่สามารถแก้ไขยานพาหนะได้', 'error');
       }
+    }
+  }
+
+  async openEditProfile() {
+    const modal = await this.modalCtrl.create({
+      component: EditProfileModalComponent,
+      componentProps: {
+        currentProfile: this.userProfile // Pass the current profile data to pre-fill the form
+      },
+      breakpoints: [0, 0.75, 1],
+      initialBreakpoint: 0.75,
+      cssClass: 'edit-profile-modal'
+    });
+
+    await modal.present();
+
+    const { data, role } = await modal.onDidDismiss();
+
+    if (role === 'confirm' && data) {
+      // The auth service has already updated the behavior subject and backend
+      // But we can locally merge it into the current view just to be safe
+      this.userProfile = { ...this.userProfile, ...data };
     }
   }
 

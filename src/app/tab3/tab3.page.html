@@ -34,7 +34,8 @@
             </span>
           </div>
           <p class="mb-1 text-sm text-[#666]">เบอร์โทร: {{ userProfile.phone }}</p>
-          <div class="flex items-center text-xs text-[#666]">
+          <div class="flex items-center text-xs text-[#666] cursor-pointer active:opacity-70 transition-opacity"
+            (click)="openEditProfile()">
             <span>แก้ไขข้อมูลส่วนตัว</span>
             <ion-icon name="arrow-forward-outline" class="ml-1 text-sm"></ion-icon>
           </div>
