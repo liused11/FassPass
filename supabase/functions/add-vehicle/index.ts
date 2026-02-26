@@ -35,14 +35,13 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser()
 
     if (userError || !user) {
-      // In local dev, app might be sending default hardcoded "00000..." ID, 
-      // but let's strictly require a valid user or explicitly pass userId for testing.
-      // For this implementation, we will trust the auth context if available, 
-      // or fallback to checking if vehicle objects passes test userId (NOT recommended for prod, but matches current frontend test behavior)
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: User not logged in' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
 
-    // Use the explicitly passed userId (from test) or the authenticated users ID
-    const userId = user?.id || vehicle.user_id || '00000000-0000-0000-0000-000000000000';
+    const userId = user.id;
 
     // 2. Check if user already has 3 or more vehicles
     const { count, error: countError } = await supabaseClient

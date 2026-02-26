@@ -1275,7 +1275,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         try {
           await this.reservationService.createReservation(
             newBooking,
-            this.reservationService.getTestUserId(),
+            this.reservationService.getCurrentProfileId(),
             bookingData.siteId,
             bookingData.selectedFloors[0],
             bookingData.selectedSlotId

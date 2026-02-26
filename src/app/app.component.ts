@@ -31,7 +31,7 @@ export class AppComponent implements OnInit {
     if (!user) user = await this.authService.signInAnonymously();
 
     if (user) {
-      this.reservationService.setTestUserId(user.id);
+      this.reservationService.setCurrentProfileId(user.id);
       const profile = await this.authService.getProfile(user.id);
       if (!profile || !profile.line_id) {
         const modal = await this.modalCtrl.create({

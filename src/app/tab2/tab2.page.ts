@@ -66,7 +66,7 @@ export class Tab2Page implements OnInit {
     });
 
     // Subscribe to Test User ID changes to reload data automatically
-    this.reservationService.testUserId$.subscribe(async (userId) => {
+    this.reservationService.currentProfileId$.subscribe(async (userId: string) => {
       if (userId) {
         console.log('Tab2: Test User ID changed to', userId);
         await this.loadRealReservations();

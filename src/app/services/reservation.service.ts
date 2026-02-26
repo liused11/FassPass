@@ -7,22 +7,22 @@ import { Booking } from '../data/models';
   providedIn: 'root'
 })
 export class ReservationService {
-  private testUserId: string = '';
-  private testUserIdSubject = new BehaviorSubject<string>('');
-  testUserId$ = this.testUserIdSubject.asObservable();
+  private currentProfileId: string = '';
+  private currentProfileIdSubject = new BehaviorSubject<string>('');
+  currentProfileId$ = this.currentProfileIdSubject.asObservable();
 
   private testSlotId: string = '';
 
   constructor(private supabaseService: SupabaseService) { }
 
-  setTestUserId(id: string) {
-    this.testUserId = id;
-    this.testUserIdSubject.next(id);
-    console.log('Test User ID set:', this.testUserId);
+  setCurrentProfileId(id: string) {
+    this.currentProfileId = id;
+    this.currentProfileIdSubject.next(id);
+    console.log('Current Profile ID set:', this.currentProfileId);
   }
 
-  getTestUserId(): string {
-    return this.testUserId;
+  getCurrentProfileId(): string {
+    return this.currentProfileId;
   }
 
   setTestSlotId(id: string) {
@@ -52,11 +52,11 @@ export class ReservationService {
     return [...new Set((data || []).map((r: any) => r.slot_id))];
   }
 
-  async createReservation(booking: Booking, userId: string, siteId: string, floorId: string, slotId: string) {
+  async createReservation(booking: Booking, profileId: string, siteId: string, floorId: string, slotId: string) {
     const { data, error } = await this.supabaseService.client
       .from('reservations')
       .insert({
-        user_id: userId,
+        user_id: profileId, // Now referencing public.profiles(id)
         parking_site_id: siteId,
         floor_id: floorId,
         slot_id: slotId,
@@ -123,22 +123,24 @@ export class ReservationService {
   async getUserReservationsFromEdge() {
     console.log('getUserReservationsFromEdge: Method called');
 
-    if (!this.testUserId) {
-      console.log('getUserReservationsFromEdge: No Test User ID set. Waiting for user input.');
+    if (!this.currentProfileId) {
+      console.log('getUserReservationsFromEdge: No Current Profile ID set. Waiting for user input.');
       return [];
     }
-    // For testing purposes, we are bypassing the auth check
-    // const { data: { user }, error: userError } = await this.supabaseService.client.auth.getUser();
 
-    // if (userError || !user) {
-    //   console.error('getUserReservationsFromEdge: User not logged in', userError);
-    //   throw new Error('User not logged in');
-    // }
-    console.log('getUserReservationsFromEdge: Auth check bypassed for testing. Using testUserId:', this.testUserId);
+    // Check if the user is truly logged in at the Supabase session level
+    const { data: { user }, error: userError } = await this.supabaseService.client.auth.getUser();
 
-    console.log('getUserReservationsFromEdge: Invoking edge function "reservation_user" with body:', { user_id: this.testUserId });
+    if (userError || !user) {
+      console.error('getUserReservationsFromEdge: User not logged in', userError);
+      throw new Error('User not logged in');
+    }
+
+    console.log('getUserReservationsFromEdge: Using currentProfileId:', this.currentProfileId);
+
+    console.log('getUserReservationsFromEdge: Invoking edge function "reservation_user" with body:', { user_id: this.currentProfileId });
     const { data, error } = await this.supabaseService.client.functions.invoke('reservation_user', {
-      body: { user_id: this.testUserId }
+      body: { user_id: this.currentProfileId }
     });
 
     console.log('getUserReservationsFromEdge: Edge function response:', { data, error });
@@ -153,21 +155,21 @@ export class ReservationService {
   }
 
   subscribeToUserReservations(callback: () => void) {
-    if (!this.testUserId) {
-      console.warn('subscribeToUserReservations: No Test User ID set. Skipping subscription.');
+    if (!this.currentProfileId) {
+      console.warn('subscribeToUserReservations: No Current Profile ID set. Skipping subscription.');
       return null;
     }
 
-    console.log('Subscribing to reservations changes for user:', this.testUserId);
+    console.log('Subscribing to reservations changes for profile:', this.currentProfileId);
     return this.supabaseService.client
-      .channel(`user_reservations_${this.testUserId}`)
+      .channel(`user_reservations_${this.currentProfileId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'reservations',
-          filter: `user_id=eq.${this.testUserId}`
+          filter: `user_id=eq.${this.currentProfileId}`
         },
         (payload) => {
           console.log('Realtime update received for reservations:', payload);

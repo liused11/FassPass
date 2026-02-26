@@ -27,7 +27,7 @@ export class ParkingDataService {
     ) {
         this.loadParkingLots();
         // Subscribe to user ID changes
-        this.reservationService.testUserId$.subscribe(userId => {
+        this.reservationService.currentProfileId$.subscribe(userId => {
             if (userId) {
                 console.log('[ParkingDataService] User ID Changed:', userId);
                 this.loadUserProfile(userId);
@@ -119,7 +119,8 @@ export class ParkingDataService {
         }
     }
 
-    async loadUserVehicles(userId: string = '00000000-0000-0000-0000-000000000000') {
+    async loadUserVehicles(userId: string) {
+        if (!userId) return; // Prevent querying without Auth
         const { data, error } = await this.supabaseService.client
             .from('cars')
             .select('*')
@@ -180,7 +181,7 @@ export class ParkingDataService {
         const currentVehicles = this.vehiclesSubject.value;
 
         // Ensure user is loaded
-        const userId = this.reservationService.getTestUserId();
+        const userId = this.reservationService.getCurrentProfileId();
 
         // Pass the user_id directly if missing, just in case
         const payload = {
@@ -287,7 +288,7 @@ export class ParkingDataService {
 
         // 2. Persist to Backend
         try {
-            const userId = this.reservationService.getTestUserId();
+            const userId = this.reservationService.getCurrentProfileId();
 
             // Set all vehicles for this user to is_default = false
             await this.supabaseService.client

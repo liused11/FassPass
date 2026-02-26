@@ -154,7 +154,8 @@ ALTER TYPE "public"."user_status" OWNER TO "postgres";
 CREATE TYPE "public"."vehicle_type" AS ENUM (
     'car',
     'motorcycle',
-    'ev'
+    'ev',
+    'other'
 );
 
 
@@ -755,6 +756,52 @@ $$;
 ALTER FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."insert_activity_log"("p_site_id" "text", "p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb" DEFAULT NULL::"jsonb", "p_new_data" "jsonb" DEFAULT NULL::"jsonb", "p_meta" "jsonb" DEFAULT NULL::"jsonb") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+begin
+
+  insert into activity_logs (
+    site_id,
+    log_type,
+    action,
+    user_id,
+    user_name,
+    category,
+    status,
+    entity_type,
+    entity_id,
+    detail,
+    changes,
+    old_data,
+    new_data,
+    meta
+  )
+  values (
+    p_site_id,
+    p_log_type,
+    p_action,
+    p_user_id,
+    p_user_name,
+    p_category,
+    p_status,
+    p_entity_type,
+    p_entity_id,
+    p_detail,
+    p_changes,
+    p_old_data,
+    p_new_data,
+    p_meta
+  );
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."insert_activity_log"("p_site_id" "text", "p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."save_events_and_update_version"("p_aggregate_id" "uuid", "p_expected_version" integer, "p_new_version" integer, "p_events" "jsonb") RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$
@@ -861,22 +908,19 @@ CREATE OR REPLACE FUNCTION "public"."sync_vehicle_type_logic"() RETURNS "trigger
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
-    -- กรณีที่ 1: ถ้ามีการส่ง Code (ตัวเลข) มา -> ให้แก้ Enum ตาม
-    IF NEW.vehicle_type_code IS NOT NULL THEN
-        IF NEW.vehicle_type_code = 0 THEN NEW.vehicle_type := 'motorcycle';
-        ELSIF NEW.vehicle_type_code = 1 THEN NEW.vehicle_type := 'car';
-        ELSIF NEW.vehicle_type_code = 2 THEN NEW.vehicle_type := 'ev';
-        END IF;
-    
-    -- กรณีที่ 2: ถ้าส่งแต่ Enum (ตัวหนังสือ) มา -> ให้แก้ Code ตาม
-    ELSIF NEW.vehicle_type IS NOT NULL THEN
-        IF NEW.vehicle_type = 'motorcycle' THEN NEW.vehicle_type_code := 0;
-        ELSIF NEW.vehicle_type = 'car' THEN NEW.vehicle_type_code := 1;
-        ELSIF NEW.vehicle_type = 'ev' THEN NEW.vehicle_type_code := 2;
-        END IF;
-    END IF;
-
-    RETURN NEW;
+  IF NEW.vehicle_type = 'motorcycle' THEN
+      NEW.vehicle_type_code := 0;
+  ELSIF NEW.vehicle_type = 'car' THEN
+      NEW.vehicle_type_code := 1;
+  ELSIF NEW.vehicle_type = 'ev' THEN
+      NEW.vehicle_type_code := 2;
+  ELSIF NEW.vehicle_type = 'other' THEN
+      NEW.vehicle_type_code := 3;
+  ELSE
+      NEW.vehicle_type_code := 1; -- Default to car if unknown
+  END IF;
+  
+  RETURN NEW;
 END;
 $$;
 
@@ -988,6 +1032,7 @@ declare
   new_data jsonb;
   v_changes jsonb;
   v_key text;
+  v_site_id text;
 begin
 
   if p_payload->'entities' is null then
@@ -1023,6 +1068,8 @@ begin
       if old_data is null then
         raise exception 'Building not found: %', v_entity_id;
       end if;
+
+      v_site_id := old_data->>'parking_site_id';
 
       update buildings
       set
@@ -1062,6 +1109,13 @@ begin
         raise exception 'Floor not found: %', v_entity_id;
       end if;
 
+      -- ✅ ใส่ตรงนี้
+      select b.parking_site_id
+      into v_site_id
+      from floors f
+      join buildings b on b.id = f.building_id
+      where f.id = v_entity_id;
+
       update floors
       set
         name        = coalesce(v_updates->>'name', name),
@@ -1087,6 +1141,14 @@ begin
         raise exception 'Zone not found: %', v_entity_id;
       end if;
 
+      -- ✅ ใส่ตรงนี้
+      select b.parking_site_id
+      into v_site_id
+      from zones z
+      join floors f on f.id = z.floor_id
+      join buildings b on b.id = f.building_id
+      where z.id = v_entity_id;
+      
       update zones
       set
         name = coalesce(v_updates->>'name', name)
@@ -1107,17 +1169,27 @@ begin
       where s.id = v_entity_id
       for update;
 
+
       if old_data is null then
         raise exception 'Slot not found: %', v_entity_id;
       end if;
+
+      -- ✅ ดึงจาก old_data ตรงนี้
+      v_site_id := old_data->>'parking_site_id';
 
       update slots
       set
         name               = coalesce(v_updates->>'name', name),
         slot_number        = coalesce((v_updates->>'slot_number')::integer, slot_number),
-        status             = coalesce(v_updates->>'status', status),
+        status             = coalesce(
+                                      (v_updates->>'status')::slot_status,
+                                      status
+                                     ),
         details            = coalesce(v_updates->>'details', details),
-        vehicle_type       = coalesce(v_updates->>'vehicle_type', vehicle_type),
+        vehicle_type       = coalesce(
+                                      (v_updates->>'vehicle_type')::vehicle_type,
+                                      vehicle_type
+                                     ),
         vehicle_type_code  = coalesce((v_updates->>'vehicle_type_code')::integer, vehicle_type_code),
         version            = coalesce((v_updates->>'version')::integer, version)
       where id = v_entity_id;
@@ -1153,32 +1225,58 @@ begin
     ----------------------------------------------------------------
     -- insert log เฉพาะเมื่อมีการเปลี่ยนจริง
     ----------------------------------------------------------------
-    if v_changes <> '{}'::jsonb then
-      perform insert_activity_log(
-        'revision',
-        'update_' || v_entity_type,
-        p_user_id,
-        p_user_name,
-        'normal',
-        'success',
-        v_entity_type,
-        v_entity_id,
-        format('Updated %s', v_entity_type),
-        v_changes,
-        old_data,
-        new_data,
-        jsonb_build_object(
-          'entity_type', v_entity_type,
-          'entity_id', v_entity_id
-        )
-      );
-    end if;
+    for v_key in
+      select jsonb_object_keys(v_changes)
+    loop
+
+      if v_key in ('status', 'is_active') then
+
+        perform insert_activity_log(
+          v_site_id,
+          'activity',
+          'status_changed',
+          p_user_id,
+          p_user_name,
+          'normal',
+          'success',
+          v_entity_type,
+          v_entity_id,
+          format('%s status changed', v_entity_type),
+          jsonb_build_object(v_key, v_changes->v_key),
+          old_data,
+          new_data,
+          null
+        );
+
+      else
+
+        perform insert_activity_log(
+          v_site_id,
+          'revision',
+          'field_updated',
+          p_user_id,
+          p_user_name,
+          'normal',
+          'success',
+          v_entity_type,
+          v_entity_id,
+          format('%s %s updated', v_entity_type, v_key),
+          jsonb_build_object(v_key, v_changes->v_key),
+          old_data,
+          new_data,
+          null
+        );
+
+      end if;
+
+    end loop;
 
   end loop;
 
 exception when others then
 
   perform insert_activity_log(
+    v_site_id,
     'activity',
     'update_failed',
     p_user_id,
@@ -1290,7 +1388,7 @@ CREATE TABLE IF NOT EXISTS "public"."cars" (
     "rank" integer DEFAULT 0,
     "province" "text" DEFAULT 'กรุงเทพฯ'::"text",
     "color" "text",
-    CONSTRAINT "cars_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2])))
+    CONSTRAINT "cars_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2, 3])))
 );
 
 
@@ -3362,6 +3460,12 @@ GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."acti
 GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_site_id" "text", "p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_site_id" "text", "p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."insert_activity_log"("p_site_id" "text", "p_log_type" "public"."activity_log_type", "p_action" "text", "p_user_id" "uuid", "p_user_name" "text", "p_category" "public"."activity_category", "p_status" "public"."activity_status", "p_entity_type" "text", "p_entity_id" "text", "p_detail" "text", "p_changes" "jsonb", "p_old_data" "jsonb", "p_new_data" "jsonb", "p_meta" "jsonb") TO "service_role";
 
 
 
