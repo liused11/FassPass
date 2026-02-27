@@ -83,7 +83,12 @@
   <ion-popover trigger="type-trigger" id="type-popover" dismissOnSelect="true" class="menu-popover">
     <ng-template>
       <ion-list lines="none">
-        <ion-list-header>เลือกประเภท</ion-list-header>
+        <ion-list-header>
+          <div class="list-header-inner">
+            <slot></slot>
+          </div>
+          ประเภท
+        </ion-list-header>
         <ion-item button (click)="selectType('normal')" [class.selected-item]="selectedType === 'normal'">
           <ion-icon name="car-outline" slot="start"></ion-icon> รถทั่วไป
         </ion-item>

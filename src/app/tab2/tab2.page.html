@@ -1,40 +1,74 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="bg-white border-b border-gray-200 shadow-none" style="--background: white;">
-    <ion-title>การจองของฉัน</ion-title>
-    <ion-buttons slot="end">
-      <ion-button>
-        <ion-icon name="search-outline"></ion-icon>
-      </ion-button>
-    </ion-buttons>
+    <ng-container *ngIf="!showSearch">
+      <ion-title>การจองของฉัน</ion-title>
+      <ion-buttons slot="end">
+        <ion-button (click)="toggleSearch()">
+          <ion-icon name="search-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ng-container>
+    <ng-container *ngIf="showSearch">
+      <div class="flex items-center w-full h-full px-2 pt-1">
+        <ion-searchbar [(ngModel)]="searchQuery" (ionInput)="onSearch()" showCancelButton="always"
+          (ionCancel)="toggleSearch()" placeholder="ค้นหา สถานที่, ทะเบียนรถ, ตึก..." class="p-0 m-0"
+          [class.opacity-70]="isSearching"></ion-searchbar>
+      </div>
+    </ng-container>
   </ion-toolbar>
 
   <!-- Filter Dropdowns Row -->
   <div class="flex gap-3 px-4 py-2.5 bg-white">
     <!-- Date/Month Filter -->
-    <div
-      class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-sm text-gray-500 bg-white">
-      <ion-icon name="calendar-outline" class="text-base text-gray-400 mr-2"></ion-icon>
-      <ion-select interface="popover" [(ngModel)]="selectedMonth" (ionChange)="filterChanged()"
-        class="flex-1 w-full text-gray-900 text-sm p-0 min-h-0">
-        <ion-select-option *ngFor="let opt of monthOptions" [value]="opt.value">
-          {{ opt.label }}
-        </ion-select-option>
-      </ion-select>
-      <ion-icon name="chevron-down-outline" class="text-sm text-gray-300 pointer-events-none"></ion-icon>
+    <div id="month-filter-trigger"
+      class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-[13px] text-gray-700 bg-white cursor-pointer active:bg-gray-50 transition-colors">
+      <div class="flex items-center overflow-hidden">
+        <ion-icon name="calendar-outline" class="text-[16px] text-[#1a73e8] mr-2 shrink-0"></ion-icon>
+        <span class="truncate font-medium">{{ getSelectedMonthLabel() }}</span>
+      </div>
+      <ion-icon name="chevron-down-outline" class="text-sm text-gray-400 shrink-0 ml-1"></ion-icon>
     </div>
 
+    <ion-popover trigger="month-filter-trigger" triggerAction="click" dismissOnSelect="true" class="custom-popover">
+      <ng-template>
+        <ion-content class="ion-padding-vertical">
+          <ion-list lines="none" class="m-0 p-0">
+            <ion-item *ngFor="let opt of monthOptions" [button]="true" [detail]="false" (click)="selectMonth(opt.value)"
+              class="mx-2 mb-1 rounded-lg" [color]="selectedMonth === opt.value ? 'primary' : ''"
+              [style.--background]="selectedMonth === opt.value ? '#ebf8f6' : 'white'">
+              <ion-label [class.font-bold]="selectedMonth === opt.value"
+                [class.text-[#1a73e8]]="selectedMonth === opt.value" class="text-sm">{{ opt.label }}</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-content>
+      </ng-template>
+    </ion-popover>
+
     <!-- Category Filter -->
-    <div
-      class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-sm text-gray-500 bg-white">
-      <ion-icon name="layers-outline" class="text-base text-gray-400 mr-2"></ion-icon>
-      <ion-select interface="popover" [(ngModel)]="selectedCategory" (ionChange)="filterChanged()"
-        class="flex-1 w-full text-gray-900 text-sm p-0 min-h-0">
-        <ion-select-option *ngFor="let opt of categoryOptions" [value]="opt.value">
-          {{ opt.label }}
-        </ion-select-option>
-      </ion-select>
-      <ion-icon name="chevron-down-outline" class="text-sm text-gray-300 pointer-events-none"></ion-icon>
+    <div id="category-filter-trigger"
+      class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-[13px] text-gray-700 bg-white cursor-pointer active:bg-gray-50 transition-colors">
+      <div class="flex items-center overflow-hidden">
+        <ion-icon name="layers-outline" class="text-[16px] text-[#1a73e8] mr-2 shrink-0"></ion-icon>
+        <span class="truncate font-medium">{{ getSelectedCategoryLabel() }}</span>
+      </div>
+      <ion-icon name="chevron-down-outline" class="text-sm text-gray-400 shrink-0 ml-1"></ion-icon>
     </div>
+
+    <ion-popover trigger="category-filter-trigger" triggerAction="click" dismissOnSelect="true" class="custom-popover">
+      <ng-template>
+        <ion-content class="ion-padding-vertical">
+          <ion-list lines="none" class="m-0 p-0">
+            <ion-item *ngFor="let opt of categoryOptions" [button]="true" [detail]="false"
+              (click)="selectCategory(opt.value)" class="mx-2 mb-1 rounded-lg"
+              [color]="selectedCategory === opt.value ? 'primary' : ''"
+              [style.--background]="selectedCategory === opt.value ? '#ebf8f6' : 'white'">
+              <ion-label [class.font-bold]="selectedCategory === opt.value"
+                [class.text-[#1a73e8]]="selectedCategory === opt.value" class="text-sm">{{ opt.label }}</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-content>
+      </ng-template>
+    </ion-popover>
   </div>
 
   <!-- Status Tabs -->

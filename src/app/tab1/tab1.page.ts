@@ -64,6 +64,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   // --- Search Subject ---
   private searchSubject = new Subject<string>();
+  isSearching = false;
 
   // --- Bottom Sheet Config ---
   sheetLevel = 1;
@@ -124,10 +125,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     // Setup Search Debounce
     this.searchSub = this.searchSubject.pipe(
-      debounceTime(400),
-      distinctUntilChanged()
+      debounceTime(400)
     ).subscribe(() => {
       this.filterData();
+      this.isSearching = false;
     });
   }
 
@@ -247,7 +248,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.updateMarkers(); // Update Map
   }
 
-  onSearch() { this.searchSubject.next(this.searchQuery); }
+  onSearch() {
+    this.isSearching = true;
+    this.searchSubject.next(this.searchQuery);
+  }
   onTabChange() { this.filterData(); }
   locationChanged(ev: any) {
     this.selectedLocation = ev.detail.value;
@@ -711,6 +715,17 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       case 'motorcycle': return 'Motorcycle';
       default: return type;
     }
+  }
+
+  getSupportedTypesText(types: string[]): string {
+    if (!types || types.length === 0) return '-';
+    const names = types.map(t => {
+      if (t === 'normal') return 'รถยนต์ทั่วไป';
+      if (t === 'ev') return 'รถ EV';
+      if (t === 'motorcycle') return 'รถจักรยานยนต์';
+      return t;
+    });
+    return names.join(', ');
   }
 
   // --- Distance Calculations ---

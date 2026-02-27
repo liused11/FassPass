@@ -6,12 +6,18 @@
     <div class="absolute top-4 left-0 right-0 z-[20] flex flex-col items-center px-4 pt-safe-top gap-3">
 
       <!-- Google Style Search Bar -->
-      <div class="bg-white rounded-full shadow-md flex items-center w-full max-w-sm px-4 py-3 border border-gray-100">
-        <ion-icon name="navigate-outline" class="text-[#1a73e8] text-xl mr-3"></ion-icon>
+      <div class="rounded-full flex items-center w-full max-w-sm px-4 py-3 transition-all duration-300" [ngClass]="{
+             'bg-blue-50/80 border-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]': isSearching,
+             'bg-white shadow-md border border-gray-100': !isSearching
+           }">
+        <ion-icon name="navigate-outline" class="text-xl mr-3 transition-colors duration-300"
+          [ngClass]="isSearching ? 'text-blue-500 animate-pulse' : 'text-[#1a73e8]'"></ion-icon>
         <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()" placeholder="ค้นหา ที่นี่"
-          class="flex-1 bg-transparent border-none outline-none text-base text-gray-700 placeholder-gray-400 font-medium">
+          class="flex-1 bg-transparent border-none outline-none text-base text-gray-700 placeholder-gray-400 font-medium transition-colors"
+          [ngClass]="{'text-blue-700 placeholder-blue-300': isSearching}">
 
-        <div class="flex items-center border-l border-gray-200 pl-3 ml-2">
+        <div class="flex items-center border-l pl-3 ml-2 transition-colors duration-300"
+          [ngClass]="isSearching ? 'border-blue-200' : 'border-gray-200'">
           <div
             class="w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center">
             <!-- Profile avatar from user data -->
@@ -157,21 +163,30 @@
                 </div>
 
                 <!-- Hours -->
-                <div class="flex items-center gap-1.5 text-xs text-gray-600">
-                  <ion-icon name="time-outline" class="text-gray-400 text-sm"></ion-icon>
-                  <span class="truncate">{{ lot.hours }}</span>
+                <div class="flex items-start gap-1.5 text-xs text-gray-600">
+                  <ion-icon name="time-outline" class="text-gray-400 text-sm mt-[2px] shrink-0"></ion-icon>
+                  <span class="whitespace-normal leading-relaxed text-[11px]">{{ lot.hours }}</span>
+                </div>
+
+                <!-- Supported Vehicles -->
+                <div *ngIf="lot.supportedTypes && lot.supportedTypes.length > 0"
+                  class="flex items-start gap-1.5 text-xs text-gray-600">
+                  <ion-icon name="car-outline" class="text-gray-400 text-sm mt-[2px] shrink-0"></ion-icon>
+                  <span class="whitespace-normal leading-relaxed text-[11px]">รองรับ: {{
+                    getSupportedTypesText(lot.supportedTypes) }}</span>
                 </div>
 
                 <!-- User Types -->
-                <div class="flex items-center gap-1.5 text-xs text-gray-600">
-                  <ion-icon name="briefcase-outline" class="text-gray-400 text-sm"></ion-icon>
-                  <span class="truncate">{{ lot.userTypes }}</span>
+                <div class="flex items-start gap-1.5 text-xs text-gray-600">
+                  <ion-icon name="briefcase-outline" class="text-gray-400 text-sm mt-[2px] shrink-0"></ion-icon>
+                  <span class="whitespace-normal leading-relaxed text-[11px]">{{ lot.userTypes }}</span>
                 </div>
 
                 <!-- Note (Optional) -->
-                <div *ngIf="lot.note" class="flex items-center gap-1.5 text-xs text-gray-600">
-                  <ion-icon name="information-circle-outline" class="text-gray-400 text-sm"></ion-icon>
-                  <span class="truncate">{{ lot.note }}</span>
+                <div *ngIf="lot.note" class="flex items-start gap-1.5 text-xs text-gray-600">
+                  <ion-icon name="information-circle-outline"
+                    class="text-gray-400 text-sm mt-[2px] shrink-0"></ion-icon>
+                  <span class="whitespace-normal leading-relaxed text-[11px]">{{ lot.note }}</span>
                 </div>
               </div>
 

@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { Booking } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ReservationService } from '../services/reservation.service';
 import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-tab2',
@@ -12,17 +14,23 @@ import { CheckBookingComponent } from '../modal/check-booking/check-booking.comp
   standalone: false,
   // Removed toggleSection from Component metadata as it belongs to the class
 })
-export class Tab2Page implements OnInit {
+export class Tab2Page implements OnInit, OnDestroy {
 
   // Dropdown options
-  selectedMonth: string = 'all'; // Default to show all for easier demo, or '2025-12'
+  selectedMonth: string = 'all';
   selectedCategory: string = 'all';
 
+  // Search
+  searchQuery: string = '';
+  showSearch: boolean = false;
+  isSearching: boolean = false;
+
+  private searchSubject = new Subject<string>();
+  private searchSub!: Subscription;
+
   // Options for Selectors
-  monthOptions = [
-    { value: 'all', label: 'ทั้งหมด' },
-    { value: '2025-12', label: 'ธันวาคม 2568' },
-    { value: '2025-11', label: 'พฤศจิกายน 2568' }
+  monthOptions: { value: string, label: string }[] = [
+    { value: 'all', label: 'ทั้งหมด' }
   ];
 
   categoryOptions = [
@@ -78,6 +86,21 @@ export class Tab2Page implements OnInit {
         this.setupRealtimeSubscription();
       }
     });
+
+    // Setup Search Debounce
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(400),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.updateFilter();
+      this.isSearching = false;
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.searchSub) {
+      this.searchSub.unsubscribe();
+    }
   }
 
   async ionViewWillEnter() {
@@ -269,6 +292,9 @@ export class Tab2Page implements OnInit {
           return timeB - timeA;
         });
 
+        // Generate dynamic month options
+        this.generateMonthOptions();
+
         this.updateFilter();
       }
     } catch (error) {
@@ -293,6 +319,62 @@ export class Tab2Page implements OnInit {
 
   filterChanged() {
     this.updateFilter();
+  }
+
+  // Search Tracking
+  toggleSearch() {
+    this.showSearch = !this.showSearch;
+    if (!this.showSearch) {
+      this.searchQuery = '';
+      this.isSearching = false;
+      this.updateFilter();
+    }
+  }
+
+  onSearch() {
+    this.isSearching = true;
+    this.searchSubject.next(this.searchQuery);
+  }
+
+  // Popover Selectors
+  selectMonth(val: string) {
+    this.selectedMonth = val;
+    this.updateFilter();
+  }
+
+  selectCategory(val: string) {
+    this.selectedCategory = val;
+    this.updateFilter();
+  }
+
+  getSelectedMonthLabel(): string {
+    const opt = this.monthOptions.find(o => o.value === this.selectedMonth);
+    return opt ? opt.label : 'เดือนทั้งหมด';
+  }
+
+  getSelectedCategoryLabel(): string {
+    const opt = this.categoryOptions.find(o => o.value === this.selectedCategory);
+    return opt ? opt.label : 'ประเภททั้งหมด';
+  }
+
+  generateMonthOptions() {
+    const months = new Set<string>();
+    this.allBookings.forEach(b => {
+      const d = new Date(b.bookingTime);
+      if (isNaN(d.getTime())) return;
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      months.add(`${yyyy}-${mm}`);
+    });
+
+    // Convert to options
+    this.monthOptions = [{ value: 'all', label: 'ทั้งหมด' }];
+    Array.from(months).sort((a, b) => b.localeCompare(a)).forEach(m => {
+      const [yyyy, mm] = m.split('-');
+      const d = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+      const thaiMonth = d.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+      this.monthOptions.push({ value: m, label: thaiMonth });
+    });
   }
 
   updateFilter() {
@@ -323,7 +405,21 @@ export class Tab2Page implements OnInit {
         catMatch = b.bookingType === (this.selectedCategory as any);
       }
 
-      return statusMatch && monthMatch && catMatch;
+      // 4. Search Filter
+      let searchMatch = true;
+      if (this.searchQuery.trim() !== '') {
+        const q = this.searchQuery.toLowerCase().trim();
+        searchMatch = !!(
+          (b.placeName && b.placeName.toLowerCase().includes(q)) ||
+          (b.carId && b.carId.toLowerCase().includes(q)) ||
+          (b.licensePlate && b.licensePlate.toLowerCase().includes(q)) ||
+          (b.building && b.building.toLowerCase().includes(q)) ||
+          (b.zone && b.zone.toLowerCase().includes(q)) ||
+          (b.slot && b.slot.toLowerCase().includes(q))
+        );
+      }
+
+      return statusMatch && monthMatch && catMatch && searchMatch;
     });
 
     // Sort by bookingTime ascending (closest upcoming time first)
