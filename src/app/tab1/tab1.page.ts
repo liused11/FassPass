@@ -6,13 +6,14 @@ import {
   ViewChild,
   AfterViewInit,
   Inject,
-  PLATFORM_ID
+  PLATFORM_ID,
+  NgZone
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ModalController, Platform, AlertController } from '@ionic/angular';
 import { Router } from '@angular/router';
-import { Subscription, interval, of } from 'rxjs';
-import { catchError, timeout } from 'rxjs/operators';
+import { Subscription, interval, of, Subject } from 'rxjs';
+import { catchError, timeout, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { UiEventService } from '../services/ui-event';
 import { SupabaseService } from '../services/supabase.service';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
@@ -59,6 +60,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   private animationFrameId: any;
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
+  private searchSub!: Subscription;
+
+  // --- Search Subject ---
+  private searchSubject = new Subject<string>();
 
   // --- Bottom Sheet Config ---
   sheetLevel = 1;
@@ -82,7 +87,8 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private parkingApiService: ParkingService, // Inject new RPC Service
     private supabaseService: SupabaseService, // Inject Supabase for Realtime
     private router: Router, // ✅ Inject Router
-    @Inject(PLATFORM_ID) private platformId: Object
+    @Inject(PLATFORM_ID) private platformId: Object,
+    private ngZone: NgZone // Inject NgZone for performance optimization
   ) { }
 
 
@@ -115,6 +121,14 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     // Start Realtime Subscription
     this.setupRealtimeSubscription();
+
+    // Setup Search Debounce
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(400),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.filterData();
+    });
   }
 
   setupRealtimeSubscription() {
@@ -233,7 +247,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.updateMarkers(); // Update Map
   }
 
-  onSearch() { this.filterData(); }
+  onSearch() { this.searchSubject.next(this.searchQuery); }
   onTabChange() { this.filterData(); }
   locationChanged(ev: any) {
     this.selectedLocation = ev.detail.value;
@@ -258,6 +272,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     if (this.sheetToggleSub) this.sheetToggleSub.unsubscribe();
     if (this.timeCheckSub) this.timeCheckSub.unsubscribe();
+    if (this.searchSub) this.searchSub.unsubscribe();
     if (this.map) {
       this.map.remove();
     }
@@ -468,10 +483,14 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.startHeight = sheet.offsetHeight;
     this.startLevel = this.sheetLevel;
     this.isDragging = false;
-    window.addEventListener('mousemove', this.dragMove);
-    window.addEventListener('mouseup', this.endDrag);
-    window.addEventListener('touchmove', this.dragMove, { passive: false });
-    window.addEventListener('touchend', this.endDrag);
+
+    // Run outside Angular zone to prevent Change Detection on every pixel move
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('mousemove', this.dragMove);
+      window.addEventListener('mouseup', this.endDrag);
+      window.addEventListener('touchmove', this.dragMove, { passive: false });
+      window.addEventListener('touchend', this.endDrag);
+    });
   }
 
   dragMove = (ev: any) => {
@@ -498,7 +517,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       newHeight = Math.max(80, Math.min(newHeight, maxHeight));
       if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = requestAnimationFrame(() => {
-        this.currentSheetHeight = newHeight;
+        const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+        if (sheet) {
+          sheet.style.height = `${newHeight}px`;
+        }
       });
     }
   };
@@ -512,29 +534,44 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    if (this.isDragging) {
-      const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
-      const finalH = sheet.offsetHeight;
-      const totalDragged = finalH - this.startHeight;
-      const platformHeight = this.platform.height();
-      const dragThreshold = platformHeight * 0.15;
 
-      if (Math.abs(totalDragged) < dragThreshold) {
-        this.sheetLevel = this.startLevel;
+    // Jump back into Angular zone to apply final state
+    this.ngZone.run(() => {
+      if (this.isDragging) {
+        const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
+        const finalH = sheet.offsetHeight;
+        const totalDragged = finalH - this.startHeight;
+        const platformHeight = this.platform.height();
+        const dragThreshold = platformHeight * 0.05; // Very responsive pull (5% height)
+
+        const h0 = this.getPixelHeightForLevel(0);
+        const h1 = this.getPixelHeightForLevel(1);
+        const h2 = this.getPixelHeightForLevel(2);
+
+        if (totalDragged > dragThreshold) {
+          // Dragged UP: Snaps up
+          if (this.startLevel === 0) {
+            this.sheetLevel = (finalH > h1 + dragThreshold) ? 2 : 1;
+          } else if (this.startLevel === 1) {
+            this.sheetLevel = 2;
+          }
+        } else if (totalDragged < -dragThreshold) {
+          // Dragged DOWN: Snaps down
+          if (this.startLevel === 2) {
+            this.sheetLevel = (finalH < h1 - dragThreshold) ? 0 : 1;
+          } else if (this.startLevel === 1) {
+            this.sheetLevel = 0;
+          }
+        } else {
+          // Didn't drag enough, revert to start level
+          this.sheetLevel = this.startLevel;
+        }
+        this.snapToCurrentLevel();
       } else {
-        const distLow = Math.abs(finalH - this.getPixelHeightForLevel(0));
-        const distMid = Math.abs(finalH - this.getPixelHeightForLevel(1));
-        const distHigh = Math.abs(finalH - this.getPixelHeightForLevel(2));
-        const minDist = Math.min(distLow, distMid, distHigh);
-        if (minDist === distLow) this.sheetLevel = 0;
-        else if (minDist === distMid) this.sheetLevel = 1;
-        else this.sheetLevel = 2;
+        this.snapToCurrentLevel();
       }
-      this.snapToCurrentLevel();
-    } else {
-      this.snapToCurrentLevel();
-    }
-    setTimeout(() => { this.isDragging = false; }, 100);
+      setTimeout(() => { this.isDragging = false; }, 100);
+    });
   };
 
   snapToCurrentLevel() {

@@ -67,8 +67,9 @@
       </ion-fab-button>
     </div>
 
-    <div class="bottom-sheet" [style.height.px]="currentSheetHeight" [class.snapping]="isSnapping" style="z-index: 10;">
-      <div class="drag-header" (mousedown)="startDrag($event)" (touchstart)="startDrag($event)">
+    <div class="bottom-sheet" [style.height.px]="currentSheetHeight" [class.snapping]="isSnapping" style="z-index: 10;"
+      (mousedown)="startDrag($event)" (touchstart)="startDrag($event)">
+      <div class="drag-header">
         <div class="drag-line"></div>
       </div>
 
@@ -108,7 +109,7 @@
           </div>
         </div>
 
-        <div class="lot-list" (touchstart)="startDrag($event)" (mousedown)="startDrag($event)">
+        <div class="lot-list">
           <!-- Empty State -->
           <div *ngIf="filteredParkingLots.length === 0" class="empty-state"
             style="text-align: center; padding: 40px 20px; color: #6b7280;">
@@ -145,7 +146,7 @@
                 <!-- Title Row -->
                 <div class="flex items-start gap-2 mb-0.5">
                   <div
-                    class="flex items-center justify-center min-w-[20px] h-[20px] rounded bg-gray-100 text-[#1a73e8] text-xs font-bold leading-none"
+                    class="flex items-center justify-center min-w-[20px] h-[20px] flex-shrink-0 rounded bg-gray-100 text-[#1a73e8] text-xs font-bold leading-none"
                     [style.color]="lot.distanceColor"
                     [style.backgroundColor]="lot.distanceColor ? lot.distanceColor + '20' : ''">
                     {{ i + 1 }}
