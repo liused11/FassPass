@@ -124,7 +124,7 @@ export class ParkingDataService {
         const { data, error } = await this.supabaseService.client
             .from('cars')
             .select('*')
-            .eq('user_id', userId)
+            .eq('profile_id', userId)
             .eq('is_active', true);
 
         if (error) {

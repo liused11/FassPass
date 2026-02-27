@@ -43,11 +43,32 @@ serve(async (req) => {
 
     const userId = user.id;
 
+    // 1.5. Check if user is Anonymous (Visitor)
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      return new Response(
+        JSON.stringify({ error: `Failed to fetch profile: ${profileError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    if (profile && profile.role === 'Visitor') {
+      return new Response(
+        JSON.stringify({ error: 'ผู้ใช้งานทั่วไป (Anonymous) ไม่สามารถลงทะเบียนรถได้ กรุณาเข้าสู่ระบบผ่านแถบเมนูเพื่อเริ่มใช้งาน' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     // 2. Check if user already has 3 or more vehicles
     const { count, error: countError } = await supabaseClient
       .from('cars')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .eq('profile_id', userId)
 
     if (countError) {
       throw new Error(`Failed to check vehicle count: ${countError.message}`)
@@ -64,7 +85,7 @@ serve(async (req) => {
 
     // 4. Insert the new vehicle
     const newVehicleData = {
-      user_id: userId,
+      profile_id: userId,
       vehicle_type: vehicle.type !== 'car' && vehicle.type !== 'ev' && vehicle.type !== 'motorcycle' ? 'other' : vehicle.type,
       model: vehicle.type === 'other' || vehicle.customType
         ? `[${vehicle.customType || 'อื่นๆ'}] ${vehicle.model}`

@@ -113,9 +113,13 @@ export class Tab3Page implements OnInit {
 
       } catch (error: any) {
         console.error('[Tab3Page] Failed to add vehicle:', error);
-        const msg = error.message === 'รถป้ายทะเบียนนี้มีอยู่ในระบบแล้ว'
-          ? error.message
-          : 'เกิดข้อผิดพลาด ไม่สามารถเพิ่มยานพาหนะได้';
+
+        // Extract Edge Function error message if present
+        let msg = 'เกิดข้อผิดพลาด ไม่สามารถเพิ่มยานพาหนะได้';
+        if (error.message) {
+          msg = error.message;
+        }
+
         await this.showToast(msg, 'error');
       }
     }
