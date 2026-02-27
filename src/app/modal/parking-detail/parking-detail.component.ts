@@ -1303,8 +1303,8 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           endTime: bookingData.endSlot.dateTime,
           status: bookingData.status,
           price: bookingData.price || bookingData.totalPrice,
-          carBrand: 'TOYOTA YARIS',
-          licensePlate: '1กข 1234',
+          carBrand: 'N/A',
+          licensePlate: bookingData.car_plate || '-',
           bookingType: bookingData.bookingMode || 'daily',
           carId: bookingData.car_id
         };

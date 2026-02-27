@@ -188,7 +188,7 @@ export class ParkingDataService {
         const { data: existingCars, error: checkError } = await this.supabaseService.client
             .from('cars')
             .select('*')
-            .eq('user_id', userId)
+            .eq('profile_id', userId)
             .eq('license_plate', vehicle.licensePlate);
 
         if (checkError) {
@@ -248,10 +248,10 @@ export class ParkingDataService {
         }
 
         // Case C: Does not exist - Insert new vehicle
-        // Pass the user_id directly if missing, just in case
+        // Pass the profile_id directly if missing, just in case
         const payload = {
             ...vehicle,
-            user_id: userId
+            profile_id: userId
         };
 
         try {
@@ -359,7 +359,7 @@ export class ParkingDataService {
             await this.supabaseService.client
                 .from('cars')
                 .update({ is_default: false })
-                .eq('user_id', userId);
+                .eq('profile_id', userId);
 
             // Set the selected vehicle to is_default = true
             const { error: setTrueError } = await this.supabaseService.client

@@ -351,6 +351,7 @@ export class CheckBookingComponent implements OnInit {
 
     // Step 2: Final Confirm
     const isPayLater = this.selectedPaymentMethod === 'pay_later';
+    const selectedCar = this.selectedCarInfo;
     const finalData = {
       ...this.data,
       selectedFloors: [this.assignedFloor],
@@ -358,7 +359,8 @@ export class CheckBookingComponent implements OnInit {
       totalPrice: this.totalPrice,
       paymentMethod: this.selectedPaymentMethod,
       status: isPayLater ? 'pending_payment' : 'pending',
-      car_id: this.selectedCarId
+      car_id: this.selectedCarId,
+      car_plate: selectedCar ? selectedCar.licensePlate : ''
     };
     this.modalCtrl.dismiss({ confirmed: true, data: finalData, action: isPayLater ? 'pay_later' : 'pay_now' }, 'confirm');
   }

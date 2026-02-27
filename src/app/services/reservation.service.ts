@@ -56,7 +56,7 @@ export class ReservationService {
     const { data, error } = await this.supabaseService.client
       .from('reservations')
       .insert({
-        user_id: profileId, // Now referencing public.profiles(id)
+        profile_id: profileId, // Now referencing public.profiles(id)
         parking_site_id: siteId,
         floor_id: floorId,
         slot_id: slotId,
@@ -65,6 +65,7 @@ export class ReservationService {
         status: booking.status || 'pending',
         vehicle_type: 'car',
         car_id: booking.carId,
+        car_plate: booking.licensePlate,
         booking_type: this.mapBookingTypeToEnum(booking.bookingType) // Map to DB Enum
       })
       .select()
@@ -139,9 +140,9 @@ export class ReservationService {
 
     console.log('getUserReservationsFromEdge: Using currentProfileId:', this.currentProfileId);
 
-    console.log('getUserReservationsFromEdge: Invoking edge function "reservation_user" with body:', { user_id: this.currentProfileId });
+    console.log('getUserReservationsFromEdge: Invoking edge function "reservation_user" with body:', { profile_id: this.currentProfileId });
     const { data, error } = await this.supabaseService.client.functions.invoke('reservation_user', {
-      body: { user_id: this.currentProfileId }
+      body: { profile_id: this.currentProfileId }
     });
 
     console.log('getUserReservationsFromEdge: Edge function response:', { data, error });
@@ -170,7 +171,7 @@ export class ReservationService {
           event: '*',
           schema: 'public',
           table: 'reservations',
-          filter: `user_id=eq.${this.currentProfileId}`
+          filter: `profile_id=eq.${this.currentProfileId}`
         },
         (payload) => {
           console.log('Realtime update received for reservations:', payload);

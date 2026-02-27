@@ -4,7 +4,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
-serve(async (req)=>{
+serve(async (req) => {
   // 1. Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
@@ -12,10 +12,10 @@ serve(async (req)=>{
     });
   }
   try {
-    // 2. อ่านค่า user_id จาก Body
-    const { user_id } = await req.json();
-    if (!user_id) {
-      throw new Error('Please send "user_id" in request body');
+    // 2. อ่านค่า profile_id จาก Body
+    const { profile_id } = await req.json();
+    if (!profile_id) {
+      throw new Error('Please send "profile_id" in request body');
     }
     // 3. สร้าง Client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -23,14 +23,14 @@ serve(async (req)=>{
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     // 4. Query ข้อมูล
     // แก้ไข: เปลี่ยนจาก order('created_at') เป็น order('start_time')
-    const { data, error } = await supabase.from('reservations').select('*').eq('user_id', user_id).order('start_time', {
+    const { data, error } = await supabase.from('reservations').select('*').eq('profile_id', profile_id).order('start_time', {
       ascending: false
     });
     if (error) throw error;
     // 5. ส่งผลลัพธ์
     return new Response(JSON.stringify({
       success: true,
-      user_id_checked: user_id,
+      profile_id_checked: profile_id,
       data: data
     }), {
       headers: {
