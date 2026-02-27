@@ -1,9 +1,12 @@
 
 import { Component, Input, OnInit } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import { ModalController, ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { ParkingLot } from '../../data/models';
 import { ParkingDataService } from '../../services/parking-data.service';
+import { ReservationService } from '../../services/reservation.service';
+import { AddVehicleModalComponent } from '../add-vehicle/add-vehicle-modal.component';
+import { take } from 'rxjs/operators';
 // Remove unused service import if not needed, or keep for future
 import { BottomSheetService } from '../../services/bottom-sheet.service';
 import { addIcons } from 'ionicons';
@@ -42,7 +45,9 @@ export class BuildingDetailComponent implements OnInit {
     constructor(
         private modalCtrl: ModalController,
         private router: Router,
-        private parkingService: ParkingDataService
+        private parkingService: ParkingDataService,
+        private reservationService: ReservationService,
+        private toastCtrl: ToastController
     ) {
         addIcons({
             closeOutline, locationOutline, peopleOutline, cubeOutline, timeOutline,
@@ -73,8 +78,46 @@ export class BuildingDetailComponent implements OnInit {
     }
 
     checkRights() {
-        // Logic to check booking rights
         console.log('Checking rights...');
+        this.parkingService.vehicles$.pipe(take(1)).subscribe(async (vehicles) => {
+            if (vehicles && vehicles.length > 0) {
+                // If has vehicles, proceed to next step
+                this.proceedToBooking();
+            } else {
+                // No vehicles, show Add Vehicle modal
+                const modal = await this.modalCtrl.create({
+                    component: AddVehicleModalComponent,
+                    breakpoints: [0, 1],
+                    initialBreakpoint: 1,
+                });
+                await modal.present();
+
+                const { data, role } = await modal.onDidDismiss();
+                if (role === 'confirm' && data) {
+                    try {
+                        await this.parkingService.addVehicle(data);
+                        const userId = this.reservationService.getCurrentProfileId();
+                        await this.parkingService.loadUserVehicles(userId);
+                        this.proceedToBooking();
+                    } catch (e: any) {
+                        console.error('Error adding vehicle', e);
+                        const msg = e.message === 'รถป้ายทะเบียนนี้มีอยู่ในระบบแล้ว'
+                            ? e.message
+                            : 'เกิดข้อผิดพลาดในการเพิ่มรถ';
+                        this.presentToast(msg);
+                    }
+                }
+            }
+        });
+    }
+
+    proceedToBooking() {
+        console.log('Proceeding to booking with at least 1 car...');
+        this.modalCtrl.dismiss().then(() => {
+            // Example action: map navigate or show parking detail
+            // For now, doing standard tab4 navigation since building-detail is a high-level component
+            this.router.navigate(['/tabs/tab4'], { queryParams: { buildingId: this.lot.id } });
+        });
     }
 
     // --- Helper Methods ---
@@ -165,5 +208,15 @@ export class BuildingDetailComponent implements OnInit {
         // Always use Google Maps
         const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
         window.open(url, '_blank');
+    }
+
+    async presentToast(message: string) {
+        const toast = await this.toastCtrl.create({
+            message: message,
+            duration: 2000,
+            color: 'dark',
+            position: 'bottom',
+        });
+        toast.present();
     }
 }

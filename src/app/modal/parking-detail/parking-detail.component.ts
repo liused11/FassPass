@@ -12,6 +12,8 @@ import { BookingSuccessModalComponent } from '../booking-success-modal/booking-s
 import { ReservationService } from '../../services/reservation.service';
 import { ParkingService } from '../../services/parking.service';
 import { UiEventService } from '../../services/ui-event';
+import { AddVehicleModalComponent } from '../add-vehicle/add-vehicle-modal.component';
+import { take } from 'rxjs/operators';
 
 // --- Interfaces copied from ParkingReservations ---
 interface DaySection {
@@ -1198,6 +1200,42 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // --- Vehicle Check ---
+    this.parkingDataService.vehicles$.pipe(take(1)).subscribe(async (vehicles) => {
+      if (!vehicles || vehicles.length === 0) {
+        // No vehicles, show Add Vehicle modal
+        const addModal = await this.modalCtrl.create({
+          component: AddVehicleModalComponent,
+          breakpoints: [0, 1],
+          initialBreakpoint: 1,
+        });
+        await addModal.present();
+
+        const { data, role } = await addModal.onDidDismiss();
+        if (role === 'confirm' && data) {
+          try {
+            await this.parkingDataService.addVehicle(data);
+            const userId = this.reservationService.getCurrentProfileId();
+            await this.parkingDataService.loadUserVehicles(userId);
+            this.processBooking();
+          } catch (e: any) {
+            console.error('Error adding vehicle', e);
+            const msg = e.message === 'รถป้ายทะเบียนนี้มีอยู่ในระบบแล้ว'
+              ? e.message
+              : 'เกิดข้อผิดพลาดในการเพิ่มรถ';
+            this.presentToast(msg);
+          }
+        }
+      } else {
+        // User has at least 1 vehicle, proceed to booking processing
+        this.processBooking();
+      }
+    });
+  }
+
+  private async processBooking() {
+    if (!this.startSlot || !this.endSlot) return; // TS guard
+
     // --- LOGIC FOR BOOKING MODES ---
     let finalStart = new Date(this.startSlot.dateTime);
     let finalEnd = new Date(this.endSlot.dateTime);
@@ -1268,6 +1306,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           carBrand: 'TOYOTA YARIS',
           licensePlate: '1กข 1234',
           bookingType: bookingData.bookingMode || 'daily',
+          carId: bookingData.car_id
         };
 
         this.parkingDataService.addBooking(newBooking);

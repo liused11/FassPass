@@ -124,7 +124,8 @@ export class ParkingDataService {
         const { data, error } = await this.supabaseService.client
             .from('cars')
             .select('*')
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('is_active', true);
 
         if (error) {
             console.error('Error loading user vehicles:', error);
@@ -183,6 +184,70 @@ export class ParkingDataService {
         // Ensure user is loaded
         const userId = this.reservationService.getCurrentProfileId();
 
+        // 1. Check if vehicle exists for this user by license_plate
+        const { data: existingCars, error: checkError } = await this.supabaseService.client
+            .from('cars')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('license_plate', vehicle.licensePlate);
+
+        if (checkError) {
+            console.error('[ParkingDataService] Error checking existing vehicle:', checkError);
+            throw checkError;
+        }
+
+        if (existingCars && existingCars.length > 0) {
+            const existingCar = existingCars[0];
+
+            // Case A: Exists and is active
+            if (existingCar.is_active) {
+                throw new Error("รถป้ายทะเบียนนี้มีอยู่ในระบบแล้ว");
+            }
+
+            // Case B: Exists but is inactive (soft deleted) - Update it
+            console.log('[ParkingDataService] Reactivating soft-deleted vehicle:', existingCar.id);
+
+            const updateData = {
+                model: vehicle.model || existingCar.model,
+                province: vehicle.province || existingCar.province,
+                color: vehicle.color || existingCar.color,
+                image: vehicle.image || existingCar.image,
+                is_default: vehicle.isDefault ?? existingCar.is_default,
+                is_active: true, // Reactivate
+                updated_at: new Date().toISOString()
+            };
+
+            const { data: updatedDbCar, error: updateError } = await this.supabaseService.client
+                .from('cars')
+                .update(updateData)
+                .eq('id', existingCar.id)
+                .select()
+                .single();
+
+            if (updateError) {
+                console.error('[ParkingDataService] Error reactivating vehicle:', updateError);
+                throw updateError;
+            }
+
+            const reactivatedVehicle: Vehicle = {
+                id: updatedDbCar.id,
+                model: updatedDbCar.model,
+                licensePlate: updatedDbCar.license_plate,
+                province: updatedDbCar.province,
+                color: updatedDbCar.color,
+                image: updatedDbCar.image,
+                isDefault: updatedDbCar.is_default,
+                status: 'active',
+                lastUpdate: this.formatThaiDateTime(updatedDbCar.updated_at)
+            };
+
+            const updated = [...currentVehicles, reactivatedVehicle];
+            this.vehiclesSubject.next(updated);
+
+            return reactivatedVehicle;
+        }
+
+        // Case C: Does not exist - Insert new vehicle
         // Pass the user_id directly if missing, just in case
         const payload = {
             ...vehicle,
@@ -322,7 +387,7 @@ export class ParkingDataService {
         try {
             const { error } = await this.supabaseService.client
                 .from('cars')
-                .delete()
+                .update({ is_active: false, updated_at: new Date().toISOString() })
                 .eq('id', id);
 
             if (error) {

@@ -61,7 +61,7 @@
         <!-- Section 2: Slot & Vehicle -->
         <div class="p-5 pt-6 bg-gray-50/50">
           <!-- Result Slot -->
-          <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+          <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-gray-100 shadow-sm mb-3">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
                 <ion-icon name="car-sport" class="text-xl"></ion-icon>
@@ -76,6 +76,41 @@
               </div>
             </div>
           </div>
+
+          <!-- Select Vehicle -->
+          <div
+            class="relative w-full rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden text-left flex justify-between items-center p-3"
+            id="trigger-car-popover">
+            <div class="flex items-center gap-3 w-full" *ngIf="selectedCarInfo">
+              <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                <ion-icon name="car" class="text-blue-600 text-xl"></ion-icon>
+              </div>
+              <div class="flex-1 overflow-hidden">
+                <div class="text-[10px] text-gray-400 font-medium">รถที่ใช้จอง</div>
+                <div class="text-sm font-bold text-gray-800 truncate flex items-center gap-2">
+                  {{ selectedCarInfo.licensePlate }}
+                  <span class="text-xs font-normal text-gray-500">{{ selectedCarInfo.province }}</span>
+                </div>
+              </div>
+              <ion-icon name="chevron-down-outline" class="text-gray-400 shrink-0"></ion-icon>
+            </div>
+          </div>
+          <ion-popover trigger="trigger-car-popover" class="vehicle-popover">
+            <ng-template>
+              <ion-content class="ion-padding-vertical">
+                <ion-list lines="none">
+                  <ion-item *ngFor="let car of userVehicles" button (click)="selectCar(car.id)">
+                    <ion-label>
+                      <h2 class="font-bold text-gray-800">{{ car.licensePlate }}</h2>
+                      <p class="text-sm text-gray-500">{{ car.province }}</p>
+                    </ion-label>
+                    <ion-icon *ngIf="car.id === selectedCarId" name="checkmark-circle" color="primary"
+                      slot="end"></ion-icon>
+                  </ion-item>
+                </ion-list>
+              </ion-content>
+            </ng-template>
+          </ion-popover>
         </div>
       </div>
 

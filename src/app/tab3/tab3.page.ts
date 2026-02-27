@@ -111,9 +111,12 @@ export class Tab3Page implements OnInit {
 
         await this.showToast('เพิ่มยานพาหนะสำเร็จเรียบร้อย', 'success');
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('[Tab3Page] Failed to add vehicle:', error);
-        await this.showToast('เกิดข้อผิดพลาด ไม่สามารถเพิ่มยานพาหนะได้', 'error');
+        const msg = error.message === 'รถป้ายทะเบียนนี้มีอยู่ในระบบแล้ว'
+          ? error.message
+          : 'เกิดข้อผิดพลาด ไม่สามารถเพิ่มยานพาหนะได้';
+        await this.showToast(msg, 'error');
       }
     }
   }

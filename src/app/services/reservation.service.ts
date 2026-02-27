@@ -64,6 +64,7 @@ export class ReservationService {
         end_time: booking.endTime.toISOString(),
         status: booking.status || 'pending',
         vehicle_type: 'car',
+        car_id: booking.carId,
         booking_type: this.mapBookingTypeToEnum(booking.bookingType) // Map to DB Enum
       })
       .select()

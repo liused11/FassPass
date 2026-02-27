@@ -1,8 +1,9 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { ReservationService } from '../../services/reservation.service';
-
 import { ParkingService } from '../../services/parking.service';
+import { ParkingDataService } from '../../services/parking-data.service';
+import { Vehicle } from '../../data/models';
 
 @Component({
   selector: 'app-check-booking',
@@ -52,16 +53,28 @@ export class CheckBookingComponent implements OnInit {
   cardName: string = '';
   walletPhone: string = '';
 
+  userVehicles: Vehicle[] = [];
+  selectedCarId: number | string = '';
+
   constructor(
     private modalCtrl: ModalController,
     private toastCtrl: ToastController,
     private reservationService: ReservationService,
-    private parkingService: ParkingService
+    private parkingService: ParkingService,
+    private parkingDataService: ParkingDataService
   ) { }
 
   ngOnInit() {
     this.calculateDurationAndPrice();
     this.generatePromptPayRef();
+
+    this.parkingDataService.vehicles$.subscribe(vehicles => {
+      this.userVehicles = vehicles || [];
+      if (this.userVehicles.length > 0) {
+        const defaultVehicle = this.userVehicles.find(v => v.isDefault);
+        this.selectedCarId = defaultVehicle ? defaultVehicle.id : this.userVehicles[0].id;
+      }
+    });
 
     if (!this.data.selectedFloors) this.data.selectedFloors = [];
     if (!this.data.selectedZones) this.data.selectedZones = [];
@@ -344,9 +357,20 @@ export class CheckBookingComponent implements OnInit {
       selectedZones: [this.assignedZone],
       totalPrice: this.totalPrice,
       paymentMethod: this.selectedPaymentMethod,
-      status: isPayLater ? 'pending_payment' : 'pending'
+      status: isPayLater ? 'pending_payment' : 'pending',
+      car_id: this.selectedCarId
     };
     this.modalCtrl.dismiss({ confirmed: true, data: finalData, action: isPayLater ? 'pay_later' : 'pay_now' }, 'confirm');
+  }
+
+  get selectedCarInfo(): Vehicle | undefined {
+    return this.userVehicles.find(v => v.id === this.selectedCarId);
+  }
+
+  selectCar(id: string | number) {
+    this.selectedCarId = id;
+    const popover = document.querySelector('ion-popover.vehicle-popover') as any;
+    if (popover && popover.dismiss) popover.dismiss();
   }
 
   getTypeName(type: string): string {
