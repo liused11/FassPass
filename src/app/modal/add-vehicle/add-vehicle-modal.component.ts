@@ -42,6 +42,11 @@ export class AddVehicleModalComponent implements OnInit {
 
   selectedImage: string | null = null;
 
+  // Custom states for ion-popover logic
+  selectedTypeLabel: string = 'เลือกประเภท';
+  selectedBrandLabel: string = 'เลือกยี่ห้อ';
+  selectedProvinceLabel: string = 'จังหวัด';
+
   constructor(
     private modalCtrl: ModalController,
     private fb: FormBuilder
@@ -90,16 +95,26 @@ export class AddVehicleModalComponent implements OnInit {
       const initialType = isKnownType ? parsedType : 'other';
       const initialCustomType = isKnownType ? '' : parsedType;
 
+      const initialBrand = this.brands.includes(brand) ? brand : (brand ? 'อื่นๆ' : '');
+      const initialProvince = this.editVehicle.province || 'กรุงเทพมหานคร';
+
       this.vehicleForm.patchValue({
         type: initialType,
         customType: initialCustomType,
-        brand: this.brands.includes(brand) ? brand : (brand ? 'อื่นๆ' : ''),
+        brand: initialBrand,
         customBrand: this.brands.includes(brand) ? '' : brand,
         model: modelPart,
         color: this.editVehicle.color || '',
         licensePlate: this.editVehicle.licensePlate || '',
-        province: this.editVehicle.province || 'กรุงเทพมหานคร'
+        province: initialProvince
       });
+
+      // Update selected popover labels for edit mode
+      const typeOption = this.vehicleTypes.find(t => t.value === initialType);
+      if (typeOption) this.selectedTypeLabel = typeOption.label;
+      if (initialBrand) this.selectedBrandLabel = initialBrand;
+      if (initialProvince) this.selectedProvinceLabel = initialProvince;
+
     } else {
       // Default image based on type
       this.updateDefaultImage();
@@ -115,6 +130,22 @@ export class AddVehicleModalComponent implements OnInit {
       };
       reader.readAsDataURL(file);
     }
+  }
+
+  // Popover Selectors Methods
+  selectType(val: string, label: string) {
+    this.vehicleForm.patchValue({ type: val });
+    this.selectedTypeLabel = label;
+  }
+
+  selectBrand(val: string) {
+    this.vehicleForm.patchValue({ brand: val });
+    this.selectedBrandLabel = val;
+  }
+
+  selectProvince(val: string) {
+    this.vehicleForm.patchValue({ province: val });
+    this.selectedProvinceLabel = val;
   }
 
   updateDefaultImage() {

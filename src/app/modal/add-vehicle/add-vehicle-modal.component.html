@@ -1,5 +1,4 @@
 <ion-header class="ion-no-border">
-  <div class="h-1 w-10 bg-gray-300 rounded-full mx-auto mt-3 mb-1"></div>
   <ion-toolbar class="--background:transparent">
     <ion-title class="text-center font-bold text-lg">{{ isEditMode ? 'แก้ไขยานพาหนะ' : 'เพิ่มยานพาหนะใหม่'
       }}</ion-title>
@@ -36,16 +35,30 @@
       <!-- Vehicle Type -->
       <div class="form-group">
         <label class="font-bold text-sm text-gray-800 mb-2 block">ประเภทรถ</label>
-        <div class="relative">
-          <select formControlName="type"
-            class="w-full h-12 border border-gray-200 rounded-xl px-4 appearance-none bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors">
-            <option value="" disabled selected hidden>เลือกประเภท</option>
-            <option *ngFor="let t of vehicleTypes" [value]="t.value">{{ t.label }}</option>
-          </select>
-          <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
-            <ion-icon name="chevron-down"></ion-icon>
-          </div>
+        <div id="type-select-trigger"
+          class="w-full h-12 border border-gray-200 rounded-xl px-4 flex justify-between items-center bg-white text-gray-700 cursor-pointer active:bg-gray-50 transition-colors"
+          [class.border-blue-500]="selectedTypeLabel !== 'เลือกประเภท'">
+          <span [class.text-gray-400]="selectedTypeLabel === 'เลือกประเภท'">{{ selectedTypeLabel }}</span>
+          <ion-icon name="chevron-down" class="text-gray-500"></ion-icon>
         </div>
+
+        <ion-popover trigger="type-select-trigger" triggerAction="click" dismissOnSelect="true" class="custom-popover">
+          <ng-template>
+            <ion-content class="ion-padding-vertical">
+              <ion-list lines="none" class="m-0 p-0">
+                <ion-item *ngFor="let t of vehicleTypes" [button]="true" [detail]="false"
+                  (click)="selectType(t.value, t.label)" class="mx-2 mb-1 rounded-lg"
+                  [color]="vehicleForm.get('type')?.value === t.value ? 'primary' : ''"
+                  [style.--background]="vehicleForm.get('type')?.value === t.value ? '#ebf8f6' : 'white'">
+                  <ion-label [class.font-bold]="vehicleForm.get('type')?.value === t.value"
+                    [class.text-[#1a73e8]]="vehicleForm.get('type')?.value === t.value" class="text-sm">
+                    {{ t.label }}
+                  </ion-label>
+                </ion-item>
+              </ion-list>
+            </ion-content>
+          </ng-template>
+        </ion-popover>
         <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('type')">กรุณาเลือกประเภทรถ</span>
       </div>
 
@@ -61,16 +74,31 @@
       <div class="grid grid-cols-2 gap-3">
         <div class="form-group">
           <label class="font-bold text-sm text-gray-800 mb-2 block">ยี่ห้อ</label>
-          <div class="relative">
-            <select formControlName="brand"
-              class="w-full h-12 border border-gray-200 rounded-xl px-3 appearance-none bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors">
-              <option value="" disabled selected hidden>เลือกยี่ห้อ</option>
-              <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
-            </select>
-            <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-500">
-              <ion-icon name="chevron-down"></ion-icon>
-            </div>
+          <div id="brand-select-trigger"
+            class="w-full h-12 border border-gray-200 rounded-xl px-3 flex justify-between items-center bg-white text-gray-700 cursor-pointer active:bg-gray-50 transition-colors truncate"
+            [class.border-blue-500]="selectedBrandLabel !== 'เลือกยี่ห้อ'">
+            <span class="truncate pr-2" [class.text-gray-400]="selectedBrandLabel === 'เลือกยี่ห้อ'">{{
+              selectedBrandLabel }}</span>
+            <ion-icon name="chevron-down" class="text-gray-500 shrink-0"></ion-icon>
           </div>
+
+          <ion-popover trigger="brand-select-trigger" triggerAction="click" dismissOnSelect="true"
+            class="custom-popover">
+            <ng-template>
+              <ion-content class="ion-padding-vertical max-h-64">
+                <ion-list lines="none" class="m-0 p-0">
+                  <ion-item *ngFor="let b of brands" [button]="true" [detail]="false" (click)="selectBrand(b)"
+                    class="mx-2 mb-1 rounded-lg" [color]="vehicleForm.get('brand')?.value === b ? 'primary' : ''"
+                    [style.--background]="vehicleForm.get('brand')?.value === b ? '#ebf8f6' : 'white'">
+                    <ion-label [class.font-bold]="vehicleForm.get('brand')?.value === b"
+                      [class.text-[#1a73e8]]="vehicleForm.get('brand')?.value === b" class="text-sm">
+                      {{ b }}
+                    </ion-label>
+                  </ion-item>
+                </ion-list>
+              </ion-content>
+            </ng-template>
+          </ion-popover>
           <span class="text-xs text-red-500 mt-1" *ngIf="isControlInvalid('brand')">กรุณาเลือกยี่ห้อ</span>
 
           <!-- Custom Brand (Shown if 'other' is selected) -->
@@ -106,15 +134,31 @@
             <input type="text" formControlName="licensePlate" placeholder="เช่น 1กข 1234"
               class="w-full h-full border border-gray-200 rounded-xl px-4 bg-white text-gray-700 focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-300 appearance-none">
           </div>
-          <div class="col-span-7 relative">
-            <select formControlName="province"
-              class="w-full h-full border border-gray-200 rounded-xl px-2 appearance-none bg-white text-gray-700 text-sm focus:outline-none focus:border-blue-500 transition-colors truncate pr-8">
-              <option value="" disabled selected hidden>จังหวัด</option>
-              <option *ngFor="let p of provinces" [value]="p">{{ p }}</option>
-            </select>
-            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
-              <ion-icon name="chevron-down"></ion-icon>
+          <div class="col-span-7">
+            <div id="province-select-trigger"
+              class="w-full h-full border border-gray-200 rounded-xl px-3 flex justify-between items-center bg-white text-gray-700 cursor-pointer active:bg-gray-50 transition-colors truncate">
+              <span class="truncate pr-1 text-sm" [class.text-gray-400]="selectedProvinceLabel === 'จังหวัด'">{{
+                selectedProvinceLabel }}</span>
+              <ion-icon name="chevron-down" class="text-gray-500 shrink-0 text-sm"></ion-icon>
             </div>
+
+            <ion-popover trigger="province-select-trigger" triggerAction="click" dismissOnSelect="true"
+              class="custom-popover">
+              <ng-template>
+                <ion-content class="ion-padding-vertical h-72">
+                  <ion-list lines="none" class="m-0 p-0">
+                    <ion-item *ngFor="let p of provinces" [button]="true" [detail]="false" (click)="selectProvince(p)"
+                      class="mx-2 mb-1 rounded-lg" [color]="vehicleForm.get('province')?.value === p ? 'primary' : ''"
+                      [style.--background]="vehicleForm.get('province')?.value === p ? '#ebf8f6' : 'white'">
+                      <ion-label [class.font-bold]="vehicleForm.get('province')?.value === p"
+                        [class.text-[#1a73e8]]="vehicleForm.get('province')?.value === p" class="text-sm">
+                        {{ p }}
+                      </ion-label>
+                    </ion-item>
+                  </ion-list>
+                </ion-content>
+              </ng-template>
+            </ion-popover>
           </div>
         </div>
 

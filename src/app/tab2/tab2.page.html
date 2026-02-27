@@ -9,10 +9,21 @@
       </ion-buttons>
     </ng-container>
     <ng-container *ngIf="showSearch">
-      <div class="flex items-center w-full h-full px-2 pt-1">
-        <ion-searchbar [(ngModel)]="searchQuery" (ionInput)="onSearch()" showCancelButton="always"
-          (ionCancel)="toggleSearch()" placeholder="ค้นหา สถานที่, ทะเบียนรถ, ตึก..." class="p-0 m-0"
-          [class.opacity-70]="isSearching"></ion-searchbar>
+      <div class="flex items-center w-full h-full px-3 py-2">
+        <div class="rounded-full flex items-center w-full px-4 py-2 transition-all duration-300" [ngClass]="{
+               'bg-blue-50/80 border-2 border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]': isSearching,
+               'bg-gray-100 border border-transparent': !isSearching
+             }">
+          <ion-icon name="search-outline" class="text-xl mr-3 transition-colors duration-300"
+            [ngClass]="isSearching ? 'text-blue-500 animate-pulse' : 'text-[#1a73e8]'"></ion-icon>
+          <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()"
+            placeholder="ค้นหา สถานที่, ทะเบียนรถ, ตึก..."
+            class="flex-1 w-full bg-transparent border-none outline-none p-0 m-0 text-[15px] text-gray-700 placeholder-gray-500 font-medium transition-colors"
+            [ngClass]="{'text-blue-700 placeholder-blue-300': isSearching}">
+
+          <ion-icon name="close-circle" class="text-xl ml-2 text-gray-400 cursor-pointer active:opacity-50"
+            (click)="toggleSearch()"></ion-icon>
+        </div>
       </div>
     </ng-container>
   </ion-toolbar>
