@@ -50,10 +50,17 @@
                     </div>
                 </div>
 
-                <button class="circle-btn bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-full p-1"
-                    (click)="dismiss()">
-                    <ion-icon name="close-outline" class="text-2xl"></ion-icon>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button class="circle-btn bg-gray-50 hover:bg-gray-100 rounded-full p-1 transition-colors"
+                        [class.text-red-500]="isBookmarked" [class.text-gray-500]="!isBookmarked"
+                        (click)="toggleBookmark()">
+                        <ion-icon [name]="isBookmarked ? 'heart' : 'heart-outline'" class="text-2xl"></ion-icon>
+                    </button>
+                    <button class="circle-btn bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-full p-1"
+                        (click)="dismiss()">
+                        <ion-icon name="close-outline" class="text-2xl"></ion-icon>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

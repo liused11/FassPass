@@ -25,6 +25,7 @@ import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem, UserProfile } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ParkingService } from '../services/parking.service';
+import { BookmarkService } from '../services/bookmark.service';
 
 @Component({
   selector: 'app-tab1',
@@ -88,6 +89,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private parkingApiService: ParkingService, // Inject new RPC Service
     private supabaseService: SupabaseService, // Inject Supabase for Realtime
     private router: Router, // ✅ Inject Router
+    private bookmarkService: BookmarkService, // ✅ Inject Bookmark Service
     @Inject(PLATFORM_ID) private platformId: Object,
     private ngZone: NgZone // Inject NgZone for performance optimization
   ) { }
@@ -175,9 +177,16 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         })
       )
       .subscribe({
-        next: (realLots) => {
+        next: async (realLots) => {
           if (realLots) {
             console.log('[Tab1] Applying Real Data (Count: ' + realLots.length + ')');
+
+            // Fetch bookmarks and apply to lots
+            const bookmarkedIds = await this.bookmarkService.getBookmarkedBuildingIds();
+            realLots.forEach(lot => {
+              lot.isBookmarked = bookmarkedIds.includes(lot.id);
+            });
+
             this.allParkingLots = realLots;
             this.processScheduleData();
             this.updateParkingStatuses();
@@ -780,6 +789,23 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  }
+
+  async toggleBookmark(lot: ParkingLot, event: Event) {
+    event.stopPropagation();
+    if (!lot?.id) return;
+
+    try {
+      if (lot.isBookmarked) {
+        await this.bookmarkService.removeBookmark(lot.id);
+        lot.isBookmarked = false;
+      } else {
+        await this.bookmarkService.addBookmark(lot.id);
+        lot.isBookmarked = true;
+      }
+    } catch (e) {
+      console.error('Error toggling bookmark', e);
+    }
   }
 
   async viewLotDetails(lot: ParkingLot) {

@@ -157,9 +157,7 @@
                     [style.backgroundColor]="lot.distanceColor ? lot.distanceColor + '20' : ''">
                     {{ i + 1 }}
                   </div>
-                  <div class="text-base font-bold text-gray-800 leading-tight">{{ lot.name }}</div>
-                  <ion-icon *ngIf="lot.isBookmarked" name="bookmark"
-                    class="text-gray-400 text-sm mt-0.5 shrink-0"></ion-icon>
+                  <div class="text-base font-bold text-gray-800 leading-tight pr-1">{{ lot.name }}</div>
                 </div>
 
                 <!-- Hours -->
@@ -190,10 +188,19 @@
                 </div>
               </div>
 
-              <!-- Right Column: Price & Promo -->
-              <div class="flex flex-col items-end justify-between pl-1 min-w-[80px]">
-                <div class="text-[10px] text-gray-400 text-right">
-                  {{ lot.promotion || '' }}
+              <!-- Right Column: Price, Promo & Bookmark -->
+              <div class="flex flex-col items-end justify-between pl-1 min-w-[85px]">
+                <div class="flex flex-col items-end w-full">
+                  <button
+                    class="bg-transparent hover:bg-gray-50 rounded-full p-1 transition-colors shrink-0 z-10 mb-1 -mr-1"
+                    (click)="toggleBookmark(lot, $event)">
+                    <ion-icon [name]="lot.isBookmarked ? 'heart' : 'heart-outline'"
+                      [class.text-red-500]="lot.isBookmarked" [class.text-gray-300]="!lot.isBookmarked"
+                      class="text-2xl drop-shadow-sm"></ion-icon>
+                  </button>
+                  <div class="text-[10px] text-gray-400 text-right w-full" *ngIf="lot.promotion">
+                    {{ lot.promotion }}
+                  </div>
                 </div>
 
                 <div class="text-right mt-1">

@@ -7,6 +7,7 @@ import { ParkingDataService } from '../../services/parking-data.service';
 import { ReservationService } from '../../services/reservation.service';
 import { AddVehicleModalComponent } from '../add-vehicle/add-vehicle-modal.component';
 import { take } from 'rxjs/operators';
+import { BookmarkService } from '../../services/bookmark.service';
 // Remove unused service import if not needed, or keep for future
 import { BottomSheetService } from '../../services/bottom-sheet.service';
 import { addIcons } from 'ionicons';
@@ -14,7 +15,7 @@ import {
     closeOutline, locationOutline, peopleOutline, cubeOutline, timeOutline,
     chevronDownOutline, keyOutline, personOutline, calendarNumberOutline,
     caretDownOutline, chevronBackOutline, chevronForwardOutline, swapHorizontalOutline,
-    checkmarkOutline
+    checkmarkOutline, heartOutline, heart
 } from 'ionicons/icons';
 
 @Component({
@@ -26,6 +27,8 @@ import {
 export class BuildingDetailComponent implements OnInit {
 
     @Input() lot!: ParkingLot;
+
+    isBookmarked: boolean = false;
 
     // --- Mock Data for UI ---
     availableSites: ParkingLot[] = [];
@@ -47,13 +50,14 @@ export class BuildingDetailComponent implements OnInit {
         private router: Router,
         private parkingService: ParkingDataService,
         private reservationService: ReservationService,
+        private bookmarkService: BookmarkService,
         private toastCtrl: ToastController
     ) {
         addIcons({
             closeOutline, locationOutline, peopleOutline, cubeOutline, timeOutline,
             chevronDownOutline, keyOutline, personOutline, calendarNumberOutline,
             caretDownOutline, chevronBackOutline, chevronForwardOutline, swapHorizontalOutline,
-            checkmarkOutline
+            checkmarkOutline, heartOutline, heart
         });
     }
 
@@ -65,6 +69,31 @@ export class BuildingDetailComponent implements OnInit {
                 this.availableSites = lots;
             }
         });
+        this.checkBookmarkStatus();
+    }
+
+    async checkBookmarkStatus() {
+        if (this.lot?.id) {
+            this.isBookmarked = await this.bookmarkService.checkIsBookmarked(this.lot.id);
+        }
+    }
+
+    async toggleBookmark() {
+        if (!this.lot?.id) return;
+
+        try {
+            if (this.isBookmarked) {
+                await this.bookmarkService.removeBookmark(this.lot.id);
+                this.isBookmarked = false;
+                this.presentToast('นำออกจากบันทึกแล้ว', 'success');
+            } else {
+                await this.bookmarkService.addBookmark(this.lot.id);
+                this.isBookmarked = true;
+                this.presentToast('บันทึกสถานที่แล้ว', 'success');
+            }
+        } catch (error) {
+            this.presentToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+        }
     }
 
     dismiss() {
@@ -210,11 +239,11 @@ export class BuildingDetailComponent implements OnInit {
         window.open(url, '_blank');
     }
 
-    async presentToast(message: string) {
+    async presentToast(message: string, color: string = 'dark') {
         const toast = await this.toastCtrl.create({
             message: message,
             duration: 2000,
-            color: 'dark',
+            color: color,
             position: 'bottom',
         });
         toast.present();
