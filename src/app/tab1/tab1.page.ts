@@ -68,15 +68,19 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   isSearching = false;
 
   // --- Bottom Sheet Config ---
-  sheetLevel = 1;
-  currentSheetHeight = 0;
-
-  canScroll = false;
-  isSnapping = true;
+  sheetLevel = 1; // 0 = minimized, 1 = mid, 2 = full
+  currentSheetHeight = 250;
   isDragging = false;
+  isSnapping = true;
   startY = 0;
   startHeight = 0;
   startLevel = 1;
+  canScroll = false;
+
+  // Velocity tracking
+  lastY = 0;
+  lastTime = 0;
+  velocityY = 0;
 
   isModalOpen = false;
 
@@ -490,6 +494,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   startDrag(ev: any) {
     const touch = ev.touches ? ev.touches[0] : ev;
     this.startY = touch.clientY;
+
+    // Reset velocity trackers
+    this.lastY = this.startY;
+    this.lastTime = Date.now();
+    this.velocityY = 0;
+
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     sheet.classList.remove('snapping');
     this.isSnapping = false;
@@ -509,6 +519,20 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   dragMove = (ev: any) => {
     const touch = ev.touches ? ev.touches[0] : ev;
     const currentY = touch.clientY;
+    const now = Date.now();
+
+    // Calculate instantaneous velocity (pixels per ms)
+    if (this.lastTime > 0) {
+      const dt = now - this.lastTime;
+      const dy = currentY - this.lastY;
+      if (dt > 0) {
+        // Exponential moving average for smooth velocity
+        this.velocityY = (this.velocityY * 0.4) + ((dy / dt) * 0.6);
+      }
+    }
+    this.lastY = currentY;
+    this.lastTime = now;
+
     const contentEl = this.sheetContentEl.nativeElement;
     const isAtTop = contentEl.scrollTop <= 0;
     const isMaxLevel = this.sheetLevel === 2;
@@ -561,24 +585,40 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         const h1 = this.getPixelHeightForLevel(1);
         const h2 = this.getPixelHeightForLevel(2);
 
-        if (totalDragged > dragThreshold) {
-          // Dragged UP: Snaps up
-          if (this.startLevel === 0) {
-            this.sheetLevel = (finalH > h1 + dragThreshold) ? 2 : 1;
-          } else if (this.startLevel === 1) {
-            this.sheetLevel = 2;
-          }
-        } else if (totalDragged < -dragThreshold) {
-          // Dragged DOWN: Snaps down
-          if (this.startLevel === 2) {
-            this.sheetLevel = (finalH < h1 - dragThreshold) ? 0 : 1;
-          } else if (this.startLevel === 1) {
-            this.sheetLevel = 0;
-          }
+        // Detect flick gesture (Ionic modal characteristic)
+        const isFlickUp = this.velocityY < -0.6; // SWIPE UP = negative velocity (pixels moving up)
+        const isFlickDown = this.velocityY > 0.6; // SWIPE DOWN = positive velocity
+
+        if (isFlickUp) {
+          // Flicked Up -> go to next higher level
+          if (this.startLevel === 0) this.sheetLevel = 1;
+          else if (this.startLevel === 1) this.sheetLevel = 2;
+        } else if (isFlickDown) {
+          // Flicked Down -> go to next lower level
+          if (this.startLevel === 2) this.sheetLevel = 1;
+          else if (this.startLevel === 1) this.sheetLevel = 0;
         } else {
-          // Didn't drag enough, revert to start level
-          this.sheetLevel = this.startLevel;
+          // Distance based fallback if swiped slowly
+          if (totalDragged > dragThreshold) {
+            // Dragged UP: Snaps up
+            if (this.startLevel === 0) {
+              this.sheetLevel = (finalH > h1 + dragThreshold) ? 2 : 1;
+            } else if (this.startLevel === 1) {
+              this.sheetLevel = 2;
+            }
+          } else if (totalDragged < -dragThreshold) {
+            // Dragged DOWN: Snaps down
+            if (this.startLevel === 2) {
+              this.sheetLevel = (finalH < h1 - dragThreshold) ? 0 : 1;
+            } else if (this.startLevel === 1) {
+              this.sheetLevel = 0;
+            }
+          } else {
+            // Didn't drag enough, revert to start level
+            this.sheetLevel = this.startLevel;
+          }
         }
+
         this.snapToCurrentLevel();
       } else {
         this.snapToCurrentLevel();
@@ -588,11 +628,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   };
 
   snapToCurrentLevel() {
+    this.isSnapping = true;
+    this.updateSheetHeightByLevel(this.sheetLevel);
+
+    // Explicitly set DOM height to override manual drag styles since Angular change detection might skip
+    // if `currentSheetHeight` hasn't mathematically changed but the DOM was manipulated during drag.
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     if (sheet) {
-      this.isSnapping = true;
       sheet.classList.add('snapping');
-      this.updateSheetHeightByLevel(this.sheetLevel);
+      sheet.style.height = `${this.currentSheetHeight}px`;
     }
   }
 

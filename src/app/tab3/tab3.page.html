@@ -1,24 +1,17 @@
-<ion-header [translucent]="false" class="ion-no-border bg-white">
-  <ion-toolbar>
-    <ion-title class="px-0">
-      <div class="flex items-center justify-center font-bold text-[#003366] text-lg">
-        <ion-icon name="flash" color="primary" class="mr-1"></ion-icon>
-        <span>FASTPASS</span>
-      </div>
-    </ion-title>
-  </ion-toolbar>
-  <ion-toolbar>
-    <div class="flex justify-between items-center px-4 pb-2 text-lg font-semibold text-black">
-      <span>โปรไฟล์</span>
-      <ion-icon name="log-out-outline" class="text-xl"></ion-icon>
-    </div>
+<ion-header class="ion-no-border" [translucent]="false">
+  <ion-toolbar class="bg-white border-b border-gray-200 shadow-none">
+    <ion-title class="font-bold text-gray-900 text-xl text-center">โปรไฟล์</ion-title>
+    <ion-buttons slot="end">
+      <ion-button style="--color: #111827;">
+        <ion-icon name="log-out-outline" class="text-xl"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="pt-4">
-
+<ion-content [fullscreen]="true">
   <!-- Profile Card -->
-  <div class="px-4 pb-4">
+  <div class="px-4 pt-6 pb-4">
     <div class="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
       <div class="flex items-center">
         <ion-avatar class="w-[60px] h-[60px] mr-4 border border-gray-300 bg-gray-100 flex items-center justify-center">

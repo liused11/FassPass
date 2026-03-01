@@ -1,7 +1,6 @@
 <ion-header class="ion-no-border">
-    <ion-toolbar class="bg-white/90 backdrop-blur-md">
-        <ion-title
-            class="font-[Inter] font-bold text-center text-xl text-gray-800 tracking-tight">เลือกรูปแบบการจอง</ion-title>
+    <ion-toolbar class="bg-white border-b border-gray-200 shadow-none">
+        <ion-title class="font-bold text-gray-900 text-xl text-center tracking-tight">เลือกรูปแบบการจอง</ion-title>
         <ion-buttons slot="end">
             <ion-button (click)="close()"
                 class="m-2 bg-gray-100 hover:bg-gray-200 rounded-full w-10 h-10 transition-colors">
@@ -11,10 +10,11 @@
     </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding" style="--background: #f4f7fb;">
+<ion-content class="ion-padding" style="--background: white;">
     <div class="flex flex-col gap-3 mt-1">
         <div *ngFor="let type of bookingTypes" (click)="selectType(type.id)"
-            class="group relative p-4 rounded-2xl bg-white border border-gray-100 shadow-[0_2px_15px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_6px_25px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300 flex items-center gap-4 overflow-hidden cursor-pointer">
+            class="group relative p-4 rounded-xl bg-white border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] active:scale-95 transition-all duration-300 flex items-center gap-4 overflow-hidden cursor-pointer"
+            [style.border-left]="'6px solid ' + type.hexColor">
 
             <!-- Subtle background accent on hover -->
             <div class="absolute inset-0 bg-gradient-to-r from-transparent to-current opacity-0 group-hover:opacity-5 transition-opacity duration-300"
