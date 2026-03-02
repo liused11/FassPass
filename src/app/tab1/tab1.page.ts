@@ -27,6 +27,8 @@ import { ParkingDataService } from '../services/parking-data.service';
 import { ParkingService } from '../services/parking.service';
 import { BookmarkService } from '../services/bookmark.service';
 
+import buildingFloorData from '../components/floor-plan/e12-floor1.json';
+
 @Component({
   selector: 'app-tab1',
   templateUrl: 'tab1.page.html',
@@ -43,6 +45,11 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   allParkingLots: ParkingLot[] = [];
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
+
+  // --- Building Variables ---
+  buildingZones: any[] = [];
+  allBuildingRooms: any[] = [];
+  filteredBuildingRooms: any[] = [];
 
   userProfile: UserProfile | null = null;
 
@@ -102,6 +109,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit() {
     // 1. Fetch Real Data
     this.loadRealData();
+    this.loadBuildingData();
 
     // Subscribe to Refresh Event
     this.uiEventService.refreshParkingData$.subscribe(() => {
@@ -215,6 +223,24 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
+  loadBuildingData() {
+    // Instead of mapping rooms, we just want to create a Single Building Card from the JSON data.
+    this.buildingZones = [{ id: 'all', name: 'All Buildings' }];
+
+    // Create one single building record representing e12
+    const singleBuilding = {
+      id: buildingFloorData.buildingId,
+      name: buildingFloorData.buildingName,
+      type: 'Building',
+      zoneId: 'all',
+      zoneName: 'มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี',
+      color: '#1a73e8',
+      floorCount: buildingFloorData.floors.length
+    };
+
+    this.allBuildingRooms = [singleBuilding];
+  }
+
   filterData() {
     let results = this.allParkingLots;
 
@@ -240,20 +266,26 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
           return false;
         });
       } else {
-        // Building -> Filter by Zone
-        if (this.selectedTab === 'north') {
-          results = results.filter((lot) => lot.zone === 'north');
-        } else if (this.selectedTab === 'south') {
-          results = results.filter((lot) => lot.zone === 'south');
-        }
+        // Building -> Filter by Zone Room Data
+        this.filteredBuildingRooms = this.selectedTab === 'all'
+          ? this.allBuildingRooms
+          : this.allBuildingRooms.filter((room: any) => room.zoneId === this.selectedTab);
+      }
+    } else {
+      if (this.selectedLocation === 'building') {
+        this.filteredBuildingRooms = this.allBuildingRooms;
       }
     }
 
     if (this.searchQuery.trim() !== '') {
-      results = results.filter((lot) =>
-        lot.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
+      const q = this.searchQuery.toLowerCase();
+      if (this.selectedLocation === 'parking') {
+        results = results.filter((lot) => lot.name.toLowerCase().includes(q));
+      } else {
+        this.filteredBuildingRooms = this.filteredBuildingRooms.filter((room: any) => room.name.toLowerCase().includes(q));
+      }
     }
+
     this.filteredParkingLots = results;
     this.visibleParkingLots = results;
 
@@ -270,6 +302,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.selectedLocation = ev.detail.value;
     this.selectedTab = 'all'; // Reset tab when location changes
     this.filterData();
+  }
+
+  // Handle building click
+  openBuildingDetails(building: any) {
+    console.log('Opened Building:', building);
+    // TODO: Implement navigation or modal for building details
   }
 
 
