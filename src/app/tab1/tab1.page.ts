@@ -19,7 +19,7 @@ import { SupabaseService } from '../services/supabase.service';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
 import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
-
+import { Building3dModalComponent } from '../modal/building-3d-modal/building-3d-modal.component';
 
 import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem, UserProfile } from '../data/models';
@@ -305,9 +305,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Handle building click
-  openBuildingDetails(building: any) {
-    console.log('Opened Building:', building);
-    // TODO: Implement navigation or modal for building details
+  async openBuildingDetails(building: any) {
+    const modal = await this.modalCtrl.create({
+      component: Building3dModalComponent,
+      componentProps: { buildingData: building }
+    });
+    return await modal.present();
   }
 
 

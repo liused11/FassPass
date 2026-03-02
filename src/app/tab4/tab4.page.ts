@@ -23,25 +23,43 @@ export class Tab4Page implements OnInit {
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
       const bId = params['buildingId'] || 'school-building-01'; // Default Fallback
+      const floorParam = params['floor'];
+
       this.loadBuilding(bId);
+
+      // Auto-select floor if provided via queryParams
+      if (floorParam) {
+        // We'll need to wait for building to load first, so we do it in a subscription inside loadBuilding, 
+        // or just set a local variable:
+        this.selectedFloor = parseInt(floorParam, 10);
+      }
     });
   }
 
   loadBuilding(id: string) {
     this.buildingService.getBuilding(id).subscribe(data => {
       this.buildingData = data;
+
+      // If a floor was pre-selected from navigation
+      if (this.selectedFloor !== null) {
+        this.onFloorSelected(this.selectedFloor);
+      }
     });
   }
 
-  onFloorSelected(floorNumber: number) {
+  onFloorSelected(floorNumber: number | string) {
     if (!this.buildingData) return;
 
     // หาข้อมูลชั้นจาก floors array
-    // สมมติว่า floors เก็บข้อมูลเรียงตามชั้น หรือมี field floor
-    const floor = this.buildingData.floors.find(f => f.floor === floorNumber);
+    // Convert both to Number to ensure they match safely
+    const numFloor = Number(floorNumber);
+    const floor = this.buildingData.floors.find(f => Number(f.floor) === numFloor);
+
     if (floor) {
-      this.selectedFloor = floorNumber;
+      this.selectedFloor = numFloor;
       this.selectedFloorData = floor;
+    } else {
+      console.warn(`Floor ${floorNumber} not found in building data.`, this.buildingData.floors);
     }
   }
 

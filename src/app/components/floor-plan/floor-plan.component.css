@@ -6,6 +6,13 @@
   position: relative;
 }
 
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
 .floor-plan-container {
   width: 100%;
   height: 100%;
@@ -30,8 +37,8 @@ canvas {
 /* --- Shadow Button Base --- */
 .shadow-btn {
   background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 ion-button.shadow-btn {
@@ -42,8 +49,8 @@ ion-button.shadow-btn {
 
 ion-button.shadow-btn::part(native) {
   background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--border-radius, 12px);
 }
 
@@ -130,25 +137,27 @@ ion-button.circle-btn::part(native) {
 
 /* --- ปุ่มกลม (Perfect Circle) --- */
 .circle-btn {
-  width: 48px !important;    /* กำหนดกว้างสูงให้เท่ากัน */
+  width: 48px !important;
+  /* กำหนดกว้างสูงให้เท่ากัน */
   height: 48px !important;
-  --border-radius: 50% !important; /* บังคับกลม */
+  --border-radius: 50% !important;
+  /* บังคับกลม */
   --padding-start: 0 !important;
   --padding-end: 0 !important;
   margin: 0;
-  
+
   /* จัด Content ตรงกลาง */
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   /* สีพื้นหลัง */
   --background: rgba(255, 255, 255, 0.9);
   --color: #333;
-  --box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  
+  --box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+
   font-weight: 700;
-  font-size: 0.85rem; 
+  font-size: 0.85rem;
 }
 
 /* ข้อความในปุ่ม (ON/OFF, 2D/3D) */
@@ -160,7 +169,8 @@ ion-button.circle-btn::part(native) {
 }
 
 .btn-text-content span {
-  font-size: 0.75rem; /* ตัวหนังสือเล็กหน่อยให้ใส่ในวงกลมได้ */
+  font-size: 0.75rem;
+  /* ตัวหนังสือเล็กหน่อยให้ใส่ในวงกลมได้ */
 }
 
 /* --- 1. Top Bar Floating --- */
@@ -171,12 +181,13 @@ ion-button.circle-btn::part(native) {
   right: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between; /* แยกซ้ายขวา */
+  justify-content: space-between;
+  /* แยกซ้ายขวา */
   z-index: 20;
   pointer-events: none;
 }
 
-.floating-header > * {
+.floating-header>* {
   pointer-events: auto;
 }
 
@@ -203,7 +214,8 @@ ion-button.circle-btn::part(native) {
   color: #1a1a1a;
   position: absolute;
   left: 50%;
-  transform: translateX(-50%); /* จัด Title ให้อยู่กลางจอเสมอ */
+  transform: translateX(-50%);
+  /* จัด Title ให้อยู่กลางจอเสมอ */
 }
 
 /* --- 2. Bottom Left (Floor & Location) --- */
@@ -231,7 +243,9 @@ ion-button.circle-btn::part(native) {
   transition: transform 0.1s;
 }
 
-.info-pill:active { transform: scale(0.95); }
+.info-pill:active {
+  transform: scale(0.95);
+}
 
 /* --- 3. Bottom Right (Controls) --- */
 .floating-bottom-right {
@@ -240,7 +254,8 @@ ion-button.circle-btn::part(native) {
   right: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center; /* จัดกึ่งกลางแนวตั้ง */
+  align-items: center;
+  /* จัดกึ่งกลางแนวตั้ง */
   gap: 12px;
   z-index: 10;
 }
@@ -250,7 +265,8 @@ ion-button.circle-btn::part(native) {
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 24px; /* Capsule */
+  border-radius: 24px;
+  /* Capsule */
   padding: 4px;
   width: 48px;
   align-items: center;
@@ -275,7 +291,8 @@ app-joystick {
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
-  scale: 0.85; /* เล็กลงนิดนึง */
+  scale: 0.85;
+  /* เล็กลงนิดนึง */
 }
 
 .floor-plan-container.compact app-joystick {
@@ -289,8 +306,7 @@ app-joystick {
   --max-width: 380px;
   --height: auto;
   --border-radius: 20px;
-  --box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  --box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   align-items: center;
   justify-content: center;
 }
-
