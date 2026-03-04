@@ -5,6 +5,7 @@ import { ParkingDataService } from '../services/parking-data.service';
 import { GENERAL_SETTINGS, OTHER_SETTINGS } from '../data/app-settings';
 import { AddVehicleModalComponent } from '../modal/add-vehicle/add-vehicle-modal.component';
 import { EditProfileModalComponent } from '../modal/edit-profile-modal/edit-profile-modal.component';
+import { InviteVisitorModalComponent } from '../modal/invite-visitor/invite-visitor-modal.component';
 
 @Component({
   selector: 'app-tab3',
@@ -239,6 +240,20 @@ export class Tab3Page implements OnInit {
 
   getLicensePlateParts(plate: string): string[] {
     return plate ? plate.split(' ') : ['', ''];
+  }
+
+  async openInviteModal() {
+    const modal = await this.modalCtrl.create({
+      component: InviteVisitorModalComponent,
+      breakpoints: [0, 0.75, 1],
+      initialBreakpoint: 1,
+    });
+    await modal.present();
+
+    const { data, role } = await modal.onDidDismiss();
+    if (role === 'confirm' && data) {
+      console.log('Invite created:', data);
+    }
   }
 }
 

@@ -1,0 +1,117 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title>เชิญผู้เข้าติดต่อ</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">ปิด</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="space-y-6">
+
+    <!-- 1. ระบุสถานที่ -->
+    <div>
+      <h3 class="text-sm font-bold text-gray-500 uppercase mb-3">1. ระบุสถานที่</h3>
+      <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+
+        <ion-item lines="none" class="rounded-lg bg-white border border-gray-200">
+          <ion-label position="stacked" class="text-xs text-gray-500 font-medium">อาคาร</ion-label>
+          <ion-select placeholder="เลือกอาคาร" [value]="'building-12'" [disabled]="true">
+            <ion-select-option value="building-12">อาคาร 12 ชั้น</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <div class="flex gap-2">
+          <ion-item lines="none" class="flex-1 rounded-lg bg-white border border-gray-200">
+            <ion-label position="stacked" class="text-xs text-gray-500 font-medium">ชั้น</ion-label>
+            <ion-select [(ngModel)]="selectedFloor" placeholder="เลือกชั้น">
+              <ion-select-option *ngFor="let f of floors" [value]="f">ชั้น {{ f }}</ion-select-option>
+            </ion-select>
+          </ion-item>
+          <ion-item lines="none" class="flex-1 rounded-lg bg-white border border-gray-200">
+            <ion-label position="stacked" class="text-xs text-gray-500 font-medium">ห้อง / โซน</ion-label>
+            <ion-input [(ngModel)]="selectedRoom" placeholder="เช่น 1201"></ion-input>
+          </ion-item>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2. ข้อมูลผู้เยี่ยมชม -->
+    <div>
+      <h3 class="text-sm font-bold text-gray-500 uppercase mb-3">2. ข้อมูลผู้เยี่ยมชม</h3>
+
+      <ion-segment [(ngModel)]="inviteMethod" mode="ios">
+        <ion-segment-button value="select">
+          <ion-label>เลือกจากรายชื่อ</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="generate">
+          <ion-label>สร้างรหัสเชิญ</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+
+      <div class="mt-4">
+
+        <!-- Mode: Select from list -->
+        <div *ngIf="inviteMethod === 'select'">
+          <ion-searchbar placeholder="ค้นหาชื่อ" class="mb-2"></ion-searchbar>
+          <ion-list class="rounded-xl overflow-hidden border border-gray-100 p-0">
+            <ion-item button detail="false" *ngFor="let user of verifiedUsers"
+              (click)="selectedVisitor = user"
+              [class.bg-blue-50]="selectedVisitor?.id === user.id">
+              <ion-avatar slot="start">
+                <img [src]="user.avatar" />
+              </ion-avatar>
+              <ion-label>
+                <h2 class="font-semibold">{{ user.name }}</h2>
+                <p class="text-green-600 text-xs">LINE Verified</p>
+              </ion-label>
+              <ion-icon
+                *ngIf="selectedVisitor?.id === user.id"
+                name="checkmark-circle"
+                color="primary"
+                slot="end"
+                class="text-xl">
+              </ion-icon>
+            </ion-item>
+          </ion-list>
+        </div>
+
+        <!-- Mode: Generate code -->
+        <div *ngIf="inviteMethod === 'generate'"
+          class="text-center p-6 bg-blue-50 rounded-xl border border-blue-100">
+          <p class="text-sm text-blue-600 mb-2">รหัสเชิญที่จะถูกสร้างขึ้น</p>
+          <h2 class="text-3xl font-black text-blue-700 tracking-widest">{{ generatedCode }}</h2>
+          <p class="text-xs text-blue-400 mt-2">Visitor กรอกรหัสนี้ในแอปเพื่อรับบัตรผ่าน</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 3. กำหนดเวลา -->
+    <div>
+      <h3 class="text-sm font-bold text-gray-500 uppercase mb-3">3. กำหนดวันที่เข้าอาคาร</h3>
+      <ion-item lines="none" class="bg-gray-50 rounded-xl border border-gray-200">
+        <ion-label position="stacked" class="text-xs text-gray-500 font-medium">วันที่</ion-label>
+        <ion-datetime-button datetime="invite-date"></ion-datetime-button>
+        <ion-modal [keepContentsMounted]="true">
+          <ng-template>
+            <ion-datetime id="invite-date" presentation="date"></ion-datetime>
+          </ng-template>
+        </ion-modal>
+      </ion-item>
+    </div>
+
+    <!-- Confirm Button -->
+    <ion-button
+      expand="block"
+      class="h-12 font-bold text-base mt-4"
+      [disabled]="!selectedFloor || (inviteMethod === 'select' && !selectedVisitor)"
+      (click)="confirmInvite()">
+      <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+      สร้างคำเชิญและออกบัตรผ่าน
+    </ion-button>
+
+  </div>
+</ion-content>

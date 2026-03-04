@@ -19,7 +19,12 @@ import { SupabaseService } from '../services/supabase.service';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
 import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
+<<<<<<< Updated upstream
 import { Building3dModalComponent } from '../modal/building-3d-modal/building-3d-modal.component';
+=======
+import { RegisterCodeModalComponent } from '../modal/register-code/register-code-modal.component';
+
+>>>>>>> Stashed changes
 
 import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem, UserProfile } from '../data/models';
@@ -298,6 +303,21 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.searchSubject.next(this.searchQuery);
   }
   onTabChange() { this.filterData(); }
+
+  async openRegisterCodeModal() {
+    const modal = await this.modalCtrl.create({
+      component: RegisterCodeModalComponent,
+      breakpoints: [0, 0.75],
+      initialBreakpoint: 0.75,
+    });
+    await modal.present();
+
+    const { data, role } = await modal.onDidDismiss();
+    if (role === 'confirm' && data) {
+      console.log('Invite code submitted:', data.code);
+    }
+  }
+
   locationChanged(ev: any) {
     this.selectedLocation = ev.detail.value;
     this.selectedTab = 'all'; // Reset tab when location changes

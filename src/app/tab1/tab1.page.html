@@ -107,6 +107,15 @@
               </ion-segment-button>
             </ion-segment>
           </div>
+
+          <!-- Register Code Button (Building mode only) — แยก row ออกมา -->
+          <div *ngIf="selectedLocation === 'building'" class="px-3 pt-2 pb-1">
+            <ion-button (click)="openRegisterCodeModal()" expand="block" fill="outline" color="primary"
+              class="h-10 text-sm font-bold" style="--border-radius: 8px; margin: 0;">
+              <ion-icon name="key-outline" slot="start"></ion-icon>
+              มีรหัสคำเชิญ? ลงทะเบียนเข้าอาคาร
+            </ion-button>
+          </div>
         </div>
 
         <div class="lot-list">

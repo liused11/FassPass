@@ -12,6 +12,7 @@ import { CheckBookingComponent } from '../modal/check-booking/check-booking.comp
 import { BookingSlotComponent } from '../modal/booking-slot/booking-slot.component';
 import { BookingSuccessModalComponent } from '../modal/booking-success-modal/booking-success-modal.component';
 import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
+import { RegisterCodeModalComponent } from '../modal/register-code/register-code-modal.component';
 
 
 @NgModule({
@@ -21,7 +22,7 @@ import { BuildingDetailComponent } from '../modal/building-detail/building-detai
     FormsModule,
     ExploreContainerComponentModule,
     Tab1PageRoutingModule,
-
+    RegisterCodeModalComponent
   ],
   declarations: [Tab1Page, ParkingDetailComponent, ParkingReservationsComponent, CheckBookingComponent, BookingSlotComponent, BookingSuccessModalComponent, BuildingDetailComponent]
 })
