@@ -19,10 +19,6 @@ import { SupabaseService } from '../services/supabase.service';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
 import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
-<<<<<<< Updated upstream
-import { Building3dModalComponent } from '../modal/building-3d-modal/building-3d-modal.component';
-=======
-import { RegisterCodeModalComponent } from '../modal/register-code/register-code-modal.component';
 
 >>>>>>> Stashed changes
 
