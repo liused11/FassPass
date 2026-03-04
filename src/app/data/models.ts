@@ -87,10 +87,12 @@ export interface Booking {
 }
 
 export interface UserProfile {
+    id?: string;
     name: string;
     phone: string;
     avatar: string;
     role: string;
+    role_level?: number; // 0=Guest, 1=Visitor, 2=User, 3=Host
     lineId?: string;
     email?: string;
 }

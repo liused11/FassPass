@@ -6,6 +6,7 @@ import { GENERAL_SETTINGS, OTHER_SETTINGS } from '../data/app-settings';
 import { AddVehicleModalComponent } from '../modal/add-vehicle/add-vehicle-modal.component';
 import { EditProfileModalComponent } from '../modal/edit-profile-modal/edit-profile-modal.component';
 import { InviteVisitorModalComponent } from '../modal/invite-visitor/invite-visitor-modal.component';
+import { SwitchMenuModalComponent } from '../components/switch-menu-modal/switch-menu-modal.component';
 
 @Component({
   selector: 'app-tab3',
@@ -240,6 +241,22 @@ export class Tab3Page implements OnInit {
 
   getLicensePlateParts(plate: string): string[] {
     return plate ? plate.split(' ') : ['', ''];
+  }
+
+  async openSwitchMenu() {
+    const modal = await this.modalCtrl.create({
+      component: SwitchMenuModalComponent,
+      componentProps: { currentProfile: this.userProfile },
+      breakpoints: [0, 0.55],
+      initialBreakpoint: 0.55,
+    });
+    await modal.present();
+
+    const { data, role } = await modal.onDidDismiss();
+    if (role === 'confirm' && data && this.userProfile.id) {
+      // รีโหลด profile หลัง switch สำเร็จ
+      this.parkingService.loadUserProfile(this.userProfile.id);
+    }
   }
 
   async openInviteModal() {

@@ -8,6 +8,7 @@ import { Tab3PageRoutingModule } from './tab3-routing.module';
 import { AddVehicleModalComponent } from '../modal/add-vehicle/add-vehicle-modal.component';
 import { EditProfileModalComponent } from '../modal/edit-profile-modal/edit-profile-modal.component';
 import { InviteVisitorModalComponent } from '../modal/invite-visitor/invite-visitor-modal.component';
+import { SwitchMenuModalComponent } from '../components/switch-menu-modal/switch-menu-modal.component';
 
 @NgModule({
   imports: [
@@ -18,7 +19,8 @@ import { InviteVisitorModalComponent } from '../modal/invite-visitor/invite-visi
     ExploreContainerComponentModule,
     Tab3PageRoutingModule,
     EditProfileModalComponent,
-    InviteVisitorModalComponent
+    InviteVisitorModalComponent,
+    SwitchMenuModalComponent
   ],
   declarations: [Tab3Page, AddVehicleModalComponent]
 })

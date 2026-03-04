@@ -108,10 +108,12 @@ export class ParkingDataService {
 
         if (data) {
             const profile: UserProfile = {
+                id: data.id,
                 name: data.name,
                 phone: data.phone,
                 avatar: data.avatar,
                 role: data.role,
+                role_level: data.role_level,
                 lineId: data.line_id,
                 email: data.email
             };
