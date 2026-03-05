@@ -4,6 +4,7 @@ import { Booking } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ReservationService } from '../services/reservation.service';
 import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
+import { ReservationDetailComponent } from '../modal/reservation-detail/reservation-detail.component';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -538,13 +539,14 @@ export class Tab2Page implements OnInit, OnDestroy {
         }
       }
     } else {
-      // Dynamic import to avoid circular dependency or missing module declarations
-      const { ReservationDetailComponent } = await import('../modal/reservation-detail/reservation-detail.component');
-
       const modal = await this.modalCtrl.create({
         component: ReservationDetailComponent,
         componentProps: { booking: item },
-        cssClass: 'reservation-detail-modal',
+        initialBreakpoint: 1,
+        breakpoints: [0, 1],
+        backdropDismiss: true,
+        showBackdrop: true,
+        cssClass: 'detail-sheet-modal',
       });
       await modal.present();
 

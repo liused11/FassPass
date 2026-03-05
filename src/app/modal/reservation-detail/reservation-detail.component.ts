@@ -6,8 +6,7 @@ import { Booking } from '../../data/models';
 @Component({
     selector: 'app-reservation-detail',
     templateUrl: './reservation-detail.component.html',
-    standalone: true,
-    imports: [IonicModule, CommonModule]
+    standalone: false
 })
 export class ReservationDetailComponent implements OnInit, OnDestroy {
     @Input() booking!: Booking;

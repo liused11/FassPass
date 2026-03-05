@@ -7,6 +7,8 @@ import { ExploreContainerComponentModule } from '../explore-container/explore-co
 
 import { Tab2PageRoutingModule } from './tab2-routing.module';
 
+import { ReservationDetailComponent } from '../modal/reservation-detail/reservation-detail.component';
+
 @NgModule({
   imports: [
     IonicModule,
@@ -15,6 +17,6 @@ import { Tab2PageRoutingModule } from './tab2-routing.module';
     ExploreContainerComponentModule,
     Tab2PageRoutingModule
   ],
-  declarations: [Tab2Page]
+  declarations: [Tab2Page, ReservationDetailComponent]
 })
 export class Tab2PageModule { }
