@@ -538,14 +538,27 @@ export class Tab2Page implements OnInit, OnDestroy {
         }
       }
     } else {
-      // Handle "ดูรายละเอียด" view for other statuses
-      const toast = await this.toastCtrl.create({
-        message: 'เปิดหน้ารายละเอียดการจอง: ' + item.id,
-        duration: 2000,
-        color: 'dark',
-        position: 'top'
+      // Dynamic import to avoid circular dependency or missing module declarations
+      const { ReservationDetailComponent } = await import('../modal/reservation-detail/reservation-detail.component');
+
+      const modal = await this.modalCtrl.create({
+        component: ReservationDetailComponent,
+        componentProps: { booking: item },
+        cssClass: 'reservation-detail-modal',
       });
-      toast.present();
+      await modal.present();
+
+      const { data, role } = await modal.onDidDismiss();
+      // Handle actions emitted from the modal if needed
+      if (role === 'confirm' && data) {
+        if (data.action === 'cancel') {
+          // To be implemented: actually cancel the reservation
+          console.log('User wants to cancel reservation:', item.id);
+        } else if (data.action === 'checkout') {
+          // To be implemented: handle checkout
+          console.log('User wants to checkout:', item.id);
+        }
+      }
     }
   }
 }
