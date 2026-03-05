@@ -2,12 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule, ModalController } from '@ionic/angular';
-
-export interface VerifiedUser {
-  id: string;
-  name: string;
-  avatar: string;
-}
+import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-invite-visitor-modal',
@@ -19,41 +14,57 @@ export interface VerifiedUser {
 export class InviteVisitorModalComponent implements OnInit {
   selectedFloor: number | null = null;
   selectedRoom: string = '';
-  inviteMethod: 'select' | 'generate' = 'select';
-  selectedVisitor: VerifiedUser | null = null;
-  generatedCode: string = '';
+  visitorCount: number = 1;
+  passType: string = '1-day';
+  startDate: string = new Date().toISOString();
+  expiryDate: string = '';
 
-  verifiedUsers: VerifiedUser[] = [
-    { id: 'u1', name: 'สมชาย ใจดี', avatar: 'https://i.pravatar.cc/40?img=1' },
-    { id: 'u2', name: 'สมหญิง รักเรียน', avatar: 'https://i.pravatar.cc/40?img=2' },
-    { id: 'u3', name: 'มานะ พากเพียร', avatar: 'https://i.pravatar.cc/40?img=3' },
-  ];
+  isLoading = false;
+  isSuccess = false;
+  generatedCode = '';
 
   floors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(private modalCtrl: ModalController, private supabase: SupabaseService) {}
 
-  ngOnInit() {
-    this.generatedCode = 'FP-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  ngOnInit() { this.updateExpiry(); }
+
+  updateExpiry() {
+    const start = new Date(this.startDate);
+    if (this.passType === '1-time' || this.passType === '1-day') {
+      start.setHours(23, 59, 59);
+    } else if (this.passType === '2-day') {
+      start.setDate(start.getDate() + 1);
+      start.setHours(23, 59, 59);
+    }
+    this.expiryDate = start.toISOString();
   }
 
-  dismiss() {
-    this.modalCtrl.dismiss();
-  }
+  async generateTicket() {
+    this.isLoading = true;
+    this.generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  confirmInvite() {
-    if (!this.selectedFloor) return;
-
-    if (this.inviteMethod === 'select' && !this.selectedVisitor) return;
-
-    const result = {
+    const ticketData = {
+      invite_code: this.generatedCode,
+      building_id: 'building-12',
       floor: this.selectedFloor,
-      room: this.selectedRoom,
-      method: this.inviteMethod,
-      visitor: this.inviteMethod === 'select' ? this.selectedVisitor : null,
-      code: this.inviteMethod === 'generate' ? this.generatedCode : null,
+      room_id: this.selectedRoom,
+      max_usage: this.visitorCount,
+      pass_type: this.passType,
+      valid_from: this.startDate,
+      expires_at: this.expiryDate,
     };
 
-    this.modalCtrl.dismiss(result, 'confirm');
+    try {
+      const { error } = await this.supabase.client.from('access_tickets').insert(ticketData);
+      if (error) throw error;
+      this.isSuccess = true;
+    } catch (err) {
+      console.error('Error generating ticket:', err);
+    } finally {
+      this.isLoading = false;
+    }
   }
+
+  dismiss() { this.modalCtrl.dismiss(); }
 }

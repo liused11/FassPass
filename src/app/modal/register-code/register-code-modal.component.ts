@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonicModule, ModalController } from '@ionic/angular';
+import { IonicModule, ModalController, ToastController } from '@ionic/angular';
+import { SupabaseService } from '../../services/supabase.service';
+import { ReservationService } from '../../services/reservation.service';
 
 @Component({
   selector: 'app-register-code-modal',
@@ -15,28 +17,41 @@ export class RegisterCodeModalComponent {
   isLoading = false;
   errorMessage: string = '';
 
-  constructor(private modalCtrl: ModalController) {}
+  constructor(
+    private modalCtrl: ModalController,
+    private supabase: SupabaseService,
+    private reservationService: ReservationService,
+    private toastCtrl: ToastController
+  ) {}
 
-  dismiss() {
-    this.modalCtrl.dismiss();
-  }
+  dismiss() { this.modalCtrl.dismiss(); }
 
   async submitCode() {
     if (this.inviteCode.length < 6) return;
-
     this.isLoading = true;
     this.errorMessage = '';
 
-    try {
-      // TODO: Call API to verify invite code and issue access pass
-      console.log('Submitting invite code:', this.inviteCode);
+    const visitorId = this.reservationService.getCurrentProfileId();
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const { data, error } = await this.supabase.client.rpc('claim_invite_code', {
+        p_code: this.inviteCode,
+        p_visitor_id: visitorId
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว');
+
+      const toast = await this.toastCtrl.create({
+        message: 'ได้รับบัตรผ่านเข้าอาคารเรียบร้อยแล้ว!',
+        duration: 3000,
+        color: 'success'
+      });
+      toast.present();
 
       this.modalCtrl.dismiss({ code: this.inviteCode }, 'confirm');
     } catch (err: any) {
-      this.errorMessage = err.message || 'รหัสไม่ถูกต้อง กรุณาลองใหม่';
+      this.errorMessage = err.message || 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว';
     } finally {
       this.isLoading = false;
     }
