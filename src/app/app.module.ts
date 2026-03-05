@@ -12,6 +12,10 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { AuthModalComponent } from './modal/auth-modal/auth-modal.component';
 
+import { registerLocaleData } from '@angular/common';
+import localeTh from '@angular/common/locales/th';
+registerLocaleData(localeTh, 'th-TH');
+
 @NgModule({
   declarations: [AppComponent, BookingTypeSelectorComponent],
   imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule, HttpClientModule, AuthModalComponent],
