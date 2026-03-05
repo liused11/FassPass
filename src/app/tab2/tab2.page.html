@@ -143,9 +143,7 @@
               </div>
               <div class="text-xs text-gray-500 font-medium pl-6 mt-1 flex items-center gap-2">
                 <span *ngIf="item.vehicleType">
-                  {{ item.vehicleType === 'car' ? 'รถยนต์' : (item.vehicleType === 'motorcycle' ? 'รถจักรยานยนต์' :
-                  item.vehicleType) }}
-                  <span *ngIf="item.carId"> - {{ item.carId }}</span>
+                  {{ getVehicleTypeLabel(item.vehicleType) }}
                 </span>
               </div>
               <!-- Added Booking Type Label -->

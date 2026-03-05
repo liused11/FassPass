@@ -264,8 +264,8 @@ export class Tab2Page implements OnInit, OnDestroy {
             statusLabel: statusLabel,
             price: r.total_amount || 0,
             discountBadge: undefined,
-            carBrand: 'TOYOTA', // Placeholder
-            licensePlate: 'กข 1234', // Placeholder
+            carBrand: r.cars?.model || 'ไม่ระบุ',
+            licensePlate: r.car_plate ? `${r.car_plate}${r.cars?.province ? ' ' + r.cars.province : ''}` : 'ไม่ระบุทะเบียน',
             bookingType: bookingType,
             periodLabel: periodLabel,
 
@@ -437,6 +437,16 @@ export class Tab2Page implements OnInit, OnDestroy {
       case 'monthly_regular': return 'รายเดือน';
       case 'monthly_night': return 'รายเดือน (กลางคืน)';
       default: return 'ทั่วไป';
+    }
+  }
+
+  getVehicleTypeLabel(type: string | undefined): string {
+    switch (type) {
+      case 'car': return 'รถยนต์';
+      case 'motorcycle': return 'รถจักรยานยนต์';
+      case 'ev': return 'รถยนต์ไฟฟ้า (EV)';
+      case 'other': return 'อื่นๆ';
+      default: return type || 'ไม่ระบุ';
     }
   }
 
