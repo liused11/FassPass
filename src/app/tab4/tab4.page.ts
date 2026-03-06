@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { BuildingData } from '../data/models';
 import { BuildingDataService } from '../services/building-data.service';
+import { AccessControlService } from '../services/access-control.service';
+import { FloorplanInteractionService } from '../services/floorplan/floorplan-interaction.service';
 
 @Component({
   selector: 'app-tab4',
@@ -17,7 +19,9 @@ export class Tab4Page implements OnInit {
 
   constructor(
     private buildingService: BuildingDataService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private accessControl: AccessControlService,
+    private interaction: FloorplanInteractionService
   ) { }
 
   ngOnInit() {
@@ -25,15 +29,19 @@ export class Tab4Page implements OnInit {
       const bId = params['buildingId'] || 'school-building-01'; // Default Fallback
       const floorParam = params['floor'];
 
-      this.loadBuilding(bId);
-
       // Auto-select floor if provided via queryParams
       if (floorParam) {
-        // We'll need to wait for building to load first, so we do it in a subscription inside loadBuilding, 
-        // or just set a local variable:
         this.selectedFloor = parseInt(floorParam, 10);
       }
+
+      this.loadBuilding(bId);
+      this.loadDoorPermissions();
     });
+  }
+
+  async loadDoorPermissions() {
+    const accessibleDoors = await this.accessControl.getAccessibleDoors();
+    this.interaction.setPermissionList(accessibleDoors);
   }
 
   loadBuilding(id: string) {

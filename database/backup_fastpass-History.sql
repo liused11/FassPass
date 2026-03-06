@@ -162,6 +162,359 @@ CREATE TYPE "public"."vehicle_type" AS ENUM (
 ALTER TYPE "public"."vehicle_type" OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."admin_update_slot_status_with_log"("p_slot_ids" "text"[], "p_status" "public"."slot_status", "p_user_id" "uuid", "p_user_name" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+declare
+  r record;
+  v_site_id text;
+  v_event_name text;
+  v_message text;
+  v_log_level text := 'normal';
+begin
+
+  --------------------------------------------------------
+  -- Loop each slot
+  --------------------------------------------------------
+
+  for r in
+    select id, parking_site_id
+    from slots
+    where id = any(p_slot_ids)
+  loop
+
+    v_site_id := r.parking_site_id;
+
+    --------------------------------------------------------
+    -- Update main status
+    --------------------------------------------------------
+
+    update slots
+    set status = p_status,
+        updated_at = now()
+    where id = r.id;
+
+    --------------------------------------------------------
+    -- Prepare log
+    --------------------------------------------------------
+
+    v_event_name := 'slot_main_status_' || p_status::text;
+    v_message := format('Slot main status set to %s', p_status);
+
+    if p_status = 'maintenance' then
+      v_log_level := 'abnormal';
+    else
+      v_log_level := 'normal';
+    end if;
+
+    --------------------------------------------------------
+    -- Success log
+    --------------------------------------------------------
+
+    perform insert_activity_log(
+      v_site_id,
+      'activity'::activity_log_type,
+      v_event_name,
+      p_user_id,
+      p_user_name,
+      v_log_level::activity_category,
+      'success'::activity_status,
+      'slots',
+      r.id,
+      v_message,
+      jsonb_build_object(
+        'status', p_status
+      ),
+      null,
+      null,
+      null
+    );
+
+  end loop;
+
+exception when others then
+
+  --------------------------------------------------------
+  -- Error log
+  --------------------------------------------------------
+
+  perform insert_activity_log(
+    v_site_id,
+    'activity'::activity_log_type,
+    'slot_main_status_failed',
+    p_user_id,
+    p_user_name,
+    'abnormal'::activity_category,
+    'error'::activity_status,
+    'slots',
+    null,
+    'Slot main status update failed',
+    null,
+    null,
+    null,
+    jsonb_build_object('error', sqlerrm)
+  );
+
+  raise;
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."admin_update_slot_status_with_log"("p_slot_ids" "text"[], "p_status" "public"."slot_status", "p_user_id" "uuid", "p_user_name" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_upsert_slot_overrides_with_log"("p_slot_id" "text", "p_override_date" "date", "p_ranges" "jsonb", "p_user_id" "uuid", "p_user_name" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+declare
+  v_site_id text;
+  v_primary_status slot_status;
+  v_event_name text;
+  v_message text;
+  v_log_level text := 'normal';
+  v_existing record;
+  v_incoming record;
+begin
+
+  --------------------------------------------------------
+  -- Lock slot
+  --------------------------------------------------------
+  select parking_site_id
+  into v_site_id
+  from slots
+  where id = p_slot_id
+  for update;
+
+  if v_site_id is null then
+    raise exception 'Slot not found';
+  end if;
+
+  if jsonb_array_length(p_ranges) = 0 then
+    raise exception 'No time ranges provided';
+  end if;
+
+  --------------------------------------------------------
+  -- Prevent editing past time
+  --------------------------------------------------------
+  if p_override_date = current_date then
+    if exists (
+      select 1
+      from jsonb_array_elements(p_ranges) r
+      where (r->>'start_time')::time < current_time
+    ) then
+      raise exception 'Cannot modify past time range';
+    end if;
+  end if;
+
+  --------------------------------------------------------
+  -- Log prep
+  --------------------------------------------------------
+  v_primary_status := (p_ranges->0->>'status')::slot_status;
+  v_event_name := 'slot_override_' || v_primary_status::text;
+  v_message := format('Slot set to %s', v_primary_status);
+
+  if v_primary_status = 'maintenance' then
+    v_log_level := 'abnormal';
+  end if;
+
+  --------------------------------------------------------
+  -- STEP 1: Smart split overlapping ranges
+  --------------------------------------------------------
+
+  for v_existing in
+    select *
+    from slot_status_overrides
+    where slot_id = p_slot_id
+      and override_date = p_override_date
+  loop
+
+    for v_incoming in
+      select
+        (x->>'start_time')::time as new_start,
+        (x->>'end_time')::time as new_end
+      from jsonb_array_elements(p_ranges) x
+    loop
+
+      if v_existing.start_time < v_incoming.new_end
+        and v_existing.end_time > v_incoming.new_start then
+
+        -- ลบของเดิมก่อน
+        delete from slot_status_overrides
+        where id = v_existing.id;
+
+        -- ซ้ายที่เหลือ
+        if v_existing.start_time < v_incoming.new_start then
+          insert into slot_status_overrides (
+            slot_id,
+            override_date,
+            start_time,
+            end_time,
+            status
+          )
+          values (
+            p_slot_id,
+            p_override_date,
+            v_existing.start_time,
+            v_incoming.new_start,
+            v_existing.status
+          );
+        end if;
+
+        -- ขวาที่เหลือ
+        if v_existing.end_time > v_incoming.new_end then
+          insert into slot_status_overrides (
+            slot_id,
+            override_date,
+            start_time,
+            end_time,
+            status
+          )
+          values (
+            p_slot_id,
+            p_override_date,
+            v_incoming.new_end,
+            v_existing.end_time,
+            v_existing.status
+          );
+        end if;
+
+      end if;
+
+    end loop;
+
+  end loop;
+
+  --------------------------------------------------------
+  -- STEP 2: Insert incoming
+  --------------------------------------------------------
+
+  insert into slot_status_overrides (
+    slot_id,
+    override_date,
+    start_time,
+    end_time,
+    status
+  )
+  select
+    p_slot_id,
+    p_override_date,
+    (elem->>'start_time')::time,
+    (elem->>'end_time')::time,
+    (elem->>'status')::slot_status
+  from jsonb_array_elements(p_ranges) as elem;
+
+  --------------------------------------------------------
+  -- STEP 3: Merge ทั้งวัน (status เดียวกันเท่านั้น)
+  --------------------------------------------------------
+  drop table if exists tmp_merge;
+
+  create temporary table tmp_merge
+  on commit drop 
+  as
+  with ordered as (
+    select *
+    from slot_status_overrides
+    where slot_id = p_slot_id
+      and override_date = p_override_date
+    order by start_time
+  ),
+  lagged as (
+    select *,
+      lag(status) over (order by start_time) as prev_status,
+      lag(end_time) over (order by start_time) as prev_end
+    from ordered
+  ),
+  grouped as (
+    select *,
+      sum(
+        case
+          when prev_status = status
+           and prev_end >= start_time
+          then 0
+          else 1
+        end
+      ) over (order by start_time) as grp
+    from lagged
+  )
+  select
+    min(start_time) as start_time,
+    max(end_time) as end_time,
+    status
+  from grouped
+  group by status, grp;
+
+  delete from slot_status_overrides
+  where slot_id = p_slot_id
+    and override_date = p_override_date;
+
+  insert into slot_status_overrides (
+    slot_id,
+    override_date,
+    start_time,
+    end_time,
+    status
+  )
+  select
+    p_slot_id,
+    p_override_date,
+    start_time,
+    end_time,
+    status
+  from tmp_merge;
+
+  --------------------------------------------------------
+  -- Success log
+  --------------------------------------------------------
+
+  perform insert_activity_log(
+    v_site_id,
+    'activity'::activity_log_type,
+    v_event_name,
+    p_user_id,
+    p_user_name,
+    v_log_level::activity_category,
+    'success'::activity_status,
+    'slot_status_overrides',
+    p_slot_id,
+    v_message,
+    jsonb_build_object(
+      'date', p_override_date,
+      'ranges', p_ranges
+    ),
+    null,
+    null,
+    null
+  );
+
+exception when others then
+
+  perform insert_activity_log(
+    v_site_id,
+    'activity'::activity_log_type,
+    'slot_override_failed',
+    p_user_id,
+    p_user_name,
+    'abnormal'::activity_category,
+    'error'::activity_status,
+    'slot_status_overrides',
+    p_slot_id,
+    'Slot schedule update failed',
+    null,
+    null,
+    null,
+    jsonb_build_object('error', sqlerrm)
+  );
+
+  raise;
+
+end;
+$$;
+
+
+ALTER FUNCTION "public"."admin_upsert_slot_overrides_with_log"("p_slot_id" "text", "p_override_date" "date", "p_ranges" "jsonb", "p_user_id" "uuid", "p_user_name" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."auto_cancel_expired_pending_reservations"() RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -253,6 +606,38 @@ $$;
 
 
 ALTER FUNCTION "public"."check_double_booking"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."claim_invite_code"("p_code" "text", "p_visitor_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  v_ticket RECORD;
+BEGIN
+  -- ล็อก Row นี้ไว้เพื่อป้องกันคนกดพร้อมกัน (Race Condition)
+  SELECT * INTO v_ticket FROM access_tickets WHERE invite_code = p_code FOR UPDATE;
+  
+  IF NOT FOUND THEN
+    RETURN '{"success": false, "message": "ไม่พบรหัสคำเชิญนี้"}'::JSONB;
+  END IF;
+
+  IF NOW() > v_ticket.expires_at THEN
+    RETURN '{"success": false, "message": "รหัสคำเชิญนี้หมดอายุแล้ว"}'::JSONB;
+  END IF;
+
+  IF v_ticket.current_usage >= v_ticket.max_usage THEN
+    RETURN '{"success": false, "message": "รหัสนี้ถูกใช้งานครบจำนวนแล้ว"}'::JSONB;
+  END IF;
+
+  -- ผ่านทุกด่าน -> อัปเดตยอดใช้งาน
+  UPDATE access_tickets SET current_usage = current_usage + 1 WHERE id = v_ticket.id;
+
+  RETURN '{"success": true, "message": "ลงทะเบียนรับสิทธิ์เข้าอาคารสำเร็จ"}'::JSONB;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."claim_invite_code"("p_code" "text", "p_visitor_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."find_best_available_slot"("p_zone_id" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone) RETURNS "jsonb"
@@ -1078,6 +1463,17 @@ begin
         lng               = coalesce((v_updates->>'lng')::float8, lng),
         map_x             = coalesce((v_updates->>'map_x')::integer, map_x),
         map_y             = coalesce((v_updates->>'map_y')::integer, map_y),
+        images            = case
+                              when v_updates ? 'images' then
+                                coalesce(
+                                  (
+                                    select array_agg(value)
+                                    from jsonb_array_elements_text(v_updates->'images')
+                                  ),
+                                  '{}'
+                                )
+                              else images
+                            end,
         price_per_hour    = coalesce((v_updates->>'price_per_hour')::numeric, price_per_hour),
         schedule_config   = coalesce((v_updates->'schedule_config')::jsonb, schedule_config),
         open_time         = coalesce((v_updates->>'open_time')::time, open_time),
@@ -1303,9 +1699,41 @@ $$;
 
 ALTER FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "jsonb", "p_user_id" "uuid", "p_user_name" "text") OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."update_updated_at_column"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."access_tickets" (
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "invite_code" "text" NOT NULL,
+    "building_id" "text" NOT NULL,
+    "floor" integer,
+    "room_id" "text",
+    "max_usage" integer DEFAULT 1,
+    "current_usage" integer DEFAULT 0,
+    "pass_type" "text" NOT NULL,
+    "host_id" "uuid",
+    "valid_from" timestamp with time zone,
+    "expires_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."access_tickets" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."activity_logs" (
@@ -1376,7 +1804,7 @@ ALTER TABLE "public"."buildings" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."cars" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
+    "profile_id" "uuid" NOT NULL,
     "license_plate" character varying NOT NULL,
     "model" character varying,
     "created_at" timestamp with time zone DEFAULT "now"(),
@@ -1388,6 +1816,7 @@ CREATE TABLE IF NOT EXISTS "public"."cars" (
     "rank" integer DEFAULT 0,
     "province" "text" DEFAULT 'กรุงเทพฯ'::"text",
     "color" "text",
+    "is_active" boolean DEFAULT true,
     CONSTRAINT "cars_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2, 3])))
 );
 
@@ -1428,7 +1857,8 @@ CREATE TABLE IF NOT EXISTS "public"."floors" (
     "id" "text" NOT NULL,
     "building_id" "text" NOT NULL,
     "name" "text" NOT NULL,
-    "level_order" integer DEFAULT 0
+    "level_order" integer DEFAULT 0,
+    "layout_data" "jsonb" DEFAULT '{}'::"jsonb"
 );
 
 
@@ -1467,11 +1897,12 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "name" "text" NOT NULL,
     "phone" "text",
     "avatar" "text",
-    "role" "text" DEFAULT 'Visitor'::"text",
     "line_id" "text",
     "email" "text",
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "role_level" integer,
+    "role" "text"
 );
 
 
@@ -1481,7 +1912,7 @@ ALTER TABLE "public"."profiles" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."recent_activities" (
     "id" bigint NOT NULL,
     "reservation_id" "uuid" NOT NULL,
-    "user_id" "uuid" NOT NULL,
+    "profile_id" "uuid" NOT NULL,
     "slot_id" character varying,
     "status" character varying,
     "start_time" timestamp with time zone,
@@ -1513,7 +1944,7 @@ ALTER SEQUENCE "public"."recent_activities_id_seq" OWNED BY "public"."recent_act
 
 CREATE TABLE IF NOT EXISTS "public"."reservations" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
+    "profile_id" "uuid" NOT NULL,
     "parking_site_id" "text" NOT NULL,
     "floor_id" "text",
     "slot_id" "text",
@@ -1525,9 +1956,10 @@ CREATE TABLE IF NOT EXISTS "public"."reservations" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "status_code" "text" DEFAULT '1'::"text",
     "vehicle_type" "public"."vehicle_type" DEFAULT 'car'::"public"."vehicle_type" NOT NULL,
-    "car_id" "uuid",
+    "car_id" "uuid" NOT NULL,
     "vehicle_type_code" smallint DEFAULT 1,
     "booking_type" "public"."booking_type" DEFAULT 'hourly'::"public"."booking_type",
+    "car_plate" "text",
     CONSTRAINT "reservations_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2])))
 );
 
@@ -1578,6 +2010,7 @@ CREATE TABLE IF NOT EXISTS "public"."slots" (
     "version" integer DEFAULT 1 NOT NULL,
     "vehicle_type" "public"."vehicle_type" DEFAULT 'car'::"public"."vehicle_type" NOT NULL,
     "vehicle_type_code" smallint DEFAULT 1,
+    "updated_at" timestamp with time zone DEFAULT "now"(),
     CONSTRAINT "slots_vehicle_type_code_check" CHECK (("vehicle_type_code" = ANY (ARRAY[0, 1, 2])))
 );
 
@@ -1616,6 +2049,43 @@ CREATE OR REPLACE VIEW "public"."site_structure_view" AS
 
 
 ALTER VIEW "public"."site_structure_view" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."slot_recurring_rules" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "slot_id" "text" NOT NULL,
+    "start_date" "date" NOT NULL,
+    "end_date" "date" NOT NULL,
+    "start_time" time without time zone NOT NULL,
+    "end_time" time without time zone NOT NULL,
+    "recurrence_type" "text" NOT NULL,
+    "weekday" integer,
+    "status" "public"."slot_status" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "slot_recurring_rules_check" CHECK (("end_date" >= "start_date")),
+    CONSTRAINT "slot_recurring_rules_check1" CHECK (("end_time" > "start_time")),
+    CONSTRAINT "slot_recurring_rules_recurrence_type_check" CHECK (("recurrence_type" = ANY (ARRAY['daily'::"text", 'weekly'::"text"]))),
+    CONSTRAINT "slot_recurring_rules_weekday_check" CHECK ((("weekday" >= 0) AND ("weekday" <= 6)))
+);
+
+
+ALTER TABLE "public"."slot_recurring_rules" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."slot_status_overrides" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "slot_id" "text" NOT NULL,
+    "override_date" "date" NOT NULL,
+    "start_time" time without time zone NOT NULL,
+    "end_time" time without time zone NOT NULL,
+    "status" "public"."slot_status" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."slot_status_overrides" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."snapshots" (
@@ -1668,6 +2138,16 @@ ALTER TABLE ONLY "public"."reservations_history" ALTER COLUMN "id" SET DEFAULT "
 
 
 
+ALTER TABLE ONLY "public"."access_tickets"
+    ADD CONSTRAINT "access_tickets_invite_code_key" UNIQUE ("invite_code");
+
+
+
+ALTER TABLE ONLY "public"."access_tickets"
+    ADD CONSTRAINT "access_tickets_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."activity_logs"
     ADD CONSTRAINT "activity_logs_pkey" PRIMARY KEY ("id");
 
@@ -1685,11 +2165,6 @@ ALTER TABLE ONLY "public"."cars"
 
 ALTER TABLE ONLY "public"."cars"
     ADD CONSTRAINT "cars_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."cars"
-    ADD CONSTRAINT "cars_user_rank_uniq" UNIQUE ("user_id", "rank");
 
 
 
@@ -1715,6 +2190,16 @@ ALTER TABLE ONLY "public"."latest_versions"
 
 ALTER TABLE ONLY "public"."reservations"
     ADD CONSTRAINT "no_overlap_booking" EXCLUDE USING "gist" ("slot_id" WITH =, "tstzrange"("start_time", "end_time") WITH &&) WHERE (("status" <> 'cancelled'::"public"."reservation_status"));
+
+
+
+ALTER TABLE ONLY "public"."slot_status_overrides"
+    ADD CONSTRAINT "no_overlapping_overrides" EXCLUDE USING "gist" ("slot_id" WITH =, "override_date" WITH =, "int4range"((((EXTRACT(hour FROM "start_time"))::integer * 60) + (EXTRACT(minute FROM "start_time"))::integer), (((EXTRACT(hour FROM "end_time"))::integer * 60) + (EXTRACT(minute FROM "end_time"))::integer), '[)'::"text") WITH &&);
+
+
+
+ALTER TABLE ONLY "public"."slot_recurring_rules"
+    ADD CONSTRAINT "no_overlapping_rules" EXCLUDE USING "gist" ("slot_id" WITH =, "daterange"("start_date", "end_date", '[]'::"text") WITH &&, "int4range"((((EXTRACT(hour FROM "start_time"))::integer * 60) + (EXTRACT(minute FROM "start_time"))::integer), (((EXTRACT(hour FROM "end_time"))::integer * 60) + (EXTRACT(minute FROM "end_time"))::integer), '[)'::"text") WITH &&);
 
 
 
@@ -1745,6 +2230,16 @@ ALTER TABLE ONLY "public"."reservations_history"
 
 ALTER TABLE ONLY "public"."reservations"
     ADD CONSTRAINT "reservations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."slot_recurring_rules"
+    ADD CONSTRAINT "slot_recurring_rules_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."slot_status_overrides"
+    ADD CONSTRAINT "slot_status_overrides_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1802,11 +2297,15 @@ CREATE INDEX "idx_buildings_lat_lng" ON "public"."buildings" USING "btree" ("lat
 
 
 
-CREATE INDEX "idx_cars_user_id" ON "public"."cars" USING "btree" ("user_id");
+CREATE INDEX "idx_cars_user_id" ON "public"."cars" USING "btree" ("profile_id");
 
 
 
 CREATE INDEX "idx_event_store_aggregate_id" ON "public"."event_store" USING "btree" ("aggregate_id");
+
+
+
+CREATE INDEX "idx_floors_layout_data" ON "public"."floors" USING "gin" ("layout_data");
 
 
 
@@ -1838,6 +2337,14 @@ CREATE INDEX "idx_user_bookmarks_user_id" ON "public"."user_bookmarks" USING "bt
 
 
 
+CREATE OR REPLACE TRIGGER "set_updated_at_slot_recurring_rules" BEFORE UPDATE ON "public"."slot_recurring_rules" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
+CREATE OR REPLACE TRIGGER "set_updated_at_slot_status_overrides" BEFORE UPDATE ON "public"."slot_status_overrides" FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_sync_vehicle_cars" BEFORE INSERT OR UPDATE ON "public"."cars" FOR EACH ROW EXECUTE FUNCTION "public"."sync_vehicle_type_logic"();
 
 
@@ -1860,7 +2367,7 @@ ALTER TABLE ONLY "public"."buildings"
 
 
 ALTER TABLE ONLY "public"."cars"
-    ADD CONSTRAINT "cars_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "cars_user_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -1875,12 +2382,7 @@ ALTER TABLE ONLY "public"."floors"
 
 
 ALTER TABLE ONLY "public"."recent_activities"
-    ADD CONSTRAINT "recent_activities_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."reservations"
-    ADD CONSTRAINT "reservations_car_id_fkey" FOREIGN KEY ("car_id") REFERENCES "public"."cars"("id") ON DELETE SET NULL;
+    ADD CONSTRAINT "recent_activities_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -1895,12 +2397,22 @@ ALTER TABLE ONLY "public"."reservations"
 
 
 ALTER TABLE ONLY "public"."reservations"
-    ADD CONSTRAINT "reservations_slot_id_fkey" FOREIGN KEY ("slot_id") REFERENCES "public"."slots"("id");
+    ADD CONSTRAINT "reservations_profile_id_fkey" FOREIGN KEY ("profile_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."reservations"
-    ADD CONSTRAINT "reservations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+    ADD CONSTRAINT "reservations_slot_id_fkey" FOREIGN KEY ("slot_id") REFERENCES "public"."slots"("id");
+
+
+
+ALTER TABLE ONLY "public"."slot_recurring_rules"
+    ADD CONSTRAINT "slot_recurring_rules_slot_id_fkey" FOREIGN KEY ("slot_id") REFERENCES "public"."slots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."slot_status_overrides"
+    ADD CONSTRAINT "slot_status_overrides_slot_id_fkey" FOREIGN KEY ("slot_id") REFERENCES "public"."slots"("id") ON DELETE CASCADE;
 
 
 
@@ -1938,7 +2450,22 @@ CREATE POLICY "Public profiles access" ON "public"."profiles" USING (true);
 
 
 
+CREATE POLICY "Users can delete their own bookmarks" ON "public"."user_bookmarks" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can insert their own bookmarks" ON "public"."user_bookmarks" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view their own bookmarks" ON "public"."user_bookmarks" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."user_bookmarks" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -1959,6 +2486,10 @@ ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."reservations";
 
 
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."slots";
+
+
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."user_bookmarks";
 
 
 
@@ -2227,6 +2758,18 @@ GRANT ALL ON FUNCTION "public"."gbtreekey_var_out"("public"."gbtreekey_var") TO 
 
 
 
+GRANT ALL ON FUNCTION "public"."admin_update_slot_status_with_log"("p_slot_ids" "text"[], "p_status" "public"."slot_status", "p_user_id" "uuid", "p_user_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_update_slot_status_with_log"("p_slot_ids" "text"[], "p_status" "public"."slot_status", "p_user_id" "uuid", "p_user_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_update_slot_status_with_log"("p_slot_ids" "text"[], "p_status" "public"."slot_status", "p_user_id" "uuid", "p_user_name" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."admin_upsert_slot_overrides_with_log"("p_slot_id" "text", "p_override_date" "date", "p_ranges" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_upsert_slot_overrides_with_log"("p_slot_id" "text", "p_override_date" "date", "p_ranges" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_upsert_slot_overrides_with_log"("p_slot_id" "text", "p_override_date" "date", "p_ranges" "jsonb", "p_user_id" "uuid", "p_user_name" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."auto_cancel_expired_pending_reservations"() TO "anon";
 GRANT ALL ON FUNCTION "public"."auto_cancel_expired_pending_reservations"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."auto_cancel_expired_pending_reservations"() TO "service_role";
@@ -2243,6 +2786,12 @@ GRANT ALL ON FUNCTION "public"."cash_dist"("money", "money") TO "service_role";
 GRANT ALL ON FUNCTION "public"."check_double_booking"() TO "anon";
 GRANT ALL ON FUNCTION "public"."check_double_booking"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."check_double_booking"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."claim_invite_code"("p_code" "text", "p_visitor_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."claim_invite_code"("p_code" "text", "p_visitor_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."claim_invite_code"("p_code" "text", "p_visitor_id" "uuid") TO "service_role";
 
 
 
@@ -3555,6 +4104,9 @@ GRANT ALL ON FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "
 
 
 
+GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_updated_at_column"() TO "service_role";
 
 
 
@@ -3573,6 +4125,15 @@ GRANT ALL ON FUNCTION "public"."update_multiple_entities_with_log"("p_payload" "
 
 
 
+
+
+
+
+
+
+GRANT ALL ON TABLE "public"."access_tickets" TO "anon";
+GRANT ALL ON TABLE "public"."access_tickets" TO "authenticated";
+GRANT ALL ON TABLE "public"."access_tickets" TO "service_role";
 
 
 
@@ -3681,6 +4242,18 @@ GRANT ALL ON TABLE "public"."zones" TO "service_role";
 GRANT ALL ON TABLE "public"."site_structure_view" TO "anon";
 GRANT ALL ON TABLE "public"."site_structure_view" TO "authenticated";
 GRANT ALL ON TABLE "public"."site_structure_view" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."slot_recurring_rules" TO "anon";
+GRANT ALL ON TABLE "public"."slot_recurring_rules" TO "authenticated";
+GRANT ALL ON TABLE "public"."slot_recurring_rules" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."slot_status_overrides" TO "anon";
+GRANT ALL ON TABLE "public"."slot_status_overrides" TO "authenticated";
+GRANT ALL ON TABLE "public"."slot_status_overrides" TO "service_role";
 
 
 

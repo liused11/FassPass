@@ -115,7 +115,7 @@ export class BuildingViewComponent implements AfterViewInit, OnChanges, OnDestro
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }
-    
+
   // --- 2. สร้างฟังก์ชันสำหรับรวม Geometry ของหน้าต่าง ---
   private createMergedWindowMesh(totalFloors: number, floorHeight: number, wingDepth: number, coreWidth: number, coreDepth: number, material: THREE.Material): THREE.Mesh {
     const windowGeometries: THREE.BufferGeometry[] = [];
@@ -128,51 +128,51 @@ export class BuildingViewComponent implements AfterViewInit, OnChanges, OnDestro
     const baseWindowGeo = new THREE.PlaneGeometry(windowWidth, windowHeight);
 
     for (let i = 0; i < totalFloors; i++) {
-        const yPos = i * floorHeight + floorHeight / 2;
+      const yPos = i * floorHeight + floorHeight / 2;
 
-        const createWindows = (startX: number, count: number, direction: number, z: number) => {
-            for (let j = 0; j < count; j++) {
-                const geo = baseWindowGeo.clone();
-                const x = startX + direction * ((windowWidth / 2) + (j * (windowWidth + smallGap)));
-                geo.translate(x, yPos, z);
-                windowGeometries.push(geo);
-            }
-        };
-
-        // -- Pattern 2-3-2 (ด้านหน้า, ปีกซ้าย) --
-        let currentX_left = -coreWidth / 2 - largeGap;
-        createWindows(currentX_left, 2, -1, wingDepth / 2 + zOffset);
-        
-        currentX_left -= (2 * windowWidth + 1 * smallGap + largeGap);
-        createWindows(currentX_left, 3, -1, wingDepth / 2 + zOffset);
-        
-        currentX_left -= (3 * windowWidth + 2 * smallGap + largeGap);
-        createWindows(currentX_left, 2, -1, wingDepth / 2 + zOffset);
-        
-        // -- Pattern 2-3-2 (ด้านหน้า, ปีกขวา) --
-        let currentX_right = coreWidth / 2 + largeGap;
-        createWindows(currentX_right, 2, 1, wingDepth / 2 + zOffset);
-        
-        currentX_right += (2 * windowWidth + 1 * smallGap + largeGap);
-        createWindows(currentX_right, 3, 1, wingDepth / 2 + zOffset);
-        
-        currentX_right += (3 * windowWidth + 2 * smallGap + largeGap);
-        createWindows(currentX_right, 2, 1, wingDepth / 2 + zOffset);
-
-        // -- Pattern Lobby 3 (ด้านหน้า) --
-        const lobbyStartX = -(windowWidth + smallGap);
-        for (let j = 0; j < 3; j++) {
-            const geo = baseWindowGeo.clone();
-            const x = lobbyStartX + (j * (windowWidth + smallGap));
-            geo.translate(x, yPos, coreDepth / 2 + zOffset);
-            windowGeometries.push(geo);
+      const createWindows = (startX: number, count: number, direction: number, z: number) => {
+        for (let j = 0; j < count; j++) {
+          const geo = baseWindowGeo.clone();
+          const x = startX + direction * ((windowWidth / 2) + (j * (windowWidth + smallGap)));
+          geo.translate(x, yPos, z);
+          windowGeometries.push(geo);
         }
+      };
+
+      // -- Pattern 2-3-2 (ด้านหน้า, ปีกซ้าย) --
+      let currentX_left = -coreWidth / 2 - largeGap;
+      createWindows(currentX_left, 2, -1, wingDepth / 2 + zOffset);
+
+      currentX_left -= (2 * windowWidth + 1 * smallGap + largeGap);
+      createWindows(currentX_left, 3, -1, wingDepth / 2 + zOffset);
+
+      currentX_left -= (3 * windowWidth + 2 * smallGap + largeGap);
+      createWindows(currentX_left, 2, -1, wingDepth / 2 + zOffset);
+
+      // -- Pattern 2-3-2 (ด้านหน้า, ปีกขวา) --
+      let currentX_right = coreWidth / 2 + largeGap;
+      createWindows(currentX_right, 2, 1, wingDepth / 2 + zOffset);
+
+      currentX_right += (2 * windowWidth + 1 * smallGap + largeGap);
+      createWindows(currentX_right, 3, 1, wingDepth / 2 + zOffset);
+
+      currentX_right += (3 * windowWidth + 2 * smallGap + largeGap);
+      createWindows(currentX_right, 2, 1, wingDepth / 2 + zOffset);
+
+      // -- Pattern Lobby 3 (ด้านหน้า) --
+      const lobbyStartX = -(windowWidth + smallGap);
+      for (let j = 0; j < 3; j++) {
+        const geo = baseWindowGeo.clone();
+        const x = lobbyStartX + (j * (windowWidth + smallGap));
+        geo.translate(x, yPos, coreDepth / 2 + zOffset);
+        windowGeometries.push(geo);
+      }
     }
 
     baseWindowGeo.dispose(); // คืน Memory
 
     if (windowGeometries.length === 0) {
-        return new THREE.Mesh(); // Return empty mesh if no windows
+      return new THREE.Mesh(); // Return empty mesh if no windows
     }
 
     const mergedGeometry = BufferGeometryUtils.mergeGeometries(windowGeometries);
@@ -203,27 +203,29 @@ export class BuildingViewComponent implements AfterViewInit, OnChanges, OnDestro
     const rightWing = new THREE.Mesh(new THREE.BoxGeometry(wingWidth, buildingHeight, wingDepth), mainMaterial);
     rightWing.position.set(wingWidth / 2 + coreWidth / 2, buildingHeight / 2, 0);
     buildingStructureGroup.add(rightWing);
-    
+
     const core = new THREE.Mesh(new THREE.BoxGeometry(coreWidth, buildingHeight, coreDepth), accentMaterial);
     core.position.set(0, buildingHeight / 2, -(coreDepth - wingDepth) / 2);
     buildingStructureGroup.add(core);
-    
+
     const rooftopGeo = new THREE.BoxGeometry(10, 4, 15);
     const rooftopStructure = new THREE.Mesh(rooftopGeo, mainMaterial);
     rooftopStructure.position.set(0, buildingHeight + 2, 0);
     buildingStructureGroup.add(rooftopStructure);
 
     this.scene.add(buildingStructureGroup);
-    
+
     // --- 3. เรียกใช้ฟังก์ชันใหม่เพื่อสร้างหน้าต่างทั้งหมดใน Mesh เดียว ---
     const allWindowsMesh = this.createMergedWindowMesh(totalFloors, floorHeight, wingDepth, coreWidth, coreDepth, windowMaterial);
     this.scene.add(allWindowsMesh);
 
     // --- ส่วนที่ต้องแก้คือ Loop นี้ครับ ---
     const clickBoxWidth = wingWidth * 2 + coreWidth;
-    
+
     for (let i = 1; i <= totalFloors; i++) {
+      // ดึงสีส่งตรงมาจาก Database ได้เลย
       const color = this.floors?.[i - 1]?.color || this.floorColors[(i - 1) % this.floorColors.length];
+
       const overlayMaterial = new THREE.MeshStandardMaterial({
         color,
         transparent: true,
@@ -312,23 +314,23 @@ export class BuildingViewComponent implements AfterViewInit, OnChanges, OnDestro
     context.fillText(floorNumber.toString(), size / 2, size / 2 + 2);
 
     const texture = new THREE.CanvasTexture(canvas);
-    
+
     // --- จุดแก้ที่ 2: เพิ่ม alphaTest ใน Material ---
-    const material = new THREE.MeshBasicMaterial({ 
-      map: texture, 
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
       transparent: true,  // ต้องเปิดไว้เพื่อให้ตัดขอบได้
       side: THREE.DoubleSide,
-      
+
       // เพิ่มบรรทัดนี้ครับ! สำคัญมาก
       alphaTest: 0.5,     // ค่านี้จะตัดส่วนที่ใสทิ้งไปเลย ส่วนที่เหลือจะทึบแสง 100% ไม่มีการดูดสีข้างหลัง
-      
+
       // เอา depthWrite: false ออก (หรือปรับเป็น true) เพื่อให้มันบังวัตถุข้างหลังได้มิด
-      depthWrite: true 
+      depthWrite: true
     });
 
     const geometry = new THREE.PlaneGeometry(6, 6); // หรือขนาดเดิมที่คุณใช้
     const mesh = new THREE.Mesh(geometry, material);
-    
+
     return mesh;
   }
 
