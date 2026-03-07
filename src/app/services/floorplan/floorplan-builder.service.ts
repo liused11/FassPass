@@ -37,7 +37,7 @@ export class FloorplanBuilderService {
   private objectMeshes: THREE.Mesh[] = [];
   private floorMeshes: THREE.Mesh[] = [];
   private doorMeshes: THREE.Mesh[] = [];
-  
+
   private floorGroup: THREE.Group | null = null;
 
   constructor() {
@@ -70,7 +70,7 @@ export class FloorplanBuilderService {
       metalness: 0
     });
     this.unlockedDoorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x25c26e,
+      color: 0x44ff44,
       transparent: false,
       opacity: 1,
       roughness: 0.2,
@@ -83,7 +83,7 @@ export class FloorplanBuilderService {
    * @param floorData ข้อมูล JSON ของชั้น
    * @returns THREE.Group ที่มี Meshes ทั้งหมด
    */
-  public buildFloor(floorData: any): THREE.Group {
+  public buildFloor(floorData: any, doorAllowList: string[] = []): THREE.Group {
     this.clearFloor(); // ล้างของเก่าก่อน (ถ้ามี)
     this.resetColorAssignments();
     this.floorGroup = new THREE.Group();
@@ -183,7 +183,11 @@ export class FloorplanBuilderService {
 
         room.doors?.forEach((door: any) => {
           const geo = new THREE.BoxGeometry(door.size.width, this.wallHeight, door.size.depth);
-          const mesh = new THREE.Mesh(geo, this.lockedDoorMaterial); // เริ่มต้นด้วย Locked
+
+          // ตรวจสอบสิทธิ์ทันทีตอนสร้าง
+          const initialMaterial = doorAllowList.includes(door.id) ? this.unlockedDoorMaterial : this.lockedDoorMaterial;
+
+          const mesh = new THREE.Mesh(geo, initialMaterial);
           mesh.position.set(door.center.x, this.wallHeight / 2, door.center.y);
           const doorData = { ...door, floor: floorData.floor };
           mesh.userData = { type: 'door', data: doorData };
@@ -196,20 +200,20 @@ export class FloorplanBuilderService {
           // หาจุดกึ่งกลางห้อง (ถ้ามี room.center ก็ใช้เลย ถ้าไม่มีให้คำนวณจาก boundary)
           let centerX = room.center?.x;
           let centerZ = room.center?.y; // ระวัง: ใน 2D y คือ z ใน 3D
-          
+
           if (centerX === undefined || centerZ === undefined) {
-             centerX = (room.boundary.min.x + room.boundary.max.x) / 2;
-             centerZ = (room.boundary.min.y + room.boundary.max.y) / 2;
+            centerX = (room.boundary.min.x + room.boundary.max.x) / 2;
+            centerZ = (room.boundary.min.y + room.boundary.max.y) / 2;
           }
 
           const labelMesh = this.createRoomLabel(room.name);
-          
+
           // วางตำแหน่ง: X, Z ตามห้อง, Y ยกขึ้นนิดนึง (0.2) ไม่ให้จมพื้น
           labelMesh.position.set(centerX, 0.2, centerZ);
-          
+
           // หมุนให้นอนราบไปกับพื้น
           labelMesh.rotation.x = -Math.PI / 2;
-          
+
           // (Optional) ถ้าตึกหมุนอยู่แล้ว อาจจะต้องหมุนป้ายตามแกน Z ให้ตัวหนังสือหันถูกทิศ
           // labelMesh.rotation.z = Math.PI; // ลองปรับดูถ้าตัวหนังสือกลับหัว
 
@@ -449,14 +453,14 @@ export class FloorplanBuilderService {
     }
 
     const baseColor = new THREE.Color(colorInput as any);
-    
+
     const hsl = { h: 0, s: 0, l: 0 };
     baseColor.getHSL(hsl);
 
-    baseColor.setHSL(hsl.h, hsl.s * 1.0, 0.5); 
+    baseColor.setHSL(hsl.h, hsl.s * 1.0, 0.5);
 
     const material = new THREE.MeshStandardMaterial({
-      color: baseColor,   
+      color: baseColor,
       transparent: true,
       opacity: 0.6,
       side: THREE.DoubleSide,
@@ -464,7 +468,7 @@ export class FloorplanBuilderService {
       metalness: 0,
       depthWrite: true
     });
-    
+
     this.mutedFloorMaterialCache.set(key, material);
     return material;
   }
@@ -600,19 +604,19 @@ export class FloorplanBuilderService {
     const ctx = canvas.getContext('2d')!;
 
     // พื้นหลังใส
-    ctx.fillStyle = 'rgba(0,0,0,0)'; 
+    ctx.fillStyle = 'rgba(0,0,0,0)';
     ctx.clearRect(0, 0, width, height);
 
     // Font ใหญ่
-    ctx.font = 'bold 480px "Kanit", "Inter", sans-serif'; 
+    ctx.font = 'bold 480px "Kanit", "Inter", sans-serif';
     ctx.fillStyle = '#ffffffff'; // สีเทาเข้ม
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, width / 2, height / 2);
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.LinearFilter; 
-    
+    texture.minFilter = THREE.LinearFilter;
+
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
@@ -621,7 +625,7 @@ export class FloorplanBuilderService {
     });
 
     // ขนาดป้ายบนโลก 3D (5 x 1.25 เมตร)
-    const geometry = new THREE.PlaneGeometry(7.5, 1.5); 
+    const geometry = new THREE.PlaneGeometry(7.5, 1.5);
     const mesh = new THREE.Mesh(geometry, material);
 
     return mesh;

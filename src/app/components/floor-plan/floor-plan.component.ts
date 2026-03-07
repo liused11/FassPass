@@ -375,7 +375,7 @@ export class FloorPlanComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.threeScene.scene.remove(this.floorGroup);
       this.floorBuilder.clearFloor();
     }
-    this.floorGroup = this.floorBuilder.buildFloor(this.floorData);
+    this.floorGroup = this.floorBuilder.buildFloor(this.floorData, this.interaction.permissionList$.value);
     this.threeScene.scene.add(this.floorGroup);
     if (this.playerControls.player) {
       this.playerControls.player.position.set(0, this.playerControls.playerSize, 0);

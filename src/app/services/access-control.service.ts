@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import { ReservationService } from './reservation.service';
+import { AuthService } from './auth.service';
 
 export interface UserDoorAccess {
     id: string;
@@ -17,7 +17,7 @@ export class AccessControlService {
 
     constructor(
         private supabase: SupabaseService,
-        private reservationService: ReservationService
+        private authService: AuthService
     ) { }
 
     /**
@@ -25,7 +25,9 @@ export class AccessControlService {
      * และยังไม่หมดอายุ (หรือไม่มีวันหมดอายุ)
      */
     async getAccessibleDoors(): Promise<string[]> {
-        const profileId = this.reservationService.getCurrentProfileId();
+        const user = await this.authService.getCurrentUser();
+        const profileId = user?.id;
+
         if (!profileId) {
             console.warn('AccessControlService: No profile ID found. Cannot fetch door access.');
             return [];
