@@ -249,6 +249,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     results = results.filter(lot => {
       const cat = (lot.category || 'parking').toLowerCase();
       const selectedCat = (this.selectedLocation || 'parking').toLowerCase();
+
+      // Strict parking filter: must have at least one type of parking capacity
+      if (selectedCat === 'parking') {
+        const hasCapacity = lot.capacity && (lot.capacity.normal > 0 || lot.capacity.ev > 0 || lot.capacity.motorcycle > 0);
+        if (!hasCapacity) {
+          return false;
+        }
+      }
+
       return cat === selectedCat;
     });
 
