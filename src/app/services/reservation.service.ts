@@ -102,6 +102,18 @@ export class ReservationService {
     return data;
   }
 
+  // Calculate live parking fee using Supabase RPC
+  async getParkingFee(reservationId: string): Promise<number> {
+    const { data, error } = await this.supabaseService.client
+      .rpc('get_parking_fee', { res_id: reservationId });
+
+    if (error) {
+      console.error('Error calculating parking fee:', error);
+      return 0; // Fallback
+    }
+    return data || 0;
+  }
+
   /**
    * Manually trigger auto-cancellation of expired pending reservations
    * This calls the database function to cancel reservations that are

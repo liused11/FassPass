@@ -554,11 +554,39 @@ export class Tab2Page implements OnInit, OnDestroy {
       // Handle actions emitted from the modal if needed
       if (role === 'confirm' && data) {
         if (data.action === 'cancel') {
-          // To be implemented: actually cancel the reservation
           console.log('User wants to cancel reservation:', item.id);
+          try {
+            await this.reservationService.updateReservationStatus(item.id, 'cancelled');
+            const toast = await this.toastCtrl.create({
+              message: 'ยกเลิกการจองสำเร็จ',
+              duration: 2000,
+              color: 'success',
+              position: 'top'
+            });
+            toast.present();
+            this.loadRealReservations();
+          } catch (e) {
+            console.error('Cancel failed', e);
+          }
         } else if (data.action === 'checkout') {
-          // To be implemented: handle checkout
           console.log('User wants to checkout:', item.id);
+          try {
+            // Finalize parking fee (simulated checkout)
+            const finalFee = await this.reservationService.getParkingFee(item.id);
+            await this.reservationService.updateReservationStatus(item.id, 'completed');
+            
+            // Optionally, we should update the 'net_paid' in DB, but updateReservationStatus works for now.
+            const toast = await this.toastCtrl.create({
+              message: `ชำระเงินสำเร็จ ฿${finalFee}`,
+              duration: 3000,
+              color: 'success',
+              position: 'top'
+            });
+            toast.present();
+            this.loadRealReservations();
+          } catch (e) {
+            console.error('Checkout failed', e);
+          }
         }
       }
     }

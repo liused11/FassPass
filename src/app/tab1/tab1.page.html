@@ -65,6 +65,29 @@
         </div>
 
       </div>
+
+      <!-- Active Parking Widget -->
+      <div *ngIf="activeReservation" class="w-full max-w-sm mt-2 cursor-pointer transition-transform hover:scale-[1.02]" routerLink="/tabs/tab2" (click)="activeReservation = activeReservation">
+        <div class="bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-[#1a73e8] relative overflow-hidden flex items-center justify-between">
+          <div class="absolute top-0 left-0 w-1.5 h-full bg-[#1a73e8]"></div>
+          <div class="flex-1 pl-3">
+            <div class="flex items-center gap-1.5 mb-1">
+              <div class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
+              <span class="text-xs font-bold text-gray-600">กำลังจอดอยู่</span>
+            </div>
+            <div class="text-sm font-bold text-gray-900 truncate pr-2">
+              ทะเบียน: {{ activeReservation.car_plate || '-' }}
+            </div>
+            <div class="text-[11px] text-gray-500 mt-0.5 truncate pr-2">
+              เริ่ม: {{ activeReservation.start_time | date:'HH:mm' }} น.
+            </div>
+          </div>
+          <div class="flex flex-col items-end pl-2 border-l border-gray-100">
+            <span class="text-[11px] font-bold text-gray-400 mb-0.5">ค่าบริการปัจจุบัน</span>
+            <span class="text-xl font-black text-[#1a73e8]">฿{{ currentParkingFee }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="fab-container" style="position: absolute; bottom: 40%; right: 16px; z-index: 2;">

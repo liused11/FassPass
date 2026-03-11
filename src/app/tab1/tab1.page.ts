@@ -27,6 +27,7 @@ import { ParkingLot, ScheduleItem, UserProfile } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ParkingService } from '../services/parking.service';
 import { BookmarkService } from '../services/bookmark.service';
+import { ReservationService } from '../services/reservation.service';
 
 import buildingFloorData from '../components/floor-plan/e12-floor1.json';
 
@@ -53,6 +54,11 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   filteredBuildingRooms: any[] = [];
 
   userProfile: UserProfile | null = null;
+
+  // --- Active Reservation ---
+  activeReservation: any = null;
+  currentParkingFee: number = 0;
+  feeCalcInterval: any;
 
   // --- User Coordinates (Default) ---
   userLat = 13.6513;
@@ -100,6 +106,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private parkingDataService: ParkingDataService, // Renamed for clarity
     private parkingApiService: ParkingService, // Inject new RPC Service
     private supabaseService: SupabaseService, // Inject Supabase for Realtime
+    private reservationService: ReservationService, // ✅ Inject Reservation Service
     private router: Router, // ✅ Inject Router
     private bookmarkService: BookmarkService, // ✅ Inject Bookmark Service
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -145,6 +152,44 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       this.filterData();
       this.isSearching = false;
     });
+
+    // Check Active Reservation
+    this.loadActiveReservation();
+  }
+
+  async loadActiveReservation() {
+    try {
+      // Get all reservations for the current user
+      const reservations = await this.reservationService.getUserReservationsFromEdge();
+      
+      // Look for the currently active ones (status = active or checked_in)
+      this.activeReservation = reservations.find((r: any) => 
+        r.status === 'active' || r.status === 'checked_in'
+      );
+
+      if (this.activeReservation) {
+        // Fetch initially
+        this.updateCurrentFee();
+        
+        // Polling fee update every 1 minute
+        if (this.feeCalcInterval) clearInterval(this.feeCalcInterval);
+        this.feeCalcInterval = setInterval(() => {
+          this.updateCurrentFee();
+        }, 60000);
+      } else {
+        if (this.feeCalcInterval) clearInterval(this.feeCalcInterval);
+        this.currentParkingFee = 0;
+      }
+    } catch (e) {
+      console.error('[Tab1] Error loading active reservation', e);
+    }
+  }
+
+  async updateCurrentFee() {
+    if (this.activeReservation && this.activeReservation.id) {
+      const fee = await this.reservationService.getParkingFee(this.activeReservation.id);
+      this.currentParkingFee = fee;
+    }
   }
 
   setupRealtimeSubscription() {
@@ -176,6 +221,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     setTimeout(() => {
       console.log('[Tab1] 🔄 Refreshing Data due to Realtime Event...');
       this.loadRealData();
+      this.loadActiveReservation(); // Also check if reservation status changed
     }, 1000); // 1s delay for safety
   }
 
@@ -356,6 +402,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     if (this.sheetToggleSub) this.sheetToggleSub.unsubscribe();
     if (this.timeCheckSub) this.timeCheckSub.unsubscribe();
     if (this.searchSub) this.searchSub.unsubscribe();
+    if (this.feeCalcInterval) clearInterval(this.feeCalcInterval);
     if (this.map) {
       this.map.remove();
     }

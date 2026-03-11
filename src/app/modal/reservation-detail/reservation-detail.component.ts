@@ -2,6 +2,7 @@ import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { IonicModule, ModalController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { Booking } from '../../data/models';
+import { ReservationService } from '../../services/reservation.service';
 
 @Component({
     selector: 'app-reservation-detail',
@@ -19,12 +20,27 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     private timer: any;
 
-    constructor(private modalCtrl: ModalController) { }
+    constructor(
+      private modalCtrl: ModalController,
+      private reservationService: ReservationService
+    ) { }
 
     ngOnInit() {
         this.internalStatus = this.booking.status;
         this.updateStaticData();
         this.startTimer();
+        this.fetchCurrentFee();
+    }
+
+    async fetchCurrentFee() {
+        if (this.internalStatus === 'active' || this.internalStatus === 'checked_in') {
+            try {
+                const fee = await this.reservationService.getParkingFee(this.booking.id);
+                this.booking.price = fee;
+            } catch (e) {
+                console.error('Error fetching live fee:', e);
+            }
+        }
     }
 
     ngOnDestroy() {
