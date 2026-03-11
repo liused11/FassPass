@@ -97,6 +97,23 @@ ion-content {
     border-radius: 4px; // Square it up a bit to look connected
     z-index: 1;
   }
+
+  // Reserved by User (Small Green Box)
+  &.reserved-by-user {
+    background-color: #ecfdf5; // Green-50
+    border-color: #10b981; // Green-500
+    color: #047857; // Green-700
+    cursor: default;
+
+    &:active {
+      transform: none;
+    }
+
+    .status-text {
+      color: #10b981;
+      font-weight: bold;
+    }
+  }
 }
 
 // Filter Button Refined

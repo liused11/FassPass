@@ -62,7 +62,7 @@ export interface Booking {
     locationDetails: string; // e.g. "ชั้น 1 | โซน B | B04"
     bookingTime: Date;
     endTime: Date;
-    status: 'pending' | 'pending_payment' | 'confirmed' | 'completed' | 'cancelled' | 'active'; // Added 'active' for currently parking
+    status: 'pending' | 'pending_payment' | 'confirmed' | 'completed' | 'cancelled' | 'active' | 'checked_in' | 'checked_out' | 'checked_in_pending_payment'; // Added 'active' and 'check' states for parking
     statusLabel?: string; // Optional override for status text
     price: number;
     discountBadge?: string; // e.g. "ลด 15%"
@@ -86,12 +86,14 @@ export interface Booking {
     lng?: number;
 }
 
+export type UserRole = 'User' | 'Host' | 'Visitor' | 'Admin';
+
 export interface UserProfile {
     id?: string;
     name: string;
     phone: string;
     avatar: string;
-    role: string;
+    role: UserRole;
     role_level?: number; // 0=Guest, 1=Visitor, 2=User, 3=Host
     lineId?: string;
     email?: string;
@@ -120,6 +122,7 @@ export interface BuildingData {
     buildingId: string;
     buildingName?: string;
     floors: any[];
+    role_prices?: { [key: string]: number };
 }
 
 export interface Asset {
@@ -130,5 +133,5 @@ export interface Asset {
 }
 
 export interface RolePermission {
-    role: string;
+    role: UserRole;
 }

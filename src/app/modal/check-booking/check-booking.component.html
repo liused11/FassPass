@@ -92,8 +92,15 @@
                   <span class="text-xs font-normal text-gray-500">{{ selectedCarInfo.province }}</span>
                 </div>
               </div>
-              <ion-icon name="chevron-down-outline" class="text-gray-400 shrink-0"></ion-icon>
+            <ion-icon name="chevron-down-outline" class="text-gray-400 shrink-0"></ion-icon>
             </div>
+          </div>
+          <!-- Warning for Car Overlap -->
+          <div *ngIf="isCarOccupied" class="mt-2 text-center bg-red-50 border border-red-100 rounded-xl p-2 animate-pulse">
+            <p class="text-[11px] text-red-500 font-bold flex items-center justify-center gap-1">
+              <ion-icon name="alert-circle"></ion-icon>
+              รถคันนี้มีการจองในช่วงเวลานี้แล้ว
+            </p>
           </div>
           <ion-popover trigger="trigger-car-popover" class="vehicle-popover">
             <ng-template>
@@ -270,7 +277,7 @@
 
       <ion-button expand="block" shape="round" color="primary"
         class="rounded-full font-bold h-12 text-base shadow-lg shadow-blue-200" (click)="confirm()"
-        [disabled]="!data.selectedSlotId || data.selectedFloors.length === 0 || data.selectedZones.length === 0">
+        [disabled]="!data.selectedSlotId || data.selectedFloors.length === 0 || data.selectedZones.length === 0 || isCarOccupied">
         {{ selectedPaymentMethod === 'pay_later' ? 'ยืนยันการจอง' : 'ชำระเงิน (ต่อไป)' }}
       </ion-button>
     </div>
@@ -278,7 +285,7 @@
     <!-- Step 2 Footer -->
     <div *ngIf="currentStep === 2" class="animate-fade-in">
       <ion-button expand="block" shape="round" color="primary"
-        class="rounded-full font-bold h-12 text-base shadow-lg shadow-blue-200" (click)="confirm()">
+        class="rounded-full font-bold h-12 text-base shadow-lg shadow-blue-200" (click)="confirm()" [disabled]="isCarOccupied">
         {{ selectedPaymentMethod === 'pay_later' ? 'ตกลง' : 'ยืนยันการชำระเงิน' }}
       </ion-button>
     </div>

@@ -126,7 +126,7 @@
                 <ng-container
                     *ngSwitchCase="internalStatus === 'active' || internalStatus === 'checked_in' ? internalStatus : ''">
                     <ion-button expand="block" shape="round" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm">
+                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleApplyStamp()">
                         <ion-icon slot="start" name="pricetag-outline"></ion-icon>
                         ลดราคาที่จอด
                     </ion-button>
@@ -153,6 +153,11 @@
 
                 <!-- ถ้าเป็น pending (รออนุมัติ) -->
                 <ng-container *ngSwitchCase="'pending'">
+                    <ion-button expand="block" shape="round" color="primary"
+                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleSimulateCheckIn()">
+                        <ion-icon slot="start" name="log-in-outline"></ion-icon>
+                        จำลองเช็คอิน (Check-in)
+                    </ion-button>
                     <ion-button expand="block" shape="round" fill="outline" color="danger"
                         class="h-[50px] font-bold text-[15px] bg-white border-2 border-red-500 rounded-full"
                         (click)="handleCancel()">
@@ -163,14 +168,51 @@
                 <!-- ถ้าเป็น completed -->
                 <ng-container
                     *ngSwitchCase="internalStatus === 'completed' || internalStatus === 'checked_out' ? internalStatus : ''">
-                    <ion-button expand="block" shape="round" color="success"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleReceipt()">
-                        <ion-icon slot="start" name="receipt-outline"></ion-icon>
-                        ดูรายละเอียดใบเสร็จ
+                    <ion-button expand="block" shape="round" color="primary"
+                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleCheckoutConfirm()">
+                        <ion-icon slot="start" name="log-out-outline"></ion-icon>
+                        เช็คเอาท์ (ยืนยัน)
                     </ion-button>
                     <ion-button expand="block" fill="clear" color="medium" class="h-[50px] font-bold text-[14px]"
                         (click)="dismiss()">
                         หน้าหลัก
+                    </ion-button>
+                </ng-container>
+
+                <!-- ถ้าเป็น pending_payment (รอชำระเงิน) -->
+                <ng-container *ngSwitchCase="'pending_payment'">
+                    <ion-button expand="block" shape="round" color="primary"
+                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handlePay()">
+                        <ion-icon slot="start" name="card-outline"></ion-icon>
+                        ชำระเงินตอนนี้
+                    </ion-button>
+                    <ion-button expand="block" shape="round" fill="solid" color="secondary"
+                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleCheckInPendingPayment()">
+                        <ion-icon slot="start" name="log-in-outline"></ion-icon>
+                        เช็คอิน (รอชำระเงิน)
+                    </ion-button>
+                    <ion-button expand="block" shape="round" fill="outline" color="danger"
+                        class="h-[50px] font-bold text-[15px] bg-white border-2 border-red-500 rounded-full"
+                        (click)="handleCancel()">
+                        ยกเลิกคำขอจอง
+                    </ion-button>
+                </ng-container>
+
+                <!-- ถ้าเป็น checked_in_pending_payment (เข้าจอดแล้วแต่ยังไม่จ่าย) -->
+                <ng-container *ngSwitchCase="'checked_in_pending_payment'">
+                    <ion-button expand="block" shape="round" color="primary"
+                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleApplyStamp()">
+                        <ion-icon slot="start" name="pricetag-outline"></ion-icon>
+                        ลดราคาที่จอด (E-Stamp)
+                    </ion-button>
+                    <ion-button expand="block" shape="round" fill="outline" color="primary"
+                        class="mb-3 h-[50px] font-bold text-[15px] bg-white border-2 border-blue-500 rounded-full" (click)="handlePay()">
+                        <ion-icon slot="start" name="card-outline"></ion-icon>
+                        ชำระเงินตอนนี้
+                    </ion-button>
+                    <ion-button expand="block" shape="round" color="medium"
+                        class="h-[50px] font-bold text-[15px] shadow-sm opacity-80" (click)="dismiss()">
+                        ปิดหน้าต่าง
                     </ion-button>
                 </ng-container>
 

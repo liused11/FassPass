@@ -322,13 +322,17 @@
             <div class="animate-fade-in">
               <div class="grid grid-cols-3 gap-2" *ngIf="currentDay.slots.length > 0; else closedState">
                 <button *ngFor="let slot of currentDay.slots" class="slot-btn flex-col gap-0.5 min-h-[52px]"
-                  [disabled]="!slot.isAvailable" [class.unavailable]="!slot.isAvailable"
+                  [disabled]="!slot.isAvailable && !slot.isUserReserved" [class.unavailable]="!slot.isAvailable && !slot.isUserReserved"
+                  [class.reserved-by-user]="slot.isUserReserved"
                   [class.selected-start]="slot.isSelected && startSlot?.id === slot.id"
                   [class.selected-end]="slot.isSelected && endSlot?.id === slot.id" [class.in-range]="slot.isInRange"
                   (click)="onSlotClick(slot, $event)">
 
                   <span class="text-xs font-semibold leading-tight">{{ slot.timeText }}</span>
-                  <span class="text-[11px] font-normal opacity-60" *ngIf="slot.isAvailable">
+                  <span class="text-[11px] font-normal opacity-60 status-text" *ngIf="slot.isUserReserved">
+                    จองแล้ว
+                  </span>
+                  <span class="text-[11px] font-normal opacity-60 status-text" *ngIf="slot.isAvailable && !slot.isUserReserved">
                     {{ 'ว่าง ' + slot.remaining }}
                   </span>
                 </button>

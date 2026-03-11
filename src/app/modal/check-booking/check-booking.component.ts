@@ -18,6 +18,7 @@ export class CheckBookingComponent implements OnInit {
   timeDisplay: string = '';
   totalPrice: number = 0;
   hourlyRate: number = 20; // 20 THB per hour
+  isCarOccupied: boolean = false;
 
   floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
   availableZones: string[] = ['Zone A', 'Zone B', 'Zone C', 'Zone D', 'Zone E'];
@@ -109,6 +110,9 @@ export class CheckBookingComponent implements OnInit {
       this.assignedFloor = this.data.selectedFloor || (this.data.selectedFloors.length === 1 ? this.data.selectedFloors[0] : '');
       this.assignedZone = this.data.selectedZone || (this.data.selectedZones.length === 1 ? this.data.selectedZones[0] : '');
     }
+
+    // New: Check car occupation initially
+    setTimeout(() => this.checkCurrentCarAvailability(), 500);
   }
 
   initMockParkingData() {
@@ -351,6 +355,11 @@ export class CheckBookingComponent implements OnInit {
   }
 
   confirm() {
+    if (this.isCarOccupied) {
+      this.presentToast('รถคันนี้มีการจองในช่วงเวลานี้แล้ว กรุณาเปลี่ยนรถหรือเวลา');
+      return;
+    }
+
     if (this.currentStep === 1) {
       // Proceed to Payment Step
       if (this.selectedPaymentMethod === 'pay_later') {
@@ -385,8 +394,25 @@ export class CheckBookingComponent implements OnInit {
 
   selectCar(id: string | number) {
     this.selectedCarId = id;
+    this.checkCurrentCarAvailability();
     const popover = document.querySelector('ion-popover.vehicle-popover') as any;
     if (popover && popover.dismiss) popover.dismiss();
+  }
+
+  async checkCurrentCarAvailability() {
+    if (!this.selectedCarId || !this.data?.startSlot?.dateTime || !this.data?.endSlot?.dateTime) return;
+    
+    try {
+      const start = new Date(this.data.startSlot.dateTime);
+      const end = new Date(this.data.endSlot.dateTime);
+      
+      this.isCarOccupied = await this.reservationService.checkCarOverlap(this.selectedCarId, start, end);
+      if (this.isCarOccupied) {
+        console.warn('Selected car is already occupied during this period');
+      }
+    } catch (e) {
+      console.error('Error checking car availability:', e);
+    }
   }
 
   getTypeName(type: string): string {

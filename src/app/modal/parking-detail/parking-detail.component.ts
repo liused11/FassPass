@@ -35,6 +35,7 @@ interface TimeSlot {
   isSelected: boolean;
   isInRange: boolean;
   remaining: number;
+  isUserReserved?: boolean; // NEW: If car already has reservation during this slot
   originalRemaining?: number; // Store raw availability from API
   duration?: number;
 }
@@ -110,6 +111,8 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
   // Aggregated Zones for Display
   displayZones: AggregatedZone[] = [];
+
+  userCarReservations: {start_time: string, end_time: string}[] = [];
 
   currentImageIndex = 0;
   isSpecificSlot: boolean = true; // Default to true per user intent (selecting zones)
@@ -195,6 +198,23 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         }
       )
       .subscribe();
+
+    // Fetch user car reservations initially
+    this.loadUserCarReservations();
+  }
+
+  async loadUserCarReservations() {
+    this.parkingDataService.vehicles$.pipe(take(1)).subscribe(async vehicles => {
+      if (vehicles && vehicles.length > 0) {
+        try {
+          const res = await this.reservationService.getCarReservations(vehicles[0].id);
+          this.userCarReservations = res;
+          this.generateTimeSlots(); // Re-generate to apply disable logic
+        } catch (e) {
+          console.error('Error loading car reservations:', e);
+        }
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -204,6 +224,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   refreshRealtimeData() {
+    // 0. Refresh Car Reservations (to handle cancellations)
+    this.loadUserCarReservations();
+
     // 1. Refresh Time Slots (Counts)
     this.fetchTimeSlotAvailability();
 
@@ -721,10 +744,27 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
               }
             }
 
-            slot.remaining = minAvailable;
+            // Check if THIS slot overlaps with user's existing car reservations
+            const duration = slot.duration || this.slotInterval || 60;
+            const slotStart = slot.dateTime.getTime();
+            const slotEnd = slotStart + (duration * 60000);
+
+            let isReservedByThisCar = false;
+            for (const res of this.userCarReservations) {
+              const resStart = new Date(res.start_time).getTime();
+              const resEnd = new Date(res.end_time).getTime();
+              // Overlap check: (SlotStart < ResEnd) AND (SlotEnd > ResStart)
+              if (slotStart < resEnd && slotEnd > resStart) {
+                isReservedByThisCar = true;
+                break;
+              }
+            }
+
+            slot.isUserReserved = isReservedByThisCar;
+            slot.remaining = isReservedByThisCar ? 0 : minAvailable;
             slot.originalRemaining = minAvailable;
-            // ตรวจสอบว่ามีที่ว่างและยังไม่เลยเวลาปัจจุบัน
-            slot.isAvailable = slot.remaining > 0 && slot.dateTime > new Date();
+            // ตรวจสอบว่ามีที่ว่างและยังไม่เลยเวลาปัจจุบัน และไม่ทับซ้อนกับรถตัวเอง
+            slot.isAvailable = slot.remaining > 0 && slot.dateTime > new Date() && !isReservedByThisCar;
           });
         });
 
@@ -1363,6 +1403,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   calculatePrice(start: Date, end: Date): number {
     const timeDiffRaw = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     const hours = Math.max(1, Math.ceil(timeDiffRaw));
+    
     const hourlyRate = this.lot?.price !== undefined ? this.lot.price : 20;
     
     if (this.bookingMode === 'monthly') return 1500; // Mock monthly rate

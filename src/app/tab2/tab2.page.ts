@@ -3,7 +3,6 @@ import { ModalController, ToastController } from '@ionic/angular';
 import { Booking } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ReservationService } from '../services/reservation.service';
-import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
 import { ReservationDetailComponent } from '../modal/reservation-detail/reservation-detail.component';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -13,7 +12,6 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   templateUrl: 'tab2.page.html',
   styleUrls: ['tab2.page.scss'],
   standalone: false,
-  // Removed toggleSection from Component metadata as it belongs to the class
 })
 export class Tab2Page implements OnInit, OnDestroy {
 
@@ -39,7 +37,6 @@ export class Tab2Page implements OnInit, OnDestroy {
     { value: 'hourly', label: 'รายชั่วโมง' },
     { value: 'flat_24h', label: 'เหมาจ่าย 24 ชม.' },
     { value: 'monthly_regular', label: 'รายเดือน' },
-
   ];
 
   // Segment for Status
@@ -51,7 +48,6 @@ export class Tab2Page implements OnInit, OnDestroy {
   // Expanded state for the single list
   isExpanded: boolean = false;
 
-  // Mock Data
   allBookings: Booking[] = [];
 
   // Subscription for Realtime updates
@@ -68,19 +64,15 @@ export class Tab2Page implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    // Initial load from service subscription (mock data mostly)
     this.parkingService.bookings$.subscribe(bookings => {
       this.allBookings = bookings;
       this.updateFilter();
     });
 
-    // Subscribe to Test User ID changes to reload data automatically
     this.reservationService.currentProfileId$.subscribe(async (userId: string) => {
       if (userId) {
-        console.log('Tab2: Test User ID changed to', userId);
         await this.loadRealReservations();
 
-        // Re-subscribe to realtime channel for new user
         if (this.reservationsSubscription) {
           this.reservationsSubscription.unsubscribe();
         }
@@ -88,7 +80,6 @@ export class Tab2Page implements OnInit, OnDestroy {
       }
     });
 
-    // Setup Search Debounce
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
       distinctUntilChanged()
@@ -118,11 +109,10 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   setupRealtimeSubscription() {
     if (this.reservationsSubscription) {
-      return; // Already subscribed
+      return;
     }
 
     this.reservationsSubscription = this.reservationService.subscribeToUserReservations(() => {
-      console.log('Tab2: Realtime update triggered reload');
       this.loadRealReservations();
     });
   }
@@ -133,10 +123,8 @@ export class Tab2Page implements OnInit, OnDestroy {
         this.isLoading = true;
       }
       const reservations = await this.reservationService.getUserReservationsFromEdge();
-      console.log('Real reservations loaded:', reservations);
 
       if (reservations) {
-        // Map DB reservations to Booking model
         const mappedBookings: Booking[] = reservations.map((r: any) => {
           const lot = this.parkingService.getParkingLotById(r.parking_site_id);
 
@@ -150,7 +138,11 @@ export class Tab2Page implements OnInit, OnDestroy {
               break;
             case 'pending_payment':
               status = 'pending_payment';
-              statusLabel = 'รอการชำระเงิน';
+              statusLabel = 'รอชำระเงิน';
+              break;
+            case 'checked_in_pending_payment':
+              status = 'checked_in_pending_payment';
+              statusLabel = 'กำลังจอด (รอชำระเงิน)';
               break;
             case 'confirmed':
               status = 'confirmed';
@@ -175,7 +167,6 @@ export class Tab2Page implements OnInit, OnDestroy {
               statusLabel = r.status;
           }
 
-          // Zone & Location Logic
           let zoneLabel = '-';
           let floorLabel = '-';
           let buildingLabel = '-';
@@ -191,64 +182,38 @@ export class Tab2Page implements OnInit, OnDestroy {
               }
             }
 
-            if (parts.length >= 5) { // Ensure enough parts: building-floor-zone-slot
-              // "1-2-1-1-1" -> Building is parts[1] (2)
+            if (parts.length >= 5) {
               buildingLabel = parts[1];
-
-              // "1-1-2-1-1" -> Floor is parts[2] (2)
               floorLabel = parts[2];
-
-              // "1-1-1-2-1" -> Zone is parts[3] (1-24 -> A-Z)
               const zoneNum = parseInt(parts[3], 10);
               if (!isNaN(zoneNum) && zoneNum >= 1 && zoneNum <= 26) {
                 zoneLabel = String.fromCharCode(64 + zoneNum);
               } else {
-                zoneLabel = parts[3]; // Fallback
+                zoneLabel = parts[3];
               }
             }
           }
 
-          // Use derived name if found, otherwise fallback to existing logic
-          let placeName = derivedPlaceName;
-          if (!placeName) {
-            placeName = lot ? lot.name : (r.parking_site_id || 'Unknown Location');
-          }
-
-          // Map booking_type from DB to model
-          // DB types: hourly, flat_24h, monthly_regular, monthly_night
-          // Fallback to 'hourly' if undefined
+          let placeName = derivedPlaceName || (lot ? lot.name : (r.parking_site_id || 'Unknown Location'));
           const bookingType = r.booking_type || 'hourly';
-
           const bookingDate = (r.start_time.includes('Z') || r.start_time.includes('+')) ? new Date(r.start_time) : new Date(r.start_time + 'Z');
           const endDate = (r.end_time.includes('Z') || r.end_time.includes('+')) ? new Date(r.end_time) : new Date(r.end_time + 'Z');
 
           let periodLabel: string | undefined = undefined;
-
           if (bookingType === 'monthly_regular' || bookingType === 'monthly_night') {
-            // For monthly, show "20 Feb - 20 Mar"
-            // We calculate the end date relative to start date + 1 month roughly
-            // Or rely on the Date object formatting if we trust the month increment
             const startStr = bookingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
-            // Logic: Add 1 month to bookingDate for the end display, 
-            // or use endDate if it is already correct. 
-            // The user request: "plus 1 month".
             const calculatedEndDate = new Date(bookingDate);
             calculatedEndDate.setMonth(calculatedEndDate.getMonth() + 1);
-
             const endStr = calculatedEndDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
             periodLabel = `${startStr} - ${endStr}`;
           }
 
           let dateLabel: string | undefined = undefined;
-          // Check if cross-day booking for hourly/flat24h to update date display
           if (bookingType === 'hourly' || bookingType === 'flat_24h' || bookingType === 'daily') {
             const isSameDay = bookingDate.getDate() === endDate.getDate() &&
               bookingDate.getMonth() === endDate.getMonth() &&
               bookingDate.getFullYear() === endDate.getFullYear();
-
             if (!isSameDay) {
-              // Format: "21 Feb - 22 Feb"
               const startStr = bookingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
               const endStr = endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
               dateLabel = `${startStr} - ${endStr}`;
@@ -264,13 +229,10 @@ export class Tab2Page implements OnInit, OnDestroy {
             status: status,
             statusLabel: statusLabel,
             price: r.total_amount || 0,
-            discountBadge: undefined,
             carBrand: r.cars?.model || 'ไม่ระบุ',
             licensePlate: r.car_plate ? `${r.car_plate}${r.cars?.province ? ' ' + r.cars.province : ''}` : 'ไม่ระบุทะเบียน',
             bookingType: bookingType,
             periodLabel: periodLabel,
-
-            // New fields for cleaner UI
             building: buildingLabel,
             floor: floorLabel,
             zone: zoneLabel,
@@ -284,18 +246,14 @@ export class Tab2Page implements OnInit, OnDestroy {
           } as Booking;
         });
 
-        // Use ONLY real data as requested. If empty, show empty.
         this.allBookings = mappedBookings;
-        // Sort by reservedAt (latest first)
         this.allBookings.sort((a, b) => {
           const timeA = a.reservedAt ? a.reservedAt.getTime() : 0;
           const timeB = b.reservedAt ? b.reservedAt.getTime() : 0;
           return timeB - timeA;
         });
 
-        // Generate dynamic month options
         this.generateMonthOptions();
-
         this.updateFilter();
       }
     } catch (error) {
@@ -308,7 +266,6 @@ export class Tab2Page implements OnInit, OnDestroy {
     }
   }
 
-  // Pull to Refresh
   doRefresh(event: any) {
     this.loadRealReservations(event);
   }
@@ -318,11 +275,6 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.updateFilter();
   }
 
-  filterChanged() {
-    this.updateFilter();
-  }
-
-  // Search Tracking
   toggleSearch() {
     this.showSearch = !this.showSearch;
     if (!this.showSearch) {
@@ -337,7 +289,6 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.searchSubject.next(this.searchQuery);
   }
 
-  // Popover Selectors
   selectMonth(val: string) {
     this.selectedMonth = val;
     this.updateFilter();
@@ -368,7 +319,6 @@ export class Tab2Page implements OnInit, OnDestroy {
       months.add(`${yyyy}-${mm}`);
     });
 
-    // Convert to options
     this.monthOptions = [{ value: 'all', label: 'ทั้งหมด' }];
     Array.from(months).sort((a, b) => b.localeCompare(a)).forEach(m => {
       const [yyyy, mm] = m.split('-');
@@ -380,17 +330,15 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   updateFilter() {
     let filtered = this.allBookings.filter(b => {
-      // 1. Status Filter
       let statusMatch = false;
       if (this.selectedStatusSegment === 'in_progress') {
-        statusMatch = ['active', 'confirmed', 'pending_payment', 'pending'].includes(b.status);
+        statusMatch = ['active', 'confirmed', 'pending_payment', 'pending', 'checked_in_pending_payment'].includes(b.status);
       } else if (this.selectedStatusSegment === 'cancelled') {
         statusMatch = b.status === 'cancelled';
       } else {
         statusMatch = b.status === 'completed';
       }
 
-      // 2. Month Filter
       let monthMatch = true;
       if (this.selectedMonth !== 'all') {
         const d = new Date(b.bookingTime);
@@ -400,13 +348,11 @@ export class Tab2Page implements OnInit, OnDestroy {
         monthMatch = key === this.selectedMonth;
       }
 
-      // 3. Category Filter
       let catMatch = true;
       if (this.selectedCategory !== 'all') {
         catMatch = b.bookingType === (this.selectedCategory as any);
       }
 
-      // 4. Search Filter
       let searchMatch = true;
       if (this.searchQuery.trim() !== '') {
         const q = this.searchQuery.toLowerCase().trim();
@@ -423,14 +369,10 @@ export class Tab2Page implements OnInit, OnDestroy {
       return statusMatch && monthMatch && catMatch && searchMatch;
     });
 
-    // Sort by bookingTime ascending (closest upcoming time first)
     filtered.sort((a, b) => new Date(a.bookingTime).getTime() - new Date(b.bookingTime).getTime());
-
-    // Update combined display array
     this.displayBookings = filtered;
   }
 
-  // Helpers for Booking Type Label & Class
   getBookingTypeLabel(type: string | undefined): string {
     switch (type) {
       case 'hourly': return 'รายชั่วโมง';
@@ -461,13 +403,13 @@ export class Tab2Page implements OnInit, OnDestroy {
     }
   }
 
-  // Helper for Tailwind classes based on status
   getStatusClass(item: Booking): string {
     if (item.status === 'pending') return 'text-sky-500';
-    if (item.status === 'pending_payment') return 'text-[#FFB800]';
-    if (item.status === 'active') return 'text-green-600'; // Active = Green as requested
+    if (item.status === 'pending_payment') return 'text-orange-500';
+    if (item.status === 'checked_in_pending_payment') return 'text-orange-600 font-bold italic';
+    if (item.status === 'active') return 'text-green-600';
     if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]';
-    if (item.status === 'completed') return 'text-gray-500'; // Completed = Gray
+    if (item.status === 'completed') return 'text-gray-500';
     if (item.status === 'cancelled') return 'text-red-500';
     return '';
   }
@@ -476,120 +418,57 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.isExpanded = !this.isExpanded;
   }
 
-  // --- Map Navigation ---
   openMap(lat?: number, lng?: number) {
-    if (!lat || !lng) {
-      console.warn('Coordinates not available for this booking.');
-      return;
-    }
-
-    // Always use Google Maps
+    if (!lat || !lng) return;
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     window.open(url, '_blank');
   }
 
   async handleFooterClick(item: Booking) {
-    if (item.status === 'pending_payment') {
-      // Prepare data for payment modal
-      let data: any = {
-        siteId: item.placeName, // approximate 
-        siteName: item.placeName,
-        selectedType: item.vehicleType || 'normal',
-        selectedFloors: [item.floor],
-        selectedZones: [item.zone],
-        selectedZoneIds: [],
-        selectedSlotId: item.slot, // Ensure it doesn't search for a new slot
-        startSlot: { dateTime: item.bookingTime },
-        endSlot: { dateTime: item.endTime },
-        isSpecificSlot: true,
-        isRandomSystem: false,
-        bookingMode: item.bookingType,
-        price: item.price
-      };
+    const modal = await this.modalCtrl.create({
+      component: ReservationDetailComponent,
+      componentProps: { booking: item },
+      initialBreakpoint: 1,
+      breakpoints: [0, 1],
+      backdropDismiss: true,
+      showBackdrop: true,
+      cssClass: 'detail-sheet-modal',
+    });
+    await modal.present();
 
-      const modal = await this.modalCtrl.create({
-        component: CheckBookingComponent,
-        componentProps: { data: data },
-        initialBreakpoint: 1,
-        breakpoints: [0, 0.5, 1],
-        backdropDismiss: true,
-        cssClass: 'detail-sheet-modal',
-      });
-      await modal.present();
-
-      const { data: result, role } = await modal.onDidDismiss();
-      if (role === 'confirm' && result && result.confirmed) {
+    const { data, role } = await modal.onDidDismiss();
+    if (role === 'confirm' && data) {
+      if (data.action === 'cancel') {
         try {
-          const newStatus = result.data.status;
-          await this.reservationService.updateReservationStatus(item.id, newStatus);
-
-          const msg = newStatus === 'pending' ? 'แจ้งชำระเงินเรียบร้อย รอตรวจสอบ' : 'เก็บไว้ชำระเงินภายหลัง';
+          await this.reservationService.updateReservationStatus(item.id, 'cancelled');
           const toast = await this.toastCtrl.create({
-            message: msg,
+            message: 'ยกเลิกการจองสำเร็จ',
             duration: 2000,
             color: 'success',
             position: 'top'
           });
           toast.present();
-
-          // Reload reservations
           this.loadRealReservations();
-        } catch (err) {
-          console.error('Error updating status', err);
+        } catch (e) {
+          console.error(e);
         }
-      }
-    } else {
-      const modal = await this.modalCtrl.create({
-        component: ReservationDetailComponent,
-        componentProps: { booking: item },
-        initialBreakpoint: 1,
-        breakpoints: [0, 1],
-        backdropDismiss: true,
-        showBackdrop: true,
-        cssClass: 'detail-sheet-modal',
-      });
-      await modal.present();
-
-      const { data, role } = await modal.onDidDismiss();
-      // Handle actions emitted from the modal if needed
-      if (role === 'confirm' && data) {
-        if (data.action === 'cancel') {
-          console.log('User wants to cancel reservation:', item.id);
-          try {
-            await this.reservationService.updateReservationStatus(item.id, 'cancelled');
-            const toast = await this.toastCtrl.create({
-              message: 'ยกเลิกการจองสำเร็จ',
-              duration: 2000,
-              color: 'success',
-              position: 'top'
-            });
-            toast.present();
-            this.loadRealReservations();
-          } catch (e) {
-            console.error('Cancel failed', e);
-          }
-        } else if (data.action === 'checkout') {
-          console.log('User wants to checkout:', item.id);
-          try {
-            // Finalize parking fee (simulated checkout)
-            const finalFee = await this.reservationService.getParkingFee(item.id);
-            await this.reservationService.updateReservationStatus(item.id, 'completed');
-            
-            // Optionally, we should update the 'net_paid' in DB, but updateReservationStatus works for now.
-            const toast = await this.toastCtrl.create({
-              message: `ชำระเงินสำเร็จ ฿${finalFee}`,
-              duration: 3000,
-              color: 'success',
-              position: 'top'
-            });
-            toast.present();
-            this.loadRealReservations();
-          } catch (e) {
-            console.error('Checkout failed', e);
-          }
+      } else if (data.action === 'checkout') {
+        try {
+          await this.reservationService.updateReservationStatus(item.id, 'confirmed');
+          const toast = await this.toastCtrl.create({
+            message: `ยืนยันสถานะสำเร็จ`,
+            duration: 3000,
+            color: 'success',
+            position: 'top'
+          });
+          toast.present();
+          this.loadRealReservations();
+        } catch (e) {
+          console.error(e);
         }
+      } else if (data.action === 'receipt') {
+        this.loadRealReservations();
       }
     }
   }
 }
-

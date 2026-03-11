@@ -169,7 +169,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       
       // Look for the currently active ones (status = active or checked_in)
       this.activeReservation = reservations.find((r: any) => 
-        r.status === 'active' || r.status === 'checked_in'
+        r.status === 'active' || r.status === 'checked_in' || r.status === 'checked_in_pending_payment'
       );
 
       if (this.activeReservation) {

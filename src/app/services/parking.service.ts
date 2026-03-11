@@ -49,10 +49,6 @@ export class ParkingService {
 
           if (profile && profile.role) {
             const roleStr = String(profile.role).toLowerCase();
-            let overridePrice = 40; // Visitor Default
-
-            if (roleStr === 'user') overridePrice = 20;
-            else if (roleStr === 'host') overridePrice = 0;
 
             lots = lots.map(lot => {
               const roleKeyMap: { [key: string]: string } = {
@@ -62,15 +58,13 @@ export class ParkingService {
               };
               const exactRoleKey = roleKeyMap[roleStr] || 'Visitor';
               
-              // If Edge Function forwarded the role_prices JSON, use it, else fallback to hardcode
+              // If Edge Function forwarded the role_prices JSON, use it, else keep original lot.price
               const rolePrices = (lot as any).role_prices;
-              let finalPrice = overridePrice;
               if (rolePrices && rolePrices[exactRoleKey] !== undefined) {
-                 finalPrice = rolePrices[exactRoleKey];
+                 lot.price = rolePrices[exactRoleKey];
               }
 
-              lot.price = finalPrice;
-              if (finalPrice === 0) {
+              if (lot.price === 0) {
                  lot.priceUnit = 'จอดฟรี';
               } else {
                  lot.priceUnit = 'บาท/ชม.';

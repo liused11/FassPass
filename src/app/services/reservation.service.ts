@@ -102,16 +102,68 @@ export class ReservationService {
     return data;
   }
 
-  // Calculate live parking fee using Supabase RPC
-  async getParkingFee(reservationId: string): Promise<number> {
+  async checkCarOverlap(carId: string | number, start: Date, end: Date): Promise<boolean> {
     const { data, error } = await this.supabaseService.client
-      .rpc('get_parking_fee', { res_id: reservationId });
+      .from('reservations')
+      .select('id')
+      .eq('car_id', carId)
+      .in('status', ['pending', 'confirmed', 'checked_in', 'pending_payment'])
+      .lt('start_time', end.toISOString())
+      .gt('end_time', start.toISOString());
 
     if (error) {
-      console.error('Error calculating parking fee:', error);
-      return 0; // Fallback
+      console.error('Error checking car overlap:', error);
+      throw error;
     }
-    return data || 0;
+    return (data || []).length > 0;
+  }
+
+  async getCarReservations(carId: string | number): Promise<{start_time: string, end_time: string}[]> {
+    const { data, error } = await this.supabaseService.client
+      .from('reservations')
+      .select('start_time, end_time')
+      .eq('car_id', carId)
+      .in('status', ['pending', 'confirmed', 'checked_in', 'pending_payment']);
+
+    if (error) {
+      console.error('Error fetching car reservations:', error);
+      throw error;
+    }
+    return data || [];
+  }
+
+  // Calculate live parking fee using Supabase Edge Function
+  async getParkingFee(reservationId: string): Promise<number> {
+    const { data, error } = await this.supabaseService.client
+      .functions.invoke('calculate-parking-fee', {
+        body: { reservationId }
+      });
+
+    if (error) {
+      console.error('[ReservationService] Error calling calculate-parking-fee edge function:', error);
+      return 0;
+    }
+
+    return data?.final_net_price ?? 0;
+  }
+
+  // Apply E-Stamp discount using Supabase Edge Function
+  async applyEStamp(reservationId: string, shopId: string, discountAmount: number = 30) {
+    const { data, error } = await this.supabaseService.client
+      .functions.invoke('post_estamps', {
+        body: { 
+          reservationId, 
+          shopId, 
+          discountAmount 
+        }
+      });
+
+    if (error) {
+      console.error('[ReservationService] Error calling apply-e-stamp:', error);
+      throw error;
+    }
+
+    return data;
   }
 
   /**

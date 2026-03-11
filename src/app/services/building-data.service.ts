@@ -27,6 +27,7 @@ export class BuildingDataService {
       .select(`
         id,
         name,
+        role_prices,
         floors (
           id,
           name,
@@ -65,7 +66,8 @@ export class BuildingDataService {
         const apiBuilding: BuildingData = {
           buildingId: b.id,
           buildingName: b.name,
-          floors: mappedFloors
+          floors: mappedFloors,
+          role_prices: b.role_prices
         };
 
         return apiBuilding;

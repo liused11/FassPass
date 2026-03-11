@@ -17,7 +17,7 @@ import { SwitchMenuModalComponent } from '../components/switch-menu-modal/switch
 export class Tab3Page implements OnInit {
   selectedSegment: 'dashboard' | 'list' = 'dashboard';
 
-  userProfile: UserProfile = { name: '', phone: '', avatar: '', role: '' };
+  userProfile: UserProfile = { name: '', phone: '', avatar: '', role: 'Visitor' };
   vehicles: Vehicle[] = [];
   generalSettings = GENERAL_SETTINGS;
   otherSettings = OTHER_SETTINGS;
