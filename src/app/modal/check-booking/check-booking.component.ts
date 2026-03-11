@@ -65,6 +65,10 @@ export class CheckBookingComponent implements OnInit {
   ) { }
 
   ngOnInit() {
+    if (this.data && this.data.lotPrice !== undefined) {
+      this.hourlyRate = this.data.lotPrice;
+    }
+
     this.calculateDurationAndPrice();
     this.generatePromptPayRef();
 
@@ -288,20 +292,30 @@ export class CheckBookingComponent implements OnInit {
       const pad = (n: number) => n < 10 ? '0' + n : n;
       this.timeDisplay = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())} - ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
 
-      // --- PRICE CALCULATION BY MODE ---
-      const mode = this.data.bookingMode || 'daily';
-      if (mode === 'monthly') {
-        this.totalPrice = 2000;
-        this.durationText = 'รายเดือน (1 เดือน)';
-      } else if (mode === 'monthly_night') {
-        this.totalPrice = 1200;
-        this.durationText = 'รายเดือน (เฉพาะกลางคืน)';
-      } else if (mode === 'flat24') {
-        this.totalPrice = 250;
-        this.durationText = 'เหมาจ่าย 24 ชม.';
+      // --- PRICE MAP FROM PARENT ---
+      if (this.data && this.data.price !== undefined) {
+        this.totalPrice = this.data.price;
       } else {
-        // Daily / Hourly
-        this.totalPrice = roundedHours * this.hourlyRate;
+        const mode = this.data.bookingMode || 'daily';
+        if (mode === 'monthly') {
+          this.totalPrice = 1500;
+        } else if (mode === 'monthly_night') {
+          this.totalPrice = 1200;
+        } else if (mode === 'flat24') {
+          this.totalPrice = this.hourlyRate * 10;
+        } else {
+          this.totalPrice = Math.max(0, roundedHours * this.hourlyRate);
+        }
+      }
+
+      // --- TEXT UPDATE BY MODE ---
+      const modeText = this.data.bookingMode || 'daily';
+      if (modeText === 'monthly') {
+        this.durationText = 'รายเดือน (1 เดือน)';
+      } else if (modeText === 'monthly_night') {
+        this.durationText = 'รายเดือน (เฉพาะกลางคืน)';
+      } else if (modeText === 'flat24') {
+        this.durationText = 'เหมาจ่าย 24 ชม.';
       }
     }
   }

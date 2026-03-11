@@ -146,7 +146,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     // to guarantee we have the 'schedule' field populated.
     if (this.lot && this.lot.id) {
       const siteId = this.lot.id.split('-')[0];
-      this.parkingApiService.getSiteBuildings(siteId).subscribe(realSites => {
+      const profileId = this.reservationService.getCurrentProfileId(); // Get current user id
+      
+      this.parkingApiService.getSiteBuildings(siteId, 0, 0, profileId).subscribe(realSites => {
         if (realSites && realSites.length > 0) {
           console.log('Refreshed Site Data from RPC:', realSites);
           this.availableSites = realSites;
@@ -1267,6 +1269,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       isSpecificSlot: true,
       isRandomSystem: false,
       bookingMode: this.bookingMode,
+      lotPrice: this.lot?.price !== undefined ? this.lot.price : 20,
       price: this.calculatePrice(finalStart, finalEnd)
     };
 
@@ -1358,11 +1361,13 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   calculatePrice(start: Date, end: Date): number {
-    // Mock Pricing Logic
-    const hours = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-    if (this.bookingMode === 'monthly') return 1500;
-    if (this.bookingMode === 'flat24') return 200;
-    return hours * 20; // 20 THB/hr
+    const timeDiffRaw = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    const hours = Math.max(1, Math.ceil(timeDiffRaw));
+    const hourlyRate = this.lot?.price !== undefined ? this.lot.price : 20;
+    
+    if (this.bookingMode === 'monthly') return 1500; // Mock monthly rate
+    if (this.bookingMode === 'flat24') return hourlyRate * 10; // e.g. cap at 10 hours for flat24
+    return hours * hourlyRate;
   }
 
   // Helpers

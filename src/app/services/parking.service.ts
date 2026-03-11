@@ -18,31 +18,73 @@ export class ParkingService {
    * @param lng User's current longitude
    * @param userId Optional User ID for bookmark status
    */
-  getSiteBuildings(siteId: string, lat: number = 0, lng: number = 0, userId: string | null = null): Observable<ParkingLot[]> {
-    const rpcName = 'get_site_buildings';
-    const params = {
-      p_site_id: siteId,
-      p_lat: lat,
-      p_lng: lng,
-      p_user_id: userId
-    };
-
-    return from(
-      this.supabase.client.functions.invoke('get-parking-lots', {
+  getSiteBuildings(siteId: string, lat: number = 0, lng: number = 0, profileId: string | null = null): Observable<ParkingLot[]> {
+    return from((async () => {
+      // 1. Fetch from Edge Function
+      const response = await this.supabase.client.functions.invoke('get-parking-lots', {
         body: {
           site_id: siteId,
           lat: lat,
           lng: lng,
-          user_id: userId
+          user_id: profileId
         }
-      })
-    ).pipe(
-      map(response => {
-        if (response.error) {
-          throw response.error;
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      let lots = response.data as ParkingLot[];
+
+      // 2. Client-Side Price Override (Bypass Edge Function RLS Issue)
+      // Since Edge Function runs as ANON and RLS blocks profile fetching, 
+      // we fetch the profile here using the Client's valid Auth Token, then override the prices.
+      if (profileId) {
+        try {
+          const { data: profile } = await this.supabase.client
+            .from('profiles')
+            .select('role')
+            .eq('id', profileId)
+            .single();
+
+          if (profile && profile.role) {
+            const roleStr = String(profile.role).toLowerCase();
+            let overridePrice = 40; // Visitor Default
+
+            if (roleStr === 'user') overridePrice = 20;
+            else if (roleStr === 'host') overridePrice = 0;
+
+            lots = lots.map(lot => {
+              const roleKeyMap: { [key: string]: string } = {
+                'user': 'User',
+                'host': 'Host',
+                'visitor': 'Visitor'
+              };
+              const exactRoleKey = roleKeyMap[roleStr] || 'Visitor';
+              
+              // If Edge Function forwarded the role_prices JSON, use it, else fallback to hardcode
+              const rolePrices = (lot as any).role_prices;
+              let finalPrice = overridePrice;
+              if (rolePrices && rolePrices[exactRoleKey] !== undefined) {
+                 finalPrice = rolePrices[exactRoleKey];
+              }
+
+              lot.price = finalPrice;
+              if (finalPrice === 0) {
+                 lot.priceUnit = 'จอดฟรี';
+              } else {
+                 lot.priceUnit = 'บาท/ชม.';
+              }
+              return lot;
+            });
+          }
+        } catch (e) {
+          console.error('Failed to override price client-side', e);
         }
-        return response.data as ParkingLot[];
-      }),
+      }
+
+      return lots;
+    })()).pipe(
       catchError(err => {
         console.error('Available Edge Function Call Failed:', err);
         return of([]);

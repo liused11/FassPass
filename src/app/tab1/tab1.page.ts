@@ -115,27 +115,33 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
 
   ngOnInit() {
-    // 1. Fetch Real Data
-    this.loadRealData();
-    this.loadBuildingData();
-
-    // Subscribe to Refresh Event
-    this.uiEventService.refreshParkingData$.subscribe(() => {
-      console.log('[Tab1] 🔄 Refresh Event Received. Reloading Data...');
-      this.loadRealData();
-    });
-
-    // Subscribe to User Profile
-    this.parkingDataService.userProfile$.subscribe(p => {
-      this.userProfile = p;
-    });
-
     this.updateSheetHeightByLevel(this.sheetLevel);
 
     this.sheetToggleSub = this.uiEventService.toggleTab1Sheet$.subscribe(() => {
       requestAnimationFrame(() => {
         this.toggleSheetState();
       });
+    });
+
+    // 1. Subscribe to User Profile first
+    this.parkingDataService.userProfile$.subscribe(p => {
+      this.userProfile = p;
+    });
+
+    // 2. Wait for the Auth Profile ID to be available, then load real data
+    this.reservationService.currentProfileId$.subscribe(id => {
+      if (id) {
+        // Fetch Real Data with the updated profile ID
+        this.loadBuildingData();
+        this.loadRealData();
+        this.loadActiveReservation();
+      }
+    });
+
+    // Subscribe to Refresh Event
+    this.uiEventService.refreshParkingData$.subscribe(() => {
+      console.log('[Tab1] 🔄 Refresh Event Received. Reloading Data...');
+      this.loadRealData();
     });
 
     this.timeCheckSub = interval(60000).subscribe(() => {
@@ -153,8 +159,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       this.isSearching = false;
     });
 
-    // Check Active Reservation
-    this.loadActiveReservation();
+
   }
 
   async loadActiveReservation() {
@@ -227,7 +232,8 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   loadRealData() {
     console.log('[Tab1] 1. Requesting Real Data API...');
-    this.parkingApiService.getSiteBuildings('1')
+    const profileId = this.reservationService.getCurrentProfileId() || this.userProfile?.id || null;
+    this.parkingApiService.getSiteBuildings('1', 0, 0, profileId)
       .pipe(
         timeout(3000),
         catchError(err => {
