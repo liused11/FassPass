@@ -258,7 +258,7 @@ export class ParkingDataService {
 
         try {
             // Call the Edge Function instead of doing client-side insert
-            const { data, error } = await this.supabaseService.client.functions.invoke('add-vehicle', {
+            const { data, error } = await this.supabaseService.client.functions.invoke('add-vehicle-v2', {
                 body: { vehicle: payload },
             });
 
