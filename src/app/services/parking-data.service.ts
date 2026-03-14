@@ -301,50 +301,46 @@ export class ParkingDataService {
     }
 
     async updateVehicle(updatedVehicle: Vehicle) {
+        console.log('[ParkingDataService] Updating vehicle back to DB:', updatedVehicle);
 
-        const currentVehicles = this.vehiclesSubject.value;
+        const updateData = {
+            model: updatedVehicle.model,
+            license_plate: updatedVehicle.licensePlate,
+            province: updatedVehicle.province,
+            color: updatedVehicle.color,
+            image: updatedVehicle.image,
+            is_default: updatedVehicle.isDefault,
+            // status removed - not in DB
+            updated_at: new Date().toISOString() // Set current time for updated_at
+        };
 
-        try {
+        const { data, error } = await this.supabaseService.client
+            .from('cars')
+            .update(updateData)
+            .eq('id', updatedVehicle.id)
+            .select()
+            .single();
 
-            const { data, error } = await this.supabaseService.client.functions.invoke(
-                'update-vehicle-v2',
-                {
-                    body: { vehicle: updatedVehicle }
-                }
-            );
-
-            if (error) {
-                console.error('[ParkingDataService] Edge function returned error:', error);
-                throw error;
-            }
-
-            if (!data) {
-                throw new Error('No vehicle returned from server');
-            }
-
-            const updatedVehicleModel: Vehicle = {
-                id: data.id,
-                model: data.model,
-                licensePlate: data.license_plate,
-                province: data.province,
-                color: data.color,
-                image: data.image,
-                isDefault: data.is_default,
-                status: 'active',
-                lastUpdate: this.formatThaiDateTime(data.updated_at)
-            };
-
-            const updated = currentVehicles.map(v =>
-                v.id === data.id ? updatedVehicleModel : v
-            );
-
-            this.vehiclesSubject.next([...updated]);
-
-            return updatedVehicleModel;
-
-        } catch (error) {
+        if (error) {
             console.error('[ParkingDataService] Error updating vehicle:', error);
             throw error;
+        }
+
+        console.log('[ParkingDataService] Vehicle updated successfully in DB:', data);
+
+        // Update successful, reflect the new time locally
+        if (data) {
+            const currentVehicles = this.vehiclesSubject.value;
+            const updated = currentVehicles.map(v => {
+                if (v.id === updatedVehicle.id) {
+                    return {
+                        ...updatedVehicle,
+                        lastUpdate: this.formatThaiDateTime(data.updated_at)
+                    };
+                }
+                return v;
+            });
+            this.vehiclesSubject.next(updated);
         }
     }
 
