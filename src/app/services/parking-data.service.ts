@@ -410,10 +410,13 @@ export class ParkingDataService {
 
     async deleteVehicle(id: number | string) {
         try {
-            const { error } = await this.supabaseService.client
-                .from('cars')
-                .update({ is_active: false, updated_at: new Date().toISOString() })
-                .eq('id', id);
+            const { data, error } = await this.supabaseService.client.functions.invoke(
+                'delete-vehicle',
+                {
+                body: { vehicleId: id }
+                }
+            );
+
 
             if (error) {
                 console.error('[ParkingDataService] Error deleting vehicle from DB:', error);
