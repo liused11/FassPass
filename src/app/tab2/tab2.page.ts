@@ -440,7 +440,7 @@ export class Tab2Page implements OnInit, OnDestroy {
     if (role === 'confirm' && data) {
       if (data.action === 'cancel') {
         try {
-          await this.reservationService.updateReservationStatus(item.id, 'cancelled');
+          await this.reservationService.updateReservationStatusv2(item.id, 'cancelled');
           const toast = await this.toastCtrl.create({
             message: 'ยกเลิกการจองสำเร็จ',
             duration: 2000,
@@ -454,7 +454,7 @@ export class Tab2Page implements OnInit, OnDestroy {
         }
       } else if (data.action === 'checkout') {
         try {
-          await this.reservationService.updateReservationStatus(item.id, 'confirmed');
+          await this.reservationService.updateReservationStatusv2(item.id, 'confirmed');
           const toast = await this.toastCtrl.create({
             message: `ยืนยันสถานะสำเร็จ`,
             duration: 3000,

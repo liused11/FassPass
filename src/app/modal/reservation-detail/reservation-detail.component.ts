@@ -273,7 +273,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     async handleSimulateCheckIn() {
         try {
-            await this.reservationService.updateReservationStatus(this.booking.id, 'checked_in');
+            await this.reservationService.updateReservationStatusv2(this.booking.id, 'checked_in');
             this.internalStatus = 'checked_in';
             this.booking.status = 'checked_in';
             this.updateStaticData();
@@ -295,7 +295,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
     async handleCheckoutConfirm() {
         try {
             // FIX: Send 'confirmed' to database instead of 'completed' as requested in earlier turns
-            await this.reservationService.updateReservationStatus(this.booking.id, 'confirmed');
+            await this.reservationService.updateReservationStatusv2(this.booking.id, 'confirmed');
             this.internalStatus = 'confirmed';
             this.booking.status = 'confirmed';
             this.updateStaticData();
@@ -315,7 +315,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     async handlePay() {
         try {
-            await this.reservationService.updateReservationStatus(this.booking.id, 'pending');
+            await this.reservationService.updateReservationStatusv2(this.booking.id, 'pending');
             this.internalStatus = 'pending';
             this.booking.status = 'pending';
             this.updateStaticData();
@@ -368,7 +368,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     async handleCheckInPendingPayment() {
         try {
-            await this.reservationService.updateReservationStatus(this.booking.id, 'checked_in_pending_payment');
+            await this.reservationService.updateReservationStatusv2(this.booking.id, 'checked_in_pending_payment');
             this.internalStatus = 'checked_in_pending_payment';
             this.booking.status = 'checked_in_pending_payment';
             this.updateStaticData();

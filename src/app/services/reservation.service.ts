@@ -131,6 +131,23 @@ export class ReservationService {
     }
     return data;
   }
+  async updateReservationStatusv2(reservationId: string, status: string) {
+    const { data, error } = await this.supabaseService.client.functions.invoke(
+      'update-reservation-status',
+      {
+        body: {
+          reservationId: reservationId,
+          status: status
+        }
+      }
+    );
+
+    if (error) {
+      console.error('Error updating reservation status:', error);
+      throw error;
+    }
+    return data;
+  }
 
   async checkCarOverlap(carId: string | number, start: Date, end: Date): Promise<boolean> {
     const { data, error } = await this.supabaseService.client
