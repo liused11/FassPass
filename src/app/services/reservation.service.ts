@@ -79,6 +79,36 @@ export class ReservationService {
     }
     return data;
   }
+  async createReservationv2(booking: Booking, profileId: string, siteId: string, floorId: string, slotId: string) {
+    const { data, error } = await this.supabaseService.client.functions.invoke(
+      'create-reservation',
+      {
+        body: {
+          reservation: {
+            profileId: profileId,
+            siteId: siteId,
+            floorId: floorId,
+            slotId: slotId,
+            startTime: booking.bookingTime.toISOString(),
+            endTime: booking.endTime.toISOString(),
+            status: booking.status || 'pending',
+            vehicleType: 'car',
+            carId: booking.carId,
+            carPlate: booking.licensePlate,
+            bookingType: this.mapBookingTypeToEnum(booking.bookingType)
+          }
+        }
+      }
+    )
+
+    if (error) {
+      if (error.code === '23P01' || error.message.includes('Double Booking')) {
+        throw new Error('This slot is already booked. Please choose another.');
+      }
+      throw error;
+    }
+    return data;
+  }
   async getReservations() {
     const { data, error } = await this.supabaseService.client
       .from('reservations')
