@@ -94,8 +94,9 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
                 this.circleLabelText = 'เวลาที่ผ่านไป';
                 break;
             case 'confirmed':
-                this.statusLabel = 'จองสำเร็จ รอเข้าจอด';
-                this.circleLabelText = 'สามารถเข้าจอดได้ใน';
+                this.statusLabel = 'เสร็จสิ้น';
+                this.circleLabelText = 'เวลาจอดรวม';
+                this.progressOffset = 0; // เต็มวง
                 break;
             case 'pending':
                 this.statusLabel = 'กำลังตรวจสอบรายการ';
@@ -135,7 +136,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     startTimer() {
         this.updateTime();
-        if (['active', 'checked_in', 'confirmed', 'checked_in_pending_payment'].includes(this.internalStatus)) {
+        if (['active', 'checked_in', 'checked_in_pending_payment'].includes(this.internalStatus)) {
             this.timer = setInterval(() => {
                 this.updateTime();
             }, 1000);
@@ -166,7 +167,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
                 this.circleMainValue = "00:00:00";
             }
             this.progressOffset = 578;
-        } else if (this.internalStatus === 'completed' || this.internalStatus === 'checked_out') {
+        } else if (this.internalStatus === 'completed' || this.internalStatus === 'checked_out' || this.internalStatus === 'confirmed') {
             const elapsed = end - start;
             this.circleMainValue = this.formatTime(elapsed > 0 ? elapsed : 0);
             this.progressOffset = 0;
@@ -191,7 +192,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
         switch (this.internalStatus) {
             case 'active':
             case 'checked_in': return 'bg-blue-500';
-            case 'confirmed': return 'bg-[#1a73e8]';
+            case 'confirmed': return 'bg-green-500';
             case 'pending': return 'bg-amber-500';
             case 'pending_payment': 
             case 'checked_in_pending_payment': return 'bg-orange-500';
@@ -206,7 +207,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
         switch (this.internalStatus) {
             case 'active':
             case 'checked_in': return 'text-blue-500';
-            case 'confirmed': return 'text-[#1a73e8]';
+            case 'confirmed': return 'text-green-500';
             case 'pending': return 'text-amber-500';
             case 'pending_payment': 
             case 'checked_in_pending_payment': return 'text-orange-500';
@@ -221,7 +222,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
         switch (this.internalStatus) {
             case 'active':
             case 'checked_in': return '#3b82f6';
-            case 'confirmed': return '#1a73e8';
+            case 'confirmed': return '#22c55e';
             case 'pending': return '#f59e0b';
             case 'pending_payment': 
             case 'checked_in_pending_payment': return '#f97316';
