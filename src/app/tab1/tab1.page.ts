@@ -399,11 +399,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       setTimeout(() => {
         this.bottomSheetService.open(
           'access-list',
-          {
-            room_id: accessData?.room_id,
-            floor: accessData?.floor,
-            building_id: buildingId
-          },
+          undefined,
           'สิทธิ์เข้าอาคารของคุณ',
           'peek'
         );
