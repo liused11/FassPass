@@ -14,6 +14,7 @@ import { SupabaseService } from '../../services/supabase.service';
 export class InviteVisitorModalComponent implements OnInit {
   selectedFloor: number | null = null;
   selectedRoom: string = '';
+  availableRooms: any[] = [];
   visitorCount: number = 1;
   passType: string = '1-day';
   startDate: string = new Date().toISOString();
@@ -28,6 +29,41 @@ export class InviteVisitorModalComponent implements OnInit {
   constructor(private modalCtrl: ModalController, private supabase: SupabaseService) {}
 
   ngOnInit() { this.updateExpiry(); }
+
+  async onFloorChange() {
+    this.selectedRoom = '';
+    this.availableRooms = [];
+    if (!this.selectedFloor) return;
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('floors')
+        .select('layout_data')
+        .eq('building_id', 'E12')
+        .eq('level_order', this.selectedFloor)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data?.layout_data?.zones) {
+        const rooms: any[] = [];
+        data.layout_data.zones.forEach((zone: any) => {
+          if (zone.rooms) {
+            zone.rooms.forEach((room: any) => rooms.push(room));
+          }
+        });
+        this.availableRooms = rooms;
+      } else {
+        console.warn('ไม่พบข้อมูลห้องในชั้นนี้');
+      }
+    } catch (err) {
+      console.error('Error fetching rooms:', err);
+    }
+  }
+
+  getRoomAccessId(room: any): string {
+    return room?.doors?.[0]?.id || room?.id || '';
+  }
 
   updateExpiry() {
     const start = new Date(this.startDate);
@@ -44,15 +80,18 @@ export class InviteVisitorModalComponent implements OnInit {
     this.isLoading = true;
     this.generatedCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
+    const { data: user } = await this.supabase.client.auth.getUser();
+
     const ticketData = {
       invite_code: this.generatedCode,
-      building_id: 'building-12',
+      building_id: 'E12',
       floor: this.selectedFloor,
       room_id: this.selectedRoom,
       max_usage: this.visitorCount,
       pass_type: this.passType,
       valid_from: this.startDate,
       expires_at: this.expiryDate,
+      host_id: user.user?.id,
     };
 
     try {

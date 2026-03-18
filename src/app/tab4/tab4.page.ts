@@ -32,6 +32,9 @@ export class Tab4Page implements OnInit {
       // Auto-select floor if provided via queryParams
       if (floorParam) {
         this.selectedFloor = parseInt(floorParam, 10);
+      } else {
+        this.selectedFloor = null;
+        this.selectedFloorData = null;
       }
 
       this.loadBuilding(bId);

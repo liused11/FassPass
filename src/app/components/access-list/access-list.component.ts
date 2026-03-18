@@ -1,6 +1,7 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable, map, startWith } from 'rxjs';
+import { Router } from '@angular/router';
 import { 
   IonList, 
   IonItem, 
@@ -8,10 +9,10 @@ import {
   IonIcon, 
   IonBadge, 
   IonNote,
-  IonListHeader
+  IonButton
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { lockClosedOutline, locationOutline, checkmarkCircle, closeCircle, chevronForwardOutline } from 'ionicons/icons';
+import { lockClosedOutline, locationOutline, checkmarkCircle, closeCircle, chevronForwardOutline, arrowForwardOutline } from 'ionicons/icons';
 
 import { FloorplanInteractionService } from '../../services/floorplan/floorplan-interaction.service';
 import { FloorplanBuilderService } from '../../services/floorplan/floorplan-builder.service';
@@ -44,21 +45,25 @@ interface RoomAccessSummary {
     IonLabel,
     IonIcon,
     IonBadge,
-    IonNote
+    IonNote,
+    IonButton
 ],
   templateUrl: './access-list.component.html',
   styleUrls: ['./access-list.component.css']
 })
 export class AccessListComponent implements OnInit {
+  @Input() accessData: any;
+
   // เปลี่ยนชื่อ instance ให้สอดคล้องกับการใช้งานใหม่
   private interaction = inject(FloorplanInteractionService);
   private builder = inject(FloorplanBuilderService);
   private bottomSheet = inject(BottomSheetService);
+  private router = inject(Router);
 
   public accessibleRooms$!: Observable<RoomAccessSummary[]>;
 
   constructor() {
-    addIcons({lockClosedOutline,chevronForwardOutline,locationOutline,checkmarkCircle,closeCircle});
+    addIcons({arrowForwardOutline,lockClosedOutline,chevronForwardOutline,locationOutline,checkmarkCircle,closeCircle});
   }
 
   ngOnInit(): void {
@@ -84,6 +89,20 @@ export class AccessListComponent implements OnInit {
     this.interaction.focusOnAsset(room.id, false);
     // 2. เปิด Bottom Sheet: Room Detail
     this.bottomSheet.showRoomDetail(room);
+  }
+
+  jumpToFloor() {
+    const floor = this.accessData?.floor;
+    if (!floor) return;
+
+    this.bottomSheet.close();
+
+    this.router.navigate(['/tabs/tab4'], {
+      queryParams: {
+        buildingId: this.accessData?.building_id || 'E12',
+        floor
+      }
+    });
   }
 
   // [เพิ่ม] แยก "ห้อง" ออกจากชื่อห้อง

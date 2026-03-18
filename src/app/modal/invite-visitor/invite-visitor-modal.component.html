@@ -17,12 +17,14 @@
       <h3 class="text-sm font-bold text-gray-500 mb-2">1. สถานที่ติดต่อ</h3>
       <div class="flex gap-2">
         <ion-item lines="none" class="flex-1 rounded-lg border border-gray-200">
-          <ion-select [(ngModel)]="selectedFloor" placeholder="ชั้น">
+          <ion-select [(ngModel)]="selectedFloor" placeholder="ชั้น" (ionChange)="onFloorChange()">
             <ion-select-option *ngFor="let f of floors" [value]="f">ชั้น {{ f }}</ion-select-option>
           </ion-select>
         </ion-item>
         <ion-item lines="none" class="flex-1 rounded-lg border border-gray-200">
-          <ion-input [(ngModel)]="selectedRoom" placeholder="ห้อง (เช่น 1201)"></ion-input>
+          <ion-select [(ngModel)]="selectedRoom" placeholder="เลือกห้อง" [disabled]="availableRooms.length === 0">
+            <ion-select-option *ngFor="let room of availableRooms" [value]="getRoomAccessId(room)">{{ room.name }}</ion-select-option>
+          </ion-select>
         </ion-item>
       </div>
     </div>

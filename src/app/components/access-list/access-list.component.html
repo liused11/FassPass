@@ -1,4 +1,20 @@
-<div class="access-list-container">
+<div class="p-4" *ngIf="accessData?.floor" (click)="jumpToFloor()">
+  <div class="bg-white rounded-xl shadow-sm border border-green-200 p-4 relative cursor-pointer active:scale-95 transition-transform">
+    <div class="absolute left-0 top-0 bottom-0 w-2 bg-green-500"></div>
+    <div class="pl-4 flex justify-between items-center">
+      <div>
+        <h3 class="font-bold text-gray-800">อาคาร 12 ชั้น</h3>
+        <p class="text-sm text-gray-500">ชั้น {{ accessData?.floor }} • สิทธิ์เข้าถึง</p>
+      </div>
+
+      <ion-button fill="clear" color="primary">
+        เปิดแผนที่ <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+</div>
+
+<div class="access-list-container" *ngIf="!accessData?.floor">
   <div class="list-header ion-padding-horizontal ion-padding-top ion-padding-bottom">
     <div class="header-row">
       <h3>พื้นที่ที่เข้าถึงได้</h3>
