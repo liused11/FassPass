@@ -225,7 +225,32 @@ export class AuthService {
       throw err; // Throw the error so the component can show a toast
     }
   }
+  async updateProfilev2(userId: string, updateData: any) {
+    try {
+      // เรียกใช้ Edge Function ตามมาตรฐานใหม่
+      const { data, error } = await this.supabase.functions.invoke(
+        'update-profile',
+        {
+          body: {
+            userId: userId,
+            updateData: updateData
+          }
+        }
+      );
 
+      if (error) throw error;
+
+      // อัปเดต UI ทันที
+      if (data) {
+        this.userProfileSubject.next(data);
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('Update Profile Error:', err);
+      throw err;
+    }
+  }
   async changeRichMenu(userId: string, newRole: string) {
     const { data, error } = await this.supabase.functions.invoke('switch-menu', {
       body: { userId, role: newRole }

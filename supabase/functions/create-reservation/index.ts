@@ -111,7 +111,7 @@ serve(async (req) => {
         p_start_time: reservation.startTime,
         p_end_time: reservation.endTime,
 
-        p_status: reservation.status ?? 'pending',
+        p_reserve_status: reservation.status ?? 'pending',
 
         p_vehicle_type: vehicleType,
         p_car_id: reservation.carId ?? null,

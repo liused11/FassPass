@@ -58,7 +58,7 @@ export class EditProfileModalComponent implements OnInit {
       if (!user) throw new Error('ผู้ใช้งานไม่ได้เข้าสู่ระบบ');
 
       // Note: We use user.id because the auth user ID is identical to the profile ID
-      await this.authService.updateProfile(user.id, updateData);
+      await this.authService.updateProfilev2(user.id, updateData);
 
       await this.showToast('บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
       this.modalCtrl.dismiss(updateData, 'confirm');
