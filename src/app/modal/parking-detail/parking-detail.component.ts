@@ -1534,20 +1534,27 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     let errorMessage = 'ไม่สามารถดำเนินการจองได้ กรุณาลองใหม่อีกครั้ง';
     let errorButtons: any[] = ['ตกลง'];
 
+    // Extract clean message (remove error code prefix like "USER_BLACKLISTED: ...")
+    const rawMessage: string = error.message || '';
+    const cleanMessage = rawMessage.includes(':') ? rawMessage.substring(rawMessage.indexOf(':') + 1).trim() : rawMessage;
+
     // Determine error type and customize message
-    if (error.message && error.message.includes('already booked')) {
+    if (rawMessage.includes('USER_BLACKLISTED')) {
+      errorTitle = 'ไม่สามารถจองได้';
+      errorMessage = cleanMessage || 'คุณถูกระงับการใช้งานการจอง กรุณาติดต่อเจ้าหน้าที่';
+    } else if (rawMessage.includes('SLOT_NOT_AVAILABLE') || rawMessage.includes('already booked')) {
       errorTitle = 'ช่องจอดเต็มแล้ว';
-      errorMessage = 'ขออภัย ช่องจอดนี้เพิ่งมีผู้จองไปแล้ว กรุณาเลือกช่องจอดอื่นหรือเวลาอื่น';
+      errorMessage = cleanMessage || 'ขออภัย ช่องจอดนี้เพิ่งมีผู้จองไปแล้ว กรุณาเลือกช่องจอดอื่นหรือเวลาอื่น';
       errorButtons = [
         {
           text: 'เลือกใหม่',
           role: 'cancel'
         }
       ];
-    } else if (error.code === '23P01' || error.message?.includes('Double Booking')) {
+    } else if (error.code === '23P01' || rawMessage.includes('Double Booking') || rawMessage.includes('DOUBLE_BOOKING')) {
       errorTitle = 'มีการจองซ้ำ';
-      errorMessage = 'มีการจองช่องนี้ในเวลาที่ทับซ้อนกันแล้ว กรุณาเลือกช่องใหม่';
-    } else if (error.message?.includes('network') || error.message?.includes('fetch') || error.status === 0) {
+      errorMessage = cleanMessage || 'มีการจองช่องนี้ในเวลาที่ทับซ้อนกันแล้ว กรุณาเลือกช่องใหม่';
+    } else if (rawMessage.includes('network') || rawMessage.includes('fetch') || error.status === 0) {
       errorTitle = 'ไม่สามารถเชื่อมต่อได้';
       errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง';
       errorButtons = [
@@ -1556,8 +1563,8 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           role: 'cancel'
         }
       ];
-    } else if (error.message) {
-      errorMessage = error.message;
+    } else if (rawMessage && !rawMessage.includes('non-2xx status code')) {
+      errorMessage = rawMessage;
     }
 
     const alert = await this.alertCtrl.create({

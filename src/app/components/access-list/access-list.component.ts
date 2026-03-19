@@ -1,14 +1,13 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Observable, map, startWith } from 'rxjs';
-import { 
-  IonList, 
-  IonItem, 
-  IonLabel, 
-  IonIcon, 
-  IonBadge, 
-  IonNote,
-  IonListHeader
+import {
+  IonList,
+  IonItem,
+  IonLabel,
+  IonIcon,
+  IonBadge,
+  IonNote
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { lockClosedOutline, locationOutline, checkmarkCircle, closeCircle, chevronForwardOutline } from 'ionicons/icons';
@@ -45,7 +44,7 @@ interface RoomAccessSummary {
     IonIcon,
     IonBadge,
     IonNote
-],
+  ],
   templateUrl: './access-list.component.html',
   styleUrls: ['./access-list.component.css']
 })
@@ -55,7 +54,7 @@ export class AccessListComponent implements OnInit {
   private builder = inject(FloorplanBuilderService);
   private bottomSheet = inject(BottomSheetService);
 
-  public accessibleRooms$!: Observable<RoomAccessSummary[]>;
+  public accessibleRooms$!: Observable<{ floor: number; rooms: RoomAccessSummary[] }[]>;
 
   constructor() {
     addIcons({lockClosedOutline,chevronForwardOutline,locationOutline,checkmarkCircle,closeCircle});
@@ -64,7 +63,7 @@ export class AccessListComponent implements OnInit {
   ngOnInit(): void {
     this.accessibleRooms$ = this.interaction.permissionList$.pipe(
       startWith([]),
-      map(assetIds => this.buildRoomSummaries(assetIds))
+      map(assetIds => this.buildRoomsByFloor(assetIds))
     );
   }
 
@@ -100,6 +99,60 @@ export class AccessListComponent implements OnInit {
     };
   }
 
+  private buildRoomsByFloor(allowList: string[]): { floor: number; rooms: RoomAccessSummary[] }[] {
+    const floorData = this.interaction.getCurrentFloorData();
+    if (!floorData?.zones) {
+      return [];
+    }
+    const allowedSet = new Set((allowList || []).filter(Boolean));
+    const floorMap = new Map<number, RoomAccessSummary[]>();
+
+    floorData.zones.forEach((zone: any) => {
+      zone.rooms?.forEach((room: any) => {
+        const doorStatuses: DoorStatus[] = (room.doors || []).map((door: any) => ({
+          id: door.id,
+          label: door.name ?? 'ประตู',
+          allowed: allowedSet.has(door.id) || allowedSet.has(room.id)
+        }));
+
+        const anyAllowed = allowedSet.has(room.id) || doorStatuses.some(d => d.allowed);
+        
+        // 🟢 Filter: insert only if user has access
+        if (!anyAllowed) return;
+        
+        const badgeColor = this.builder.getAssignedRoomColor(room.id) ?? room.color ?? '#94a3b8';
+        const roomSummary: RoomAccessSummary = {
+          id: room.id,
+          name: room.name ?? room.id,
+          floor: floorData.floor,
+          zoneName: zone.name,
+          color: badgeColor,
+          doors: doorStatuses,
+          boundary: room.boundary,
+          center: room.center
+        };
+        
+        if (!floorMap.has(floorData.floor)) {
+          floorMap.set(floorData.floor, []);
+        }
+        floorMap.get(floorData.floor)!.push(roomSummary);
+      });
+    });
+
+    // Sort rooms within each floor by name, then return sorted by floor
+    const result: { floor: number; rooms: RoomAccessSummary[] }[] = [];
+    Array.from(floorMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .forEach(([floor, rooms]) => {
+        result.push({
+          floor,
+          rooms: rooms.sort((a, b) => a.name.localeCompare(b.name, 'th'))
+        });
+      });
+
+    return result;
+  }
+
   private buildRoomSummaries(allowList: string[]): RoomAccessSummary[] {
     const floorData = this.interaction.getCurrentFloorData();
     if (!floorData?.zones) {
@@ -125,7 +178,7 @@ export class AccessListComponent implements OnInit {
           name: room.name ?? room.id,
           floor: floorData.floor,
           zoneName: zone.name,
-          color: anyAllowed ? badgeColor : this.fadeColor(badgeColor),
+          color: badgeColor,
           doors: doorStatuses,
           boundary: room.boundary,
           center: room.center

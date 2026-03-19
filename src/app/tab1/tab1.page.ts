@@ -28,6 +28,7 @@ import { ParkingDataService } from '../services/parking-data.service';
 import { ParkingService } from '../services/parking.service';
 import { BookmarkService } from '../services/bookmark.service';
 import { ReservationService } from '../services/reservation.service';
+import { BottomSheetService } from '../services/bottom-sheet.service';
 
 import buildingFloorData from '../components/floor-plan/e12-floor1.json';
 
@@ -108,6 +109,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private supabaseService: SupabaseService, // Inject Supabase for Realtime
     private reservationService: ReservationService, // ✅ Inject Reservation Service
     private router: Router, // ✅ Inject Router
+    private bottomSheetService: BottomSheetService,
     private bookmarkService: BookmarkService, // ✅ Inject Bookmark Service
     @Inject(PLATFORM_ID) private platformId: Object,
     private ngZone: NgZone // Inject NgZone for performance optimization
@@ -371,7 +373,37 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     const { data, role } = await modal.onDidDismiss();
     if (role === 'confirm' && data) {
-      console.log('Invite code submitted:', data.code);
+      let accessData: any = null;
+
+      try {
+        const { data: ticketData, error } = await this.supabaseService.client
+          .from('access_tickets')
+          .select('building_id, floor, room_id')
+          .eq('invite_code', data.code)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) throw error;
+        accessData = ticketData;
+      } catch (err) {
+        console.error('Failed to fetch access ticket detail:', err);
+      }
+
+      const buildingId = accessData?.building_id || 'E12';
+
+      this.router.navigate(['/tabs/tab4'], {
+        queryParams: { buildingId }
+      });
+
+      setTimeout(() => {
+        this.bottomSheetService.open(
+          'access-list',
+          undefined,
+          'สิทธิ์เข้าอาคารของคุณ',
+          'peek'
+        );
+      }, 400);
     }
   }
 

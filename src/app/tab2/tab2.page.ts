@@ -146,7 +146,7 @@ export class Tab2Page implements OnInit, OnDestroy {
               break;
             case 'confirmed':
               status = 'confirmed';
-              statusLabel = 'จองแล้ว';
+              statusLabel = 'เสร็จสิ้น';
               break;
             case 'checked_in':
             case 'active':
@@ -332,11 +332,11 @@ export class Tab2Page implements OnInit, OnDestroy {
     let filtered = this.allBookings.filter(b => {
       let statusMatch = false;
       if (this.selectedStatusSegment === 'in_progress') {
-        statusMatch = ['active', 'confirmed', 'pending_payment', 'pending', 'checked_in_pending_payment'].includes(b.status);
+        statusMatch = ['active', 'pending_payment', 'pending', 'checked_in_pending_payment'].includes(b.status);
       } else if (this.selectedStatusSegment === 'cancelled') {
         statusMatch = b.status === 'cancelled';
       } else {
-        statusMatch = b.status === 'completed';
+        statusMatch = b.status === 'completed' || b.status === 'confirmed';
       }
 
       let monthMatch = true;

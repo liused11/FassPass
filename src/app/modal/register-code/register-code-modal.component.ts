@@ -42,6 +42,23 @@ export class RegisterCodeModalComponent {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.message || 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว');
 
+      // ดึง room_id (door_id) จากตาราง access_tickets
+      const { data: ticketData, error: ticketError } = await this.supabase.client
+        .from('access_tickets')
+        .select('room_id, expires_at')
+        .eq('invite_code', this.inviteCode)
+        .maybeSingle();
+
+      if (!ticketError && ticketData?.room_id) {
+        // บันทึก user_door_access เพื่อให้ access-list ดึงได้
+        await this.supabase.client.from('user_door_access').insert({
+          profile_id: visitorId,
+          door_id: ticketData.room_id,
+          is_granted: true,
+          valid_until: ticketData.expires_at
+        });
+      }
+
       const toast = await this.toastCtrl.create({
         message: 'ได้รับบัตรผ่านเข้าอาคารเรียบร้อยแล้ว!',
         duration: 3000,

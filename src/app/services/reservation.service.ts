@@ -105,6 +105,23 @@ export class ReservationService {
       if (error.code === '23P01' || error.message.includes('Double Booking')) {
         throw new Error('This slot is already booked. Please choose another.');
       }
+
+      // Try to extract the actual error message from Edge Function response body
+      if (error.message && error.message.includes('non-2xx status code') && (error as any).context) {
+        try {
+          const responseBody = await (error as any).context.json();
+          if (responseBody && responseBody.error) {
+            throw new Error(responseBody.error);
+          }
+        } catch (parseErr: any) {
+          // If the error is already the re-thrown Error from above, re-throw it
+          if (parseErr instanceof Error && parseErr.message !== error.message) {
+            throw parseErr;
+          }
+          // Otherwise fall through to throw original error
+        }
+      }
+
       throw error;
     }
     return data;

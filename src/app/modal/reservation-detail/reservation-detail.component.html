@@ -35,7 +35,8 @@
             </svg>
 
             <!-- ข้อความแกนกลางวงกลม -->
-            <div class="text-center z-10" *ngIf="internalStatus !== 'pending' && internalStatus !== 'cancelled'">
+            <div class="text-center z-10"
+                *ngIf="internalStatus !== 'pending' && internalStatus !== 'cancelled'">
                 <div class="text-[13px] text-gray-500 font-bold mb-1">{{ circleLabelText }}</div>
                 <div class="text-[38px] font-light tracking-tight" [ngClass]="getTextColor()">
                     {{ circleMainValue }}
@@ -138,16 +139,12 @@
                     </ion-button>
                 </ng-container>
 
-                <!-- ถ้าเป็น confirmed (จองแล้ว) -->
+                <!-- ถ้าเป็น confirmed (เสร็จสิ้น) -->
                 <ng-container *ngSwitchCase="'confirmed'">
-                    <ion-button expand="block" shape="round" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="openMap()">
-                        <ion-icon slot="start" name="navigate-outline"></ion-icon>
-                        นำทาง (Google Maps)
-                    </ion-button>
-                    <ion-button expand="block" fill="clear" color="danger" class="h-[50px] font-bold text-[14px]"
-                        (click)="handleCancel()">
-                        ยกเลิกการจอง
+                    <ion-button expand="block" shape="round" color="medium"
+                        class="h-[50px] font-bold text-[15px] shadow-sm opacity-80" (click)="dismiss()">
+                        <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
+                        ปิดหน้าต่าง
                     </ion-button>
                 </ng-container>
 

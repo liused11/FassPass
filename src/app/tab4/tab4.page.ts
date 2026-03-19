@@ -4,6 +4,7 @@ import { BuildingData } from '../data/models';
 import { BuildingDataService } from '../services/building-data.service';
 import { AccessControlService } from '../services/access-control.service';
 import { FloorplanInteractionService } from '../services/floorplan/floorplan-interaction.service';
+import { BottomSheetService } from '../services/bottom-sheet.service';
 
 @Component({
   selector: 'app-tab4',
@@ -21,7 +22,8 @@ export class Tab4Page implements OnInit {
     private buildingService: BuildingDataService,
     private route: ActivatedRoute,
     private accessControl: AccessControlService,
-    private interaction: FloorplanInteractionService
+    private interaction: FloorplanInteractionService,
+    private bottomSheetService: BottomSheetService
   ) { }
 
   ngOnInit() {
@@ -32,10 +34,23 @@ export class Tab4Page implements OnInit {
       // Auto-select floor if provided via queryParams
       if (floorParam) {
         this.selectedFloor = parseInt(floorParam, 10);
+      } else {
+        this.selectedFloor = null;
+        this.selectedFloorData = null;
       }
 
       this.loadBuilding(bId);
       this.loadDoorPermissions();
+
+      // 🟢 Open access-list automatically after permissions load
+      setTimeout(() => {
+        this.bottomSheetService.open(
+          'access-list',
+          undefined,
+          'สิทธิ์เข้าอาคารของคุณ',
+          'peek'
+        );
+      }, 300);
     });
   }
 
@@ -66,6 +81,8 @@ export class Tab4Page implements OnInit {
     if (floor) {
       this.selectedFloor = numFloor;
       this.selectedFloorData = floor;
+      // 🟢 Refresh permission when floor changes
+      this.loadDoorPermissions();
     } else {
       console.warn(`Floor ${floorNumber} not found in building data.`, this.buildingData.floors);
     }
