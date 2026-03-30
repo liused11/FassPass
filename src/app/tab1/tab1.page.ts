@@ -401,6 +401,13 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     const { data, role } = await modal.onDidDismiss();
     if (role === 'confirm' && data) {
+      // ✅ Handle Parking Invite Code
+      if (data.type === 'parking') {
+        this.router.navigate(['/tabs/tab2']);
+        return;
+      }
+
+      // 🏢 Handle Building Access Code
       let accessData: any = null;
 
       try {
