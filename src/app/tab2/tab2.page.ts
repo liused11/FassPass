@@ -62,7 +62,7 @@ export class Tab2Page implements OnInit, OnDestroy {
     private modalCtrl: ModalController,
     private toastCtrl: ToastController
   ) { }
-
+  //d
   ngOnInit() {
     this.parkingService.bookings$.subscribe(bookings => {
       this.allBookings = bookings;
