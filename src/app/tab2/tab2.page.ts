@@ -140,6 +140,10 @@ export class Tab2Page implements OnInit, OnDestroy {
               status = 'pending_payment';
               statusLabel = 'รอชำระเงิน';
               break;
+            case 'pending_invite':
+              status = 'pending_invite';
+              statusLabel = 'รอเข้าใช้งาน (ส่งคำเชิญแล้ว)';
+              break;
             case 'checked_in_pending_payment':
               status = 'checked_in_pending_payment';
               statusLabel = 'กำลังจอด (รอชำระเงิน)';
@@ -229,8 +233,8 @@ export class Tab2Page implements OnInit, OnDestroy {
             status: status,
             statusLabel: statusLabel,
             price: r.total_amount || 0,
-            carBrand: r.cars?.model || 'ไม่ระบุ',
-            licensePlate: r.car_plate ? `${r.car_plate}${r.cars?.province ? ' ' + r.cars.province : ''}` : 'ไม่ระบุทะเบียน',
+            carBrand: r.car_plate?.startsWith('PRK-') ? 'รอข้อมูล' : (r.cars?.model || 'ไม่ระบุ'),
+            licensePlate: r.car_plate?.startsWith('PRK-') ? `รหัสเชิญ: ${r.car_plate}` : (r.car_plate ? `${r.car_plate}${r.cars?.province ? ' ' + r.cars.province : ''}` : 'รอระบุทะเบียน'),
             bookingType: bookingType,
             periodLabel: periodLabel,
             building: buildingLabel,
@@ -332,7 +336,7 @@ export class Tab2Page implements OnInit, OnDestroy {
     let filtered = this.allBookings.filter(b => {
       let statusMatch = false;
       if (this.selectedStatusSegment === 'in_progress') {
-        statusMatch = ['active', 'pending_payment', 'pending', 'checked_in_pending_payment'].includes(b.status);
+        statusMatch = ['active', 'pending_payment', 'pending', 'pending_invite', 'checked_in_pending_payment'].includes(b.status);
       } else if (this.selectedStatusSegment === 'cancelled') {
         statusMatch = b.status === 'cancelled';
       } else {
@@ -405,6 +409,7 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   getStatusClass(item: Booking): string {
     if (item.status === 'pending') return 'text-sky-500';
+    if (item.status === 'pending_invite') return 'text-purple-600 font-bold';
     if (item.status === 'pending_payment') return 'text-orange-500';
     if (item.status === 'checked_in_pending_payment') return 'text-orange-600 font-bold italic';
     if (item.status === 'active') return 'text-green-600';
