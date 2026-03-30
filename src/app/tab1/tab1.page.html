@@ -100,10 +100,19 @@
             </ion-segment>
           </div>
 
-          <!-- Register Code Button (Building mode only) — แยก row ออกมา -->
+          <!-- Register Code Button (Parking mode only) -->
+          <div *ngIf="selectedLocation === 'parking'" class="px-3 pt-2 pb-1">
+            <ion-button (click)="openRegisterCodeModal()" expand="block" fill="outline" color="primary"
+              class="h-10 text-sm font-bold bg-blue-50/50" style="--border-radius: 8px; margin: 0; border: 1px dashed var(--ion-color-primary);">
+              <ion-icon name="qr-code-outline" slot="start"></ion-icon>
+              มีรหัสคำเชิญ? ลงทะเบียนสิทธิ์ที่จอดรถ
+            </ion-button>
+          </div>
+
+          <!-- Register Code Button (Building mode only) -->
           <div *ngIf="selectedLocation === 'building'" class="px-3 pt-2 pb-1">
             <ion-button (click)="openRegisterCodeModal()" expand="block" fill="outline" color="primary"
-              class="h-10 text-sm font-bold" style="--border-radius: 8px; margin: 0;">
+              class="h-10 text-sm font-bold bg-blue-50/50" style="--border-radius: 8px; margin: 0; border: 1px dashed var(--ion-color-primary);">
               <ion-icon name="key-outline" slot="start"></ion-icon>
               มีรหัสคำเชิญ? ลงทะเบียนเข้าอาคาร
             </ion-button>

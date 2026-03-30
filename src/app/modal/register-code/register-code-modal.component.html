@@ -19,21 +19,21 @@
     <!-- Title -->
     <h2 class="text-2xl font-bold text-gray-800 text-center">ลงทะเบียนรหัสคำเชิญ</h2>
     <p class="text-gray-500 text-center px-6 mt-2 text-sm">
-      กรอกรหัส 6 หลักที่คุณได้รับจาก Host เพื่อรับสิทธิ์เข้าอาคาร
+      กรอกรหัสคำเชิญที่คุณได้รับเพื่อรับสิทธิ์เข้าอาคารหรือที่จอดรถ
     </p>
 
     <!-- Code Input -->
     <div class="w-full px-4 mt-8">
       <input
         type="text"
-        maxlength="6"
+        maxlength="10"
         [(ngModel)]="inviteCode"
         (input)="inviteCode = inviteCode.toUpperCase(); errorMessage = ''"
-        class="w-full h-16 text-center text-3xl font-black tracking-[0.4em] border-2 rounded-xl outline-none transition-colors"
+        class="w-full h-16 text-center text-3xl font-black tracking-widest border-2 rounded-xl outline-none transition-colors"
         [class.border-[#1a73e8]]="inviteCode.length > 0"
         [class.border-red-400]="errorMessage !== ''"
         [class.border-gray-200]="inviteCode.length === 0 && errorMessage === ''"
-        placeholder="XXXXXX"
+        placeholder="PRK-XXXXXX หรือ รหัส 6 หลัก"
         autocomplete="off"
         spellcheck="false"
       />
