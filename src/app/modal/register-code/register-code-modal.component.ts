@@ -34,6 +34,34 @@ export class RegisterCodeModalComponent {
     const visitorId = this.reservationService.getCurrentProfileId();
 
     try {
+      if (this.inviteCode.startsWith('PRK-')) {
+        // Handle Parking Reservation Invite via RPC (bypasses RLS issues)
+        const { data: result, error: rpcErr } = await this.supabase.client.rpc('claim_parking_invite', {
+          p_code: this.inviteCode,
+          p_visitor_id: visitorId
+        });
+
+        if (rpcErr) {
+           console.error('RPC Error:', rpcErr);
+           throw new Error('ไม่สามารถรับสิทธิ์ได้เนื่องจากปัญหาการเข้าถึงระบบ');
+        }
+
+        if (!result?.success) {
+           throw new Error(result?.message || 'รหัสเชิญที่จอดรถไม่ถูกต้องหรือหาไม่พบ');
+        }
+
+        const toast = await this.toastCtrl.create({
+          message: 'ได้รับสิทธิ์การจองที่จอดรถเรียบร้อยแล้ว!',
+          duration: 3000,
+          color: 'success'
+        });
+        toast.present();
+
+        this.modalCtrl.dismiss({ code: this.inviteCode, type: 'parking' }, 'confirm');
+        return;
+      }
+
+      // Default: Building Access Invite
       const { data, error } = await this.supabase.client.rpc('claim_invite_code', {
         p_code: this.inviteCode,
         p_visitor_id: visitorId
@@ -66,7 +94,7 @@ export class RegisterCodeModalComponent {
       });
       toast.present();
 
-      this.modalCtrl.dismiss({ code: this.inviteCode }, 'confirm');
+      this.modalCtrl.dismiss({ code: this.inviteCode, type: 'building' }, 'confirm');
     } catch (err: any) {
       this.errorMessage = err.message || 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว';
     } finally {

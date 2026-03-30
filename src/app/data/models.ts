@@ -89,6 +89,9 @@ export interface Booking {
     // Coordinates for Navigation
     lat?: number;
     lng?: number;
+
+    isInvite?: boolean;
+    inviteCode?: string;
 }
 
 export type UserRole = 'User' | 'Host' | 'Visitor' | 'Admin';

@@ -1338,6 +1338,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         this.isBooking = true;
 
         const bookingData = result.data;
+
+        let inviteCode = '';
+        if (bookingData.isInvite) {
+          inviteCode = 'PRK-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+          bookingData.car_plate = inviteCode;
+          bookingData.status = bookingData.status === 'pending_payment' ? 'pending_payment' : 'pending_invite';
+        }
+
         const newBooking: Booking = {
           id: 'BK-' + new Date().getTime(),
           placeName: bookingData.siteName,
@@ -1349,7 +1357,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           carBrand: 'N/A',
           licensePlate: bookingData.car_plate || '-',
           bookingType: bookingData.bookingMode || 'daily',
-          carId: bookingData.car_id
+          carId: bookingData.car_id,
+          isInvite: bookingData.isInvite,
+          inviteCode: inviteCode
         };
 
         this.parkingDataService.addBooking(newBooking);
@@ -1378,7 +1388,9 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
             selectedZones: bookingData.selectedZones,
             siteName: bookingData.siteName,
             startSlot: bookingData.startSlot,
-            endSlot: bookingData.endSlot
+            endSlot: bookingData.endSlot,
+            isInvite: bookingData.isInvite,
+            inviteCode: inviteCode || bookingData.car_plate
           };
           await this.showSuccessModal(successData);
 

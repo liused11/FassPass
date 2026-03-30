@@ -3,6 +3,7 @@ import { ModalController, ToastController } from '@ionic/angular';
 import { ReservationService } from '../../services/reservation.service';
 import { ParkingService } from '../../services/parking.service';
 import { ParkingDataService } from '../../services/parking-data.service';
+import { SupabaseService } from '../../services/supabase.service';
 import { Vehicle } from '../../data/models';
 
 @Component({
@@ -57,12 +58,17 @@ export class CheckBookingComponent implements OnInit {
   userVehicles: Vehicle[] = [];
   selectedCarId: number | string = '';
 
+  bookingType: 'self' | 'invite' = 'self';
+  generatedInviteCode: string = '';
+  userRole: string = 'User'; // Default
+
   constructor(
     private modalCtrl: ModalController,
     private toastCtrl: ToastController,
     private reservationService: ReservationService,
     private parkingService: ParkingService,
-    private parkingDataService: ParkingDataService
+    private parkingDataService: ParkingDataService,
+    private supabaseService: SupabaseService
   ) { }
 
   ngOnInit() {
@@ -113,6 +119,25 @@ export class CheckBookingComponent implements OnInit {
 
     // New: Check car occupation initially
     setTimeout(() => this.checkCurrentCarAvailability(), 500);
+    this.fetchUserRole();
+  }
+
+  async fetchUserRole() {
+    try {
+      const { data: { user } } = await this.supabaseService.client.auth.getUser();
+      if (user) {
+        const { data } = await this.supabaseService.client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (data && data.role) {
+          this.userRole = data.role;
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching role:', e);
+    }
   }
 
   initMockParkingData() {
@@ -374,7 +399,8 @@ export class CheckBookingComponent implements OnInit {
 
     // Step 2: Final Confirm
     const isPayLater = this.selectedPaymentMethod === 'pay_later';
-    const selectedCar = this.selectedCarInfo;
+    const selectedCar = this.bookingType === 'invite' ? null : this.selectedCarInfo;
+    const isInvite = this.bookingType === 'invite';
     const finalData = {
       ...this.data,
       selectedFloors: [this.assignedFloor],
@@ -382,8 +408,9 @@ export class CheckBookingComponent implements OnInit {
       totalPrice: this.totalPrice,
       paymentMethod: this.selectedPaymentMethod,
       status: isPayLater ? 'pending_payment' : 'pending',
-      car_id: this.selectedCarId,
-      car_plate: selectedCar ? selectedCar.licensePlate : ''
+      car_id: isInvite ? null : this.selectedCarId,
+      car_plate: isInvite ? 'INVITATION' : (selectedCar ? selectedCar.licensePlate : ''),
+      isInvite: isInvite
     };
     this.modalCtrl.dismiss({ confirmed: true, data: finalData, action: isPayLater ? 'pay_later' : 'pay_now' }, 'confirm');
   }
