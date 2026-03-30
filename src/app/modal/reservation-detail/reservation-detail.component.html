@@ -22,39 +22,6 @@
             <span class="text-sm font-semibold" [ngClass]="getTextColor()">{{ statusLabel }}</span>
         </div>
 
-        <!-- โซน Hero Circle -->
-        <div class="relative w-52 h-52 mx-auto flex items-center justify-center mb-10">
-            <!-- วงแหวน SVG Base  -->
-            <svg class="absolute top-0 left-0 w-full h-full transform -rotate-90">
-                <!-- วงหลังสีเทา -->
-                <circle cx="104" cy="104" r="92" stroke="#f3f4f6" stroke-width="12" fill="none" />
-                <!-- วงวิ่ง (คำนวนจาก stroke-dashoffset) -->
-                <circle cx="104" cy="104" r="92" [attr.stroke]="getCircleColor()" stroke-width="12" fill="none"
-                    stroke-dasharray="578" [style.stroke-dashoffset]="progressOffset" stroke-linecap="round"
-                    class="transition-all duration-1000 ease-linear" />
-            </svg>
-
-            <!-- ข้อความแกนกลางวงกลม -->
-            <div class="text-center z-10"
-                *ngIf="internalStatus !== 'pending' && internalStatus !== 'cancelled'">
-                <div class="text-[13px] text-gray-500 font-bold mb-1">{{ circleLabelText }}</div>
-                <div class="text-[38px] font-light tracking-tight" [ngClass]="getTextColor()">
-                    {{ circleMainValue }}
-                </div>
-            </div>
-
-            <div class="text-center z-10 flex flex-col items-center justify-center"
-                *ngIf="internalStatus === 'pending'">
-                <ion-icon name="hourglass-outline" class="text-4xl text-amber-500 mb-2"></ion-icon>
-                <div class="text-[13px] text-gray-500 font-bold">{{ circleLabelText }}</div>
-            </div>
-
-            <div class="text-center z-10 flex flex-col items-center justify-center"
-                *ngIf="internalStatus === 'cancelled'">
-                <ion-icon name="close-circle-outline" class="text-5xl text-red-400 mb-2"></ion-icon>
-                <div class="text-[14px] text-gray-500 font-bold">{{ circleLabelText }}</div>
-            </div>
-        </div>
 
         <!-- วันเวลา -->
         <div class="flex justify-between items-center mb-4 px-1">
@@ -127,12 +94,12 @@
                 <ng-container
                     *ngSwitchCase="internalStatus === 'active' || internalStatus === 'checked_in' ? internalStatus : ''">
                     <ion-button expand="block" shape="round" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleApplyStamp()">
+                        class="mb-3 h-[50px] font-bold text-[15px]" (click)="handleApplyStamp()">
                         <ion-icon slot="start" name="pricetag-outline"></ion-icon>
                         ลดราคาที่จอด
                     </ion-button>
                     <ion-button expand="block" shape="round" fill="outline" color="primary"
-                        class="h-[50px] font-bold text-[15px] bg-white border-2 border-blue-500 rounded-full"
+                        class="h-[50px] font-bold text-[15px]"
                         (click)="handleCheckout()">
                         <ion-icon slot="start" name="log-out-outline"></ion-icon>
                         เช็คเอาท์และชำระเงิน
@@ -142,7 +109,7 @@
                 <!-- ถ้าเป็น confirmed (เสร็จสิ้น) -->
                 <ng-container *ngSwitchCase="'confirmed'">
                     <ion-button expand="block" shape="round" color="medium"
-                        class="h-[50px] font-bold text-[15px] shadow-sm opacity-80" (click)="dismiss()">
+                        class="h-[50px] font-bold text-[15px]" (click)="dismiss()">
                         <ion-icon slot="start" name="checkmark-circle-outline"></ion-icon>
                         ปิดหน้าต่าง
                     </ion-button>
@@ -151,12 +118,12 @@
                 <!-- ถ้าเป็น pending (รออนุมัติ) -->
                 <ng-container *ngSwitchCase="'pending'">
                     <ion-button expand="block" shape="round" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleSimulateCheckIn()">
+                        class="mb-3 h-[50px] font-bold text-[15px]" (click)="handleSimulateCheckIn()">
                         <ion-icon slot="start" name="log-in-outline"></ion-icon>
                         จำลองเช็คอิน (Check-in)
                     </ion-button>
                     <ion-button expand="block" shape="round" fill="outline" color="danger"
-                        class="h-[50px] font-bold text-[15px] bg-white border-2 border-red-500 rounded-full"
+                        class="h-[50px] font-bold text-[15px]"
                         (click)="handleCancel()">
                         ยกเลิกคำขอจอง
                     </ion-button>
@@ -166,7 +133,7 @@
                 <ng-container
                     *ngSwitchCase="internalStatus === 'completed' || internalStatus === 'checked_out' ? internalStatus : ''">
                     <ion-button expand="block" shape="round" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleCheckoutConfirm()">
+                        class="mb-3 h-[50px] font-bold text-[15px]" (click)="handleCheckoutConfirm()">
                         <ion-icon slot="start" name="log-out-outline"></ion-icon>
                         เช็คเอาท์ (ยืนยัน)
                     </ion-button>
@@ -179,17 +146,17 @@
                 <!-- ถ้าเป็น pending_payment (รอชำระเงิน) -->
                 <ng-container *ngSwitchCase="'pending_payment'">
                     <ion-button expand="block" shape="round" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handlePay()">
+                        class="mb-3 h-[50px] font-bold text-[15px]" (click)="handlePay()">
                         <ion-icon slot="start" name="card-outline"></ion-icon>
                         ชำระเงินตอนนี้
                     </ion-button>
                     <ion-button expand="block" shape="round" fill="solid" color="secondary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleCheckInPendingPayment()">
+                        class="mb-3 h-[50px] font-bold text-[15px]" (click)="handleCheckInPendingPayment()">
                         <ion-icon slot="start" name="log-in-outline"></ion-icon>
                         เช็คอิน (รอชำระเงิน)
                     </ion-button>
                     <ion-button expand="block" shape="round" fill="outline" color="danger"
-                        class="h-[50px] font-bold text-[15px] bg-white border-2 border-red-500 rounded-full"
+                        class="h-[50px] font-bold text-[15px]"
                         (click)="handleCancel()">
                         ยกเลิกคำขอจอง
                     </ion-button>
@@ -198,17 +165,17 @@
                 <!-- ถ้าเป็น checked_in_pending_payment (เข้าจอดแล้วแต่ยังไม่จ่าย) -->
                 <ng-container *ngSwitchCase="'checked_in_pending_payment'">
                     <ion-button expand="block" shape="round" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] shadow-sm" (click)="handleApplyStamp()">
+                        class="mb-3 h-[50px] font-bold text-[15px]" (click)="handleApplyStamp()">
                         <ion-icon slot="start" name="pricetag-outline"></ion-icon>
                         ลดราคาที่จอด (E-Stamp)
                     </ion-button>
                     <ion-button expand="block" shape="round" fill="outline" color="primary"
-                        class="mb-3 h-[50px] font-bold text-[15px] bg-white border-2 border-blue-500 rounded-full" (click)="handlePay()">
+                        class="mb-3 h-[50px] font-bold text-[15px]" (click)="handlePay()">
                         <ion-icon slot="start" name="card-outline"></ion-icon>
                         ชำระเงินตอนนี้
                     </ion-button>
                     <ion-button expand="block" shape="round" color="medium"
-                        class="h-[50px] font-bold text-[15px] shadow-sm opacity-80" (click)="dismiss()">
+                        class="h-[50px] font-bold text-[15px]" (click)="dismiss()">
                         ปิดหน้าต่าง
                     </ion-button>
                 </ng-container>

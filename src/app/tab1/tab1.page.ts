@@ -77,6 +77,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
   private searchSub!: Subscription;
+  private userProfileSub!: Subscription;
+  private profileIdSub!: Subscription;
+  private refreshSub!: Subscription;
+  
+  private realtimeTimeout: any; // สำหรับกันการโหลดเบิ้ลเวลา Realtime เด้งรัวๆ
+  private realtimeChannel: any; // สำหรับเก็บช่องสัญญาณ Realtime ไว้ล้างตอนปิดหน้า
 
   // --- Search Subject ---
   private searchSubject = new Subject<string>();
@@ -125,23 +131,20 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       });
     });
 
-    // 1. Subscribe to User Profile first
-    this.parkingDataService.userProfile$.subscribe(p => {
+    // เก็บ Subscription ลงตัวแปร
+    this.userProfileSub = this.parkingDataService.userProfile$.subscribe(p => {
       this.userProfile = p;
     });
 
-    // 2. Wait for the Auth Profile ID to be available, then load real data
-    this.reservationService.currentProfileId$.subscribe(id => {
+    this.profileIdSub = this.reservationService.currentProfileId$.subscribe(id => {
       if (id) {
-        // Fetch Real Data with the updated profile ID
         this.loadBuildingData();
         this.loadRealData();
         this.loadActiveReservation();
       }
     });
 
-    // Subscribe to Refresh Event
-    this.uiEventService.refreshParkingData$.subscribe(() => {
+    this.refreshSub = this.uiEventService.refreshParkingData$.subscribe(() => {
       console.log('[Tab1] 🔄 Refresh Event Received. Reloading Data...');
       this.loadRealData();
     });
@@ -150,18 +153,36 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       this.updateParkingStatuses();
     });
 
-    // Start Realtime Subscription
     this.setupRealtimeSubscription();
 
-    // Setup Search Debounce
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400)
     ).subscribe(() => {
       this.filterData();
       this.isSearching = false;
     });
+  }
 
-
+  ngOnDestroy() {
+    if (this.sheetToggleSub) this.sheetToggleSub.unsubscribe();
+    if (this.timeCheckSub) this.timeCheckSub.unsubscribe();
+    if (this.searchSub) this.searchSub.unsubscribe();
+    
+    // สิ่งที่เพิ่มเข้ามาเพื่อแก้ปัญหา Memory Leak & โหลดเบิ้ล
+    if (this.userProfileSub) this.userProfileSub.unsubscribe();
+    if (this.profileIdSub) this.profileIdSub.unsubscribe();
+    if (this.refreshSub) this.refreshSub.unsubscribe();
+    
+    if (this.feeCalcInterval) clearInterval(this.feeCalcInterval);
+    if (this.realtimeTimeout) clearTimeout(this.realtimeTimeout);
+    
+    if (this.realtimeChannel) {
+      this.supabaseService.client.removeChannel(this.realtimeChannel);
+    }
+    
+    if (this.map) {
+      this.map.remove();
+    }
   }
 
   async loadActiveReservation() {
@@ -201,22 +222,16 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   setupRealtimeSubscription() {
     console.log('[Tab1] 🔴 Starting Realtime Subscription...');
+    this.realtimeChannel = this.supabaseService.client.channel('parking-channel-multi');
 
-    // Create a NEW channel for multiple tables
-    const channel = this.supabaseService.client.channel('parking-channel-multi');
-
-    // 1. Listen to Reservations (Bookings change availability)
-    channel
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, (payload) => {
-        console.log('[Tab1] 🔔 Realtime Reservation Update:', payload);
+    this.realtimeChannel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, (payload: any) => {
         this.handleRealtimeUpdate();
       })
-      // 2. Listen to Parking Lots (Status/Capacity changes by Admin)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_lots' }, (payload) => {
-        console.log('[Tab1] 🔔 Realtime Parking Lot Update:', payload);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_lots' }, (payload: any) => {
         this.handleRealtimeUpdate();
       })
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         if (status === 'SUBSCRIBED') {
           console.log('[Tab1] ✅ Realtime Connection Established (Multi-Table)');
         }
@@ -224,12 +239,16 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   handleRealtimeUpdate() {
-    // Add a small delay/debounce to allow DB triggers to finish computing
-    setTimeout(() => {
+    // Clear timeout เดิมทิ้งถ้ามีการอัปเดตเข้ามารัวๆ ในเสี้ยววินาที (Debounce)
+    if (this.realtimeTimeout) {
+      clearTimeout(this.realtimeTimeout);
+    }
+    
+    this.realtimeTimeout = setTimeout(() => {
       console.log('[Tab1] 🔄 Refreshing Data due to Realtime Event...');
       this.loadRealData();
-      this.loadActiveReservation(); // Also check if reservation status changed
-    }, 1000); // 1s delay for safety
+      this.loadActiveReservation(); 
+    }, 1000); 
   }
 
   loadRealData() {
@@ -299,23 +318,19 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   filterData() {
     let results = this.allParkingLots;
 
-    // 1. Filter by Location Type (Safe & Case-Insensitive, default to 'parking' if undefined)
     results = results.filter(lot => {
       const cat = (lot.category || 'parking').toLowerCase();
       const selectedCat = (this.selectedLocation || 'parking').toLowerCase();
 
-      // Strict parking filter: must have at least one type of parking capacity
       if (selectedCat === 'parking') {
         const hasCapacity = lot.capacity && (lot.capacity.normal > 0 || lot.capacity.ev > 0 || lot.capacity.motorcycle > 0);
         if (!hasCapacity) {
           return false;
         }
       }
-
       return cat === selectedCat;
     });
 
-    // 2. Filter by Vehicle Type (Tab) OR Zone
     if (this.selectedTab !== 'all') {
       if (this.selectedLocation === 'parking') {
         results = results.filter((lot) => {
@@ -330,7 +345,6 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
           return false;
         });
       } else {
-        // Building -> Filter by Zone Room Data
         this.filteredBuildingRooms = this.selectedTab === 'all'
           ? this.allBuildingRooms
           : this.allBuildingRooms.filter((room: any) => room.zoneId === this.selectedTab);
@@ -350,11 +364,26 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
+    // 🌟 คำนวณค่าตัวแปรล่วงหน้าก่อนส่งไป HTML (ลดภาระ Change Detection)
+    results.forEach(lot => {
+      (lot as any).displayAvailable = this.getDisplayAvailable(lot);
+      (lot as any).displayStatusText = this.getStatusText(lot.status);
+      (lot as any).displaySupportedTypes = this.getSupportedTypesText(lot.supportedTypes || []);
+    });
+
     this.filteredParkingLots = results;
     this.visibleParkingLots = results;
 
     this.updateParkingStatuses();
-    this.updateMarkers(); // Update Map
+    this.updateMarkers(); 
+  }
+
+  trackByLotId(index: number, lot: any): string {
+    return lot.id;
+  }
+
+  trackByRoomId(index: number, room: any): string {
+    return room.id;
   }
 
   onSearch() {
@@ -436,15 +465,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  ngOnDestroy() {
-    if (this.sheetToggleSub) this.sheetToggleSub.unsubscribe();
-    if (this.timeCheckSub) this.timeCheckSub.unsubscribe();
-    if (this.searchSub) this.searchSub.unsubscribe();
-    if (this.feeCalcInterval) clearInterval(this.feeCalcInterval);
-    if (this.map) {
-      this.map.remove();
-    }
-  }
+
 
   // ----------------------------------------------------------------
   //  MAP LOGIC (Leaflet + Geohash + Error Handling)

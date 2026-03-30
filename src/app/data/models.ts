@@ -54,6 +54,11 @@ export interface ParkingLot {
     note?: string; // e.g. "รองรับผู้มาติดต่อมหาลัย"
     promotion?: string; // e.g. "จอดฟรี 1 ชม."
     description?: string; // Additional details
+
+    // UI Display helpers added for template binding
+    displayStatusText?: string;
+    displayAvailable?: string | number;
+    displaySupportedTypes?: string;
 }
 
 export interface Booking {

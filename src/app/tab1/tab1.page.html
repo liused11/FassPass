@@ -136,7 +136,7 @@
 
           <!-- PARKING LIST -->
           <ng-container *ngIf="selectedLocation === 'parking'">
-            <div *ngFor="let lot of filteredParkingLots; let i = index"
+            <div *ngFor="let lot of filteredParkingLots; let i = index; trackBy: trackByLotId"
               class="lot-card bg-white rounded-xl p-4 mb-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 relative overflow-hidden"
               [style.border-left]="'6px solid ' + (lot.distanceColor || '#9ca3af')" (click)="viewLotDetails(lot)">
 
@@ -148,11 +148,11 @@
                     'bg-yellow-500': lot.status === 'low',
                     'bg-red-500': lot.status === 'full' || lot.status === 'closed'
                   }">
-                    {{ getStatusText(lot.status) }}
+                    {{ lot.displayStatusText }}
                   </div>
 
                   <div class="text-3xl font-bold text-[#1a73e8] leading-none mb-1">
-                    {{ getDisplayAvailable(lot) }}
+                    {{ lot.displayAvailable }}
                   </div>
 
                   <div class="text-[11px] font-bold mt-1 max-w-full truncate" [style.color]="lot.distanceColor">
@@ -200,8 +200,7 @@
                       <div *ngIf="lot.supportedTypes && lot.supportedTypes.length > 0"
                         class="flex items-start gap-1.5 text-xs text-gray-600 mb-[2px]">
                         <ion-icon name="car-outline" class="text-gray-400 text-sm mt-[1px] shrink-0"></ion-icon>
-                        <span class="whitespace-normal leading-tight text-[11px] line-clamp-1">รองรับ: {{
-                          getSupportedTypesText(lot.supportedTypes) }}</span>
+                        <span class="whitespace-normal leading-tight text-[11px] line-clamp-1">รองรับ: {{ lot.displaySupportedTypes }}</span>
                       </div>
 
                       <!-- User Types -->
@@ -246,7 +245,7 @@
 
           <!-- BUILDING LIST -->
           <ng-container *ngIf="selectedLocation === 'building'">
-            <div *ngFor="let building of filteredBuildingRooms; let i = index"
+            <div *ngFor="let building of filteredBuildingRooms; let i = index; trackBy: trackByRoomId"
               class="lot-card bg-white rounded-xl p-4 mb-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 relative overflow-hidden cursor-pointer"
               [style.border-left]="'6px solid ' + (building.color || '#1a73e8')"
               (click)="openBuildingDetails(building)">

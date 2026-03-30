@@ -18,11 +18,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     internalStatus: string = '';
     statusLabel: string = '';
-    circleLabelText: string = '';
-    circleMainValue: string = '';
-    progressOffset: number = 578;
 
-    private timer: any;
     private realtimeChannel: RealtimeChannel | null = null;
 
     constructor(
@@ -36,7 +32,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
     ngOnInit() {
         this.internalStatus = this.booking.status;
         this.updateStaticData();
-        this.startTimer();
+
         this.fetchCurrentFee();
         this.setupRealtimeListener();
     }
@@ -74,9 +70,6 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
     }
 
     ngOnDestroy() {
-        if (this.timer) {
-            clearInterval(this.timer);
-        }
         if (this.realtimeChannel) {
             this.supabaseService.client.removeChannel(this.realtimeChannel);
         }
@@ -91,102 +84,31 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
             case 'active':
             case 'checked_in':
                 this.statusLabel = 'กำลังจอด';
-                this.circleLabelText = 'เวลาที่ผ่านไป';
                 break;
             case 'confirmed':
                 this.statusLabel = 'เสร็จสิ้น';
-                this.circleLabelText = 'เวลาจอดรวม';
-                this.progressOffset = 0; // เต็มวง
                 break;
             case 'pending':
                 this.statusLabel = 'กำลังตรวจสอบรายการ';
-                this.circleLabelText = 'รอตรวจสอบ...';
-                this.circleMainValue = '--:--:--';
-                this.progressOffset = 578;
                 break;
             case 'pending_payment':
                 this.statusLabel = 'รอชำระเงิน';
-                this.circleLabelText = 'รอชำระเงิน...';
-                this.circleMainValue = '--:--:--';
-                this.progressOffset = 578;
                 break;
             case 'checked_in_pending_payment':
                 this.statusLabel = 'กำลังจอด (รอชำระเงิน)';
-                this.circleLabelText = 'เวลาที่ผ่านไป';
                 break;
             case 'completed':
             case 'checked_out':
                 this.statusLabel = 'เสร็จสิ้น';
-                this.circleLabelText = 'เวลาจอดรวม';
-                this.progressOffset = 0; // เต็มวง
                 break;
             case 'cancelled':
                 this.statusLabel = 'ยกเลิกแล้ว';
-                this.circleLabelText = 'ถูกยกเลิก';
-                this.circleMainValue = '---';
-                this.progressOffset = 578;
                 break;
             default:
                 this.statusLabel = this.booking.statusLabel || this.internalStatus;
-                this.circleLabelText = 'สถานะ';
-                this.circleMainValue = '--:--:--';
-                this.progressOffset = 578;
         }
     }
 
-    startTimer() {
-        this.updateTime();
-        if (['active', 'checked_in', 'checked_in_pending_payment'].includes(this.internalStatus)) {
-            this.timer = setInterval(() => {
-                this.updateTime();
-            }, 1000);
-        }
-    }
-
-    updateTime() {
-        const now = new Date().getTime();
-        const start = new Date(this.booking.bookingTime).getTime();
-        const end = new Date(this.booking.endTime).getTime();
-
-        if (this.internalStatus === 'active' || this.internalStatus === 'checked_in' || this.internalStatus === 'checked_in_pending_payment') {
-            const elapsed = now - start;
-            if (elapsed < 0) {
-                this.circleMainValue = "00:00:00";
-                this.progressOffset = 578;
-            } else {
-                this.circleMainValue = this.formatTime(elapsed);
-                const totalDuration = end > start ? end - start : 24 * 60 * 60 * 1000;
-                const percent = Math.min(elapsed / totalDuration, 1);
-                this.progressOffset = 578 - (578 * percent);
-            }
-        } else if (this.internalStatus === 'confirmed') {
-            const remaining = start - now;
-            if (remaining > 0) {
-                this.circleMainValue = this.formatTime(remaining);
-            } else {
-                this.circleMainValue = "00:00:00";
-            }
-            this.progressOffset = 578;
-        } else if (this.internalStatus === 'completed' || this.internalStatus === 'checked_out' || this.internalStatus === 'confirmed') {
-            const elapsed = end - start;
-            this.circleMainValue = this.formatTime(elapsed > 0 ? elapsed : 0);
-            this.progressOffset = 0;
-            if (this.timer) clearInterval(this.timer);
-        }
-    }
-
-    formatTime(ms: number): string {
-        const totalSeconds = Math.floor(ms / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-
-        return `${this.pad(hours)}:${this.pad(minutes)}:${this.pad(seconds)}`;
-    }
-
-    pad(num: number): string {
-        return num < 10 ? '0' + num : num.toString();
-    }
 
     getDotColor(): string {
         switch (this.internalStatus) {
@@ -218,20 +140,6 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
         }
     }
 
-    getCircleColor(): string {
-        switch (this.internalStatus) {
-            case 'active':
-            case 'checked_in': return '#3b82f6';
-            case 'confirmed': return '#22c55e';
-            case 'pending': return '#f59e0b';
-            case 'pending_payment': 
-            case 'checked_in_pending_payment': return '#f97316';
-            case 'completed':
-            case 'checked_out': return '#22c55e';
-            case 'cancelled': return '#ef4444';
-            default: return '#9ca3af';
-        }
-    }
 
     getBookingTypeLabel(type: string | undefined): string {
         switch (type) {
@@ -278,7 +186,6 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
             this.internalStatus = 'checked_in';
             this.booking.status = 'checked_in';
             this.updateStaticData();
-            this.startTimer();
             this.fetchCurrentFee();
 
             const toast = await this.toastCtrl.create({
@@ -300,7 +207,6 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
             this.internalStatus = 'confirmed';
             this.booking.status = 'confirmed';
             this.updateStaticData();
-            this.startTimer();
 
             const toast = await this.toastCtrl.create({
                 message: 'เปลี่ยนสถานะเป็น ยืนยันแล้ว สำเร็จ',
@@ -316,13 +222,21 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     async handlePay() {
         try {
-            await this.reservationService.updateReservationStatusv2(this.booking.id, 'pending');
-            this.internalStatus = 'pending';
-            this.booking.status = 'pending';
+            let newStatus: any = 'pending';
+            let successMessage = 'ชำระเงินสำเร็จ กำลังตรวจสอบรายการ';
+
+            if (this.internalStatus === 'checked_in_pending_payment') {
+                newStatus = 'checked_in';
+                successMessage = 'ชำระเงินสำเร็จ สถานะเปลี่ยนเป็นกำลังจอด';
+            }
+
+            await this.reservationService.updateReservationStatusv2(this.booking.id, newStatus);
+            this.internalStatus = newStatus;
+            this.booking.status = newStatus;
             this.updateStaticData();
             
             const toast = await this.toastCtrl.create({
-                message: 'ชำระเงินสำเร็จ กำลังตรวจสอบรายการ',
+                message: successMessage,
                 duration: 2000,
                 color: 'success',
                 position: 'bottom'
@@ -373,7 +287,6 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
             this.internalStatus = 'checked_in_pending_payment';
             this.booking.status = 'checked_in_pending_payment';
             this.updateStaticData();
-            this.startTimer();
             this.fetchCurrentFee();
 
             const toast = await this.toastCtrl.create({
