@@ -1,22 +1,27 @@
-
 import { Component, Input, OnInit } from '@angular/core';
 import { ModalController, ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { ParkingLot } from '../../data/models';
 import { ParkingDataService } from '../../services/parking-data.service';
-import { ReservationService } from '../../services/reservation.service';
-import { AddVehicleModalComponent } from '../add-vehicle/add-vehicle-modal.component';
-import { take } from 'rxjs/operators';
 import { BookmarkService } from '../../services/bookmark.service';
-// Remove unused service import if not needed, or keep for future
-import { BottomSheetService } from '../../services/bottom-sheet.service';
+import { AuthService } from '../../services/auth.service';
+import { SupabaseService } from '../../services/supabase.service';
+import { RegisterCodeModalComponent } from '../register-code/register-code-modal.component';
+import * as QRCode from 'qrcode';
 import { addIcons } from 'ionicons';
 import {
     closeOutline, locationOutline, peopleOutline, cubeOutline, timeOutline,
     chevronDownOutline, keyOutline, personOutline, calendarNumberOutline,
     caretDownOutline, chevronBackOutline, chevronForwardOutline, swapHorizontalOutline,
-    checkmarkOutline, heartOutline, heart
+    checkmarkOutline, heartOutline, heart, qrCodeOutline
 } from 'ionicons/icons';
+
+interface AccessPassSummary {
+    totalGranted: number;
+    roomLabels: string[];
+    expiresAt: string | null;
+    qrImageDataUrl?: string;
+}
 
 @Component({
     selector: 'app-building-detail',
@@ -29,47 +34,41 @@ export class BuildingDetailComponent implements OnInit {
     @Input() lot!: ParkingLot;
 
     isBookmarked: boolean = false;
+    isLoadingAccessPass = true;
+    accessPassSummary: AccessPassSummary = {
+        totalGranted: 0,
+        roomLabels: [],
+        expiresAt: null,
+        qrImageDataUrl: '',
+    };
 
-    // --- Mock Data for UI ---
     availableSites: ParkingLot[] = [];
-
-    // --- Filter States ---
-    selectedPassType: string = '1-day'; // '1-day', 'visitor', 'monthly'
-    selectedUserRole: string = 'user'; // 'user', 'admin', 'staff'
-    selectedDuration: number = 60; // Minutes
-    selectedBookingDays: number = 1;
-
-    // --- Calendar State ---
-    currentDisplayedDate: Date = new Date();
-    currentMonthLabel: string = '';
-    displayDays: any[] = [];
-    selectedDateIndex: number = 0;
 
     constructor(
         private modalCtrl: ModalController,
         private router: Router,
         private parkingService: ParkingDataService,
-        private reservationService: ReservationService,
         private bookmarkService: BookmarkService,
-        private toastCtrl: ToastController
+        private toastCtrl: ToastController,
+        private authService: AuthService,
+        private supabaseService: SupabaseService,
     ) {
         addIcons({
             closeOutline, locationOutline, peopleOutline, cubeOutline, timeOutline,
             chevronDownOutline, keyOutline, personOutline, calendarNumberOutline,
             caretDownOutline, chevronBackOutline, chevronForwardOutline, swapHorizontalOutline,
-            checkmarkOutline, heartOutline, heart
+            checkmarkOutline, heartOutline, heart, qrCodeOutline
         });
     }
 
     ngOnInit() {
-        this.generateCalendar();
         this.parkingService.parkingLots$.subscribe(lots => {
             if (lots && lots.length > 0) {
-                // Filter out current lot if needed, or just show all
-                this.availableSites = lots;
+                this.availableSites = lots.filter((item) => String(item.category || 'building').toLowerCase() === 'building');
             }
         });
         this.checkBookmarkStatus();
+        this.loadAccessPassSummary();
     }
 
     async checkBookmarkStatus() {
@@ -100,53 +99,175 @@ export class BuildingDetailComponent implements OnInit {
         this.modalCtrl.dismiss();
     }
 
-    view3DFloorPlan() {
+    async openRegisterCodeModal() {
+        const modal = await this.modalCtrl.create({
+            component: RegisterCodeModalComponent,
+            breakpoints: [0, 0.75],
+            initialBreakpoint: 0.75,
+        });
+        await modal.present();
+
+        await modal.onDidDismiss();
+        this.loadAccessPassSummary();
+    }
+
+    openBuildingAccess() {
         this.modalCtrl.dismiss().then(() => {
             this.router.navigate(['/tabs/tab4'], { queryParams: { buildingId: this.lot.id } });
         });
     }
 
-    checkRights() {
-        console.log('Checking rights...');
-        this.parkingService.vehicles$.pipe(take(1)).subscribe(async (vehicles) => {
-            if (vehicles && vehicles.length > 0) {
-                // If has vehicles, proceed to next step
-                this.proceedToBooking();
-            } else {
-                // No vehicles, show Add Vehicle modal
-                const modal = await this.modalCtrl.create({
-                    component: AddVehicleModalComponent,
-                    breakpoints: [0, 1],
-                    initialBreakpoint: 1,
-                });
-                await modal.present();
+    private async loadAccessPassSummary() {
+        this.isLoadingAccessPass = true;
 
-                const { data, role } = await modal.onDidDismiss();
-                if (role === 'confirm' && data) {
-                    try {
-                        await this.parkingService.addVehicle(data);
-                        const userId = this.reservationService.getCurrentProfileId();
-                        await this.parkingService.loadUserVehicles(userId);
-                        this.proceedToBooking();
-                    } catch (e: any) {
-                        console.error('Error adding vehicle', e);
-                        const msg = e.message === 'รถป้ายทะเบียนนี้มีอยู่ในระบบแล้ว'
-                            ? e.message
-                            : 'เกิดข้อผิดพลาดในการเพิ่มรถ';
-                        this.presentToast(msg);
+        try {
+            const user = await this.authService.getCurrentUser();
+            if (!user?.id) {
+                this.accessPassSummary = {
+                    totalGranted: 0,
+                    roomLabels: [],
+                    expiresAt: null,
+                    qrImageDataUrl: '',
+                };
+                return;
+            }
+
+            const nowIso = new Date().toISOString();
+
+            const { data: accesses, error: accessError } = await this.supabaseService.client
+                .from('user_door_access')
+                .select('id, door_id, valid_until, is_granted, granted_at')
+                .eq('profile_id', user.id)
+                .eq('is_granted', true)
+                .or(`valid_until.gte.${nowIso},valid_until.is.null`);
+
+            if (accessError) {
+                throw accessError;
+            }
+
+            const grantedRows = accesses || [];
+            if (!grantedRows.length) {
+                this.accessPassSummary = {
+                    totalGranted: 0,
+                    roomLabels: [],
+                    expiresAt: null,
+                    qrImageDataUrl: '',
+                };
+                return;
+            }
+
+            const allDoorIds = Array.from(new Set(grantedRows.map((row: any) => row.door_id).filter(Boolean)));
+            let relevantRows: any[] = [];
+            let doorIds: string[] = [];
+            let roomLabels: string[] = [];
+
+            if (allDoorIds.length) {
+                const { data: ticketRows, error: ticketError } = await this.supabaseService.client
+                    .from('access_tickets')
+                    .select('room_id, floor, building_id, expires_at')
+                    .eq('building_id', this.lot.id)
+                    .in('room_id', allDoorIds);
+
+                if (!ticketError && ticketRows?.length) {
+                    const activeTicketRows = ticketRows.filter((t: any) => !t.expires_at || new Date(t.expires_at).getTime() >= new Date(nowIso).getTime());
+                    const allowedDoorIds = new Set(activeTicketRows.map((t: any) => t.room_id).filter(Boolean));
+
+                    relevantRows = grantedRows.filter((row: any) => allowedDoorIds.has(row.door_id));
+                    doorIds = Array.from(new Set(relevantRows.map((row: any) => row.door_id).filter(Boolean)));
+
+                    const ticketMap = new Map(activeTicketRows.map((t: any) => [t.room_id, t]));
+                    roomLabels = doorIds.map((id: string) => {
+                        const ticket = ticketMap.get(id);
+                        return ticket?.floor ? `ชั้น ${ticket.floor} | ${id}` : `ห้อง ${id}`;
+                    });
+                }
+            }
+
+            if (!relevantRows.length && allDoorIds.length) {
+                const { data: floorsInBuilding } = await this.supabaseService.client
+                    .from('floors')
+                    .select('id')
+                    .eq('building_id', this.lot.id);
+
+                const floorIds = (floorsInBuilding || []).map((f: any) => f.id).filter(Boolean);
+                if (floorIds.length) {
+                    const { data: assetRows } = await this.supabaseService.client
+                        .from('assets')
+                        .select('id,name,floor_id')
+                        .in('id', allDoorIds)
+                        .in('floor_id', floorIds);
+
+                    if (assetRows && assetRows.length) {
+                        const assetMap = new Map(assetRows.map((a: any) => [a.id, a.name || a.id]));
+                        const allowedDoorIds = new Set(assetRows.map((a: any) => a.id));
+                        relevantRows = grantedRows.filter((row: any) => allowedDoorIds.has(row.door_id));
+                        doorIds = Array.from(new Set(relevantRows.map((row: any) => row.door_id).filter(Boolean)));
+                        roomLabels = doorIds.map((id: string) => assetMap.get(id) || `ประตู ${id}`);
                     }
                 }
             }
+
+            const expireCandidates = relevantRows
+                .map((row: any) => row.valid_until)
+                .filter((val: string | null) => !!val) as string[];
+
+            const expiresAt = expireCandidates.length
+                ? expireCandidates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0]
+                : null;
+
+            let qrImageDataUrl = '';
+            const qrSource = relevantRows[0];
+            if (qrSource?.id && qrSource?.door_id) {
+                const qrPayload = JSON.stringify({
+                    type: 'gate_access',
+                    v: 1,
+                    access_id: qrSource.id,
+                    door_id: qrSource.door_id,
+                    valid_until: qrSource.valid_until || null,
+                    issued_at: qrSource.granted_at || null,
+                });
+                qrImageDataUrl = await this.generateQrDataUrl(qrPayload);
+            }
+
+            this.accessPassSummary = {
+                totalGranted: doorIds.length,
+                roomLabels,
+                expiresAt,
+                qrImageDataUrl,
+            };
+        } catch (error) {
+            console.error('Failed to load access pass summary', error);
+            this.accessPassSummary = {
+                totalGranted: 0,
+                roomLabels: [],
+                expiresAt: null,
+                qrImageDataUrl: '',
+            };
+        } finally {
+            this.isLoadingAccessPass = false;
+        }
+    }
+
+    openTicketsPage() {
+        this.modalCtrl.dismiss().then(() => {
+            this.router.navigate(['/tabs/tab2']);
         });
     }
 
-    proceedToBooking() {
-        console.log('Proceeding to booking with at least 1 car...');
-        this.modalCtrl.dismiss().then(() => {
-            // Example action: map navigate or show parking detail
-            // For now, doing standard tab4 navigation since building-detail is a high-level component
-            this.router.navigate(['/tabs/tab4'], { queryParams: { buildingId: this.lot.id } });
-        });
+    private async generateQrDataUrl(payload: string): Promise<string> {
+        try {
+            return await QRCode.toDataURL(payload, {
+                width: 220,
+                margin: 1,
+                color: {
+                    dark: '#111827',
+                    light: '#FFFFFFFF'
+                }
+            });
+        } catch (error) {
+            console.error('Failed to generate access QR image', error);
+            return '';
+        }
     }
 
     // --- Helper Methods ---
@@ -159,7 +280,22 @@ export class BuildingDetailComponent implements OnInit {
         return this.lot?.floors || [];
     }
 
-    // --- UI Logic Methods ---
+    get accessHeadline(): string {
+        if (this.isLoadingAccessPass) return 'กำลังโหลดสิทธิ์การเข้าอาคาร...';
+        if (!this.accessPassSummary.totalGranted) return 'ยังไม่มีสิทธิ์เข้าพื้นที่';
+        return `คุณมีสิทธิ์เข้า ${this.accessPassSummary.totalGranted} พื้นที่`;
+    }
+
+    get accessSummaryLine(): string {
+        if (!this.accessPassSummary.roomLabels.length) return 'กรุณาลงทะเบียนรหัสคำเชิญจาก Host';
+        return this.accessPassSummary.roomLabels.slice(0, 2).join(' | ');
+    }
+
+    get expiresLabel(): string {
+        if (!this.accessPassSummary.expiresAt) return 'ไม่กำหนดวันหมดอายุ';
+        const d = new Date(this.accessPassSummary.expiresAt);
+        return `หมดอายุ ${d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}`;
+    }
 
     selectSite(s: ParkingLot) {
         console.log('Selected site:', s);
@@ -169,62 +305,6 @@ export class BuildingDetailComponent implements OnInit {
         // Dismiss popover
         const popover = document.querySelector('ion-popover.menu-popover') as any;
         if (popover && popover.dismiss) popover.dismiss();
-    }
-
-    selectPassType(type: string) {
-        this.selectedPassType = type;
-        const popover = document.querySelector('ion-popover.pass-type-popover') as any;
-        if (popover) popover.dismiss();
-    }
-
-    selectUserRole(role: string) {
-        this.selectedUserRole = role;
-        const popover = document.querySelector('ion-popover.role-popover') as any;
-        if (popover) popover.dismiss();
-    }
-
-    selectDuration(minutes: number) {
-        this.selectedDuration = minutes;
-        const popover = document.querySelector('ion-popover.duration-popover') as any;
-        if (popover) popover.dismiss();
-    }
-
-    selectBookingDays(days: number) {
-        this.selectedBookingDays = days;
-        const popover = document.querySelector('ion-popover.days-popover') as any;
-        if (popover) popover.dismiss();
-    }
-
-    // --- Calendar Logic ---
-    generateCalendar() {
-        this.displayDays = [];
-        const baseDate = new Date(); // Start from today
-        const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-        const thaiDays = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-
-        this.currentMonthLabel = `${thaiMonths[baseDate.getMonth()]} ${baseDate.getFullYear() + 543}`;
-
-        for (let i = 0; i < 14; i++) { // Generate 2 weeks
-            const d = new Date(baseDate);
-            d.setDate(baseDate.getDate() + i);
-
-            this.displayDays.push({
-                date: d,
-                dayName: thaiDays[d.getDay()],
-                dateNumber: d.getDate(),
-                isSelected: i === 0
-            });
-        }
-    }
-
-    selectDate(index: number) {
-        this.selectedDateIndex = index;
-    }
-
-    changeMonth(offset: number) {
-        // Mock method if needed strictly for month navigation, 
-        // but horizontal scroll usually suffices for short term.
-        console.log('Change month', offset);
     }
 
     // --- Map Navigation ---

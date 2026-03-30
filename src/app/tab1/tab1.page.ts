@@ -20,7 +20,6 @@ import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.c
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
 import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 import { RegisterCodeModalComponent } from '../modal/register-code/register-code-modal.component';
-import { Building3dModalComponent } from '../modal/building-3d-modal/building-3d-modal.component';
 
 import * as ngeohash from 'ngeohash';
 import { ParkingLot, ScheduleItem, UserProfile } from '../data/models';
@@ -445,8 +444,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   // Handle building click
   async openBuildingDetails(building: any) {
     const modal = await this.modalCtrl.create({
-      component: Building3dModalComponent,
-      componentProps: { buildingData: building }
+      component: BuildingDetailComponent,
+      componentProps: {
+        lot: building
+      },
+      initialBreakpoint: 1,
+      breakpoints: [0, 1],
+      backdropDismiss: true,
+      showBackdrop: true,
+      cssClass: 'detail-sheet-modal',
     });
     return await modal.present();
   }
