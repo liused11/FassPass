@@ -4,6 +4,8 @@ import { Booking } from '../data/models';
 import { ParkingDataService } from '../services/parking-data.service';
 import { ReservationService } from '../services/reservation.service';
 import { ReservationDetailComponent } from '../modal/reservation-detail/reservation-detail.component';
+import { SupabaseService } from '../services/supabase.service';
+import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -49,6 +51,8 @@ export class Tab2Page implements OnInit, OnDestroy {
   isExpanded: boolean = false;
 
   allBookings: Booking[] = [];
+  private reservationBookings: Booking[] = [];
+  private accessPassBookings: Booking[] = [];
 
   // Subscription for Realtime updates
   reservationsSubscription: any;
@@ -60,18 +64,20 @@ export class Tab2Page implements OnInit, OnDestroy {
     private parkingService: ParkingDataService,
     private reservationService: ReservationService,
     private modalCtrl: ModalController,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
+    private supabaseService: SupabaseService,
   ) { }
   //d
   ngOnInit() {
     this.parkingService.bookings$.subscribe(bookings => {
-      this.allBookings = bookings;
-      this.updateFilter();
+      this.reservationBookings = bookings || [];
+      this.mergeAllBookings();
     });
 
     this.reservationService.currentProfileId$.subscribe(async (userId: string) => {
       if (userId) {
         await this.loadRealReservations();
+        await this.loadAccessPassBookings(userId);
 
         if (this.reservationsSubscription) {
           this.reservationsSubscription.unsubscribe();
@@ -97,6 +103,10 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   async ionViewWillEnter() {
     await this.loadRealReservations();
+    const profileId = this.reservationService.getCurrentProfileId();
+    if (profileId) {
+      await this.loadAccessPassBookings(profileId);
+    }
     this.setupRealtimeSubscription();
   }
 
@@ -250,15 +260,8 @@ export class Tab2Page implements OnInit, OnDestroy {
           } as Booking;
         });
 
-        this.allBookings = mappedBookings;
-        this.allBookings.sort((a, b) => {
-          const timeA = a.reservedAt ? a.reservedAt.getTime() : 0;
-          const timeB = b.reservedAt ? b.reservedAt.getTime() : 0;
-          return timeB - timeA;
-        });
-
-        this.generateMonthOptions();
-        this.updateFilter();
+        this.reservationBookings = mappedBookings;
+        this.mergeAllBookings();
       }
     } catch (error) {
       console.error('Error loading real reservations:', error);
@@ -272,6 +275,10 @@ export class Tab2Page implements OnInit, OnDestroy {
 
   doRefresh(event: any) {
     this.loadRealReservations(event);
+    const profileId = this.reservationService.getCurrentProfileId();
+    if (profileId) {
+      this.loadAccessPassBookings(profileId);
+    }
   }
 
   segmentChanged(event: any) {
@@ -354,7 +361,11 @@ export class Tab2Page implements OnInit, OnDestroy {
 
       let catMatch = true;
       if (this.selectedCategory !== 'all') {
-        catMatch = b.bookingType === (this.selectedCategory as any);
+        if (b.itemKind === 'access_pass') {
+          catMatch = false;
+        } else {
+          catMatch = b.bookingType === (this.selectedCategory as any);
+        }
       }
 
       let searchMatch = true;
@@ -375,6 +386,240 @@ export class Tab2Page implements OnInit, OnDestroy {
 
     filtered.sort((a, b) => new Date(a.bookingTime).getTime() - new Date(b.bookingTime).getTime());
     this.displayBookings = filtered;
+  }
+
+  private mergeAllBookings() {
+    this.allBookings = [...(this.reservationBookings || []), ...(this.accessPassBookings || [])];
+
+    this.allBookings.sort((a, b) => {
+      const timeA = (a.reservedAt || a.bookingTime)?.getTime?.() ?? 0;
+      const timeB = (b.reservedAt || b.bookingTime)?.getTime?.() ?? 0;
+      return timeB - timeA;
+    });
+
+    this.generateMonthOptions();
+    this.updateFilter();
+  }
+
+  private async loadAccessPassBookings(profileId: string) {
+    try {
+      const { data: accessRows, error } = await this.supabaseService.client
+        .from('user_door_access')
+        .select('door_id, valid_until, granted_at, is_granted')
+        .eq('profile_id', profileId)
+        .eq('is_granted', true);
+
+      if (error) throw error;
+
+      const rows = (accessRows || []).filter((r: any) => !!r?.door_id);
+      if (!rows.length) {
+        this.accessPassBookings = [];
+        this.mergeAllBookings();
+        return;
+      }
+
+      const bestByDoor = new Map<string, { validUntil: string | null; grantedAt: string | null }>();
+      for (const r of rows) {
+        const doorId = String(r.door_id);
+        const prev = bestByDoor.get(doorId);
+        const nextValidUntil: string | null = r.valid_until ?? null;
+        const nextGrantedAt: string | null = r.granted_at ?? null;
+
+        if (!prev) {
+          bestByDoor.set(doorId, { validUntil: nextValidUntil, grantedAt: nextGrantedAt });
+          continue;
+        }
+
+        const prevValidUntil = prev.validUntil;
+        const mergedValidUntil = (prevValidUntil === null || nextValidUntil === null)
+          ? null
+          : (new Date(nextValidUntil).getTime() > new Date(prevValidUntil).getTime() ? nextValidUntil : prevValidUntil);
+
+        const prevGrantedAt = prev.grantedAt;
+        const mergedGrantedAt = (!prevGrantedAt || (nextGrantedAt && new Date(nextGrantedAt).getTime() > new Date(prevGrantedAt).getTime()))
+          ? nextGrantedAt
+          : prevGrantedAt;
+
+        bestByDoor.set(doorId, { validUntil: mergedValidUntil, grantedAt: mergedGrantedAt });
+      }
+
+      const doorIds = Array.from(bestByDoor.keys());
+      const { data: ticketRows, error: ticketError } = await this.supabaseService.client
+        .from('access_tickets')
+        .select('room_id, floor, building_id, expires_at')
+        .in('room_id', doorIds);
+
+      if (ticketError) throw ticketError;
+
+      const ticketByDoor = new Map<string, any>();
+      for (const t of (ticketRows || [])) {
+        const roomId = t?.room_id;
+        if (!roomId) continue;
+        const prev = ticketByDoor.get(roomId);
+        if (!prev) {
+          ticketByDoor.set(roomId, t);
+          continue;
+        }
+        const prevExpiry = prev.expires_at ? new Date(prev.expires_at).getTime() : -1;
+        const nextExpiry = t.expires_at ? new Date(t.expires_at).getTime() : -1;
+        if (nextExpiry > prevExpiry) {
+          ticketByDoor.set(roomId, t);
+        }
+      }
+
+      type BuildingGroup = {
+        buildingId: string;
+        doorIds: string[];
+        roomLabels: string[];
+        anyActive: boolean;
+        expiresAt: Date | null;
+        grantedAt: Date | null;
+      };
+
+      const groups = new Map<string, BuildingGroup>();
+      const now = Date.now();
+
+      for (const doorId of doorIds) {
+        const ticket = ticketByDoor.get(doorId);
+        const buildingId = ticket?.building_id;
+        if (!buildingId) continue;
+
+        const access = bestByDoor.get(doorId);
+        const validUntilIso: string | null = access?.validUntil ?? (ticket?.expires_at ?? null);
+        const grantedAtIso: string | null = access?.grantedAt ?? null;
+
+        const isActive = (validUntilIso === null) || (new Date(validUntilIso).getTime() >= now);
+
+        const label = ticket?.floor
+          ? `ชั้น ${ticket.floor} | ${doorId}`
+          : `ห้อง ${doorId}`;
+
+        const existing = groups.get(buildingId);
+        const grantedAt = grantedAtIso ? new Date(grantedAtIso) : null;
+        const validUntil = validUntilIso ? new Date(validUntilIso) : null;
+
+        if (!existing) {
+          groups.set(buildingId, {
+            buildingId,
+            doorIds: [doorId],
+            roomLabels: [label],
+            anyActive: isActive,
+            expiresAt: validUntilIso === null ? null : validUntil,
+            grantedAt,
+          });
+        } else {
+          existing.doorIds.push(doorId);
+          existing.roomLabels.push(label);
+          existing.anyActive = existing.anyActive || isActive;
+
+          if (existing.expiresAt !== null) {
+            if (validUntilIso === null) {
+              existing.expiresAt = null;
+            } else if (validUntil) {
+              existing.expiresAt = existing.expiresAt
+                ? (validUntil.getTime() < existing.expiresAt.getTime() ? validUntil : existing.expiresAt)
+                : validUntil;
+            }
+          }
+
+          if (grantedAt) {
+            existing.grantedAt = existing.grantedAt
+              ? (grantedAt.getTime() > existing.grantedAt.getTime() ? grantedAt : existing.grantedAt)
+              : grantedAt;
+          }
+        }
+      }
+
+      const mapped = Array.from(groups.values()).map((g) => {
+        const lot = this.parkingService.getParkingLotById(g.buildingId);
+
+        // Expiry display logic:
+        // - if any active: show nearest upcoming expiry (min)
+        // - if fully expired: show most recent expiry (max)
+        let computedExpiresAt: Date | null = null;
+        if (g.doorIds?.length) {
+          let hasUnlimited = false;
+          const expiryTimes: number[] = [];
+
+          for (const doorId of g.doorIds) {
+            const access = bestByDoor.get(doorId);
+            const ticket = ticketByDoor.get(doorId);
+            const validUntilIso: string | null = access?.validUntil ?? (ticket?.expires_at ?? null);
+            if (validUntilIso === null) {
+              hasUnlimited = true;
+              break;
+            }
+            const t = new Date(validUntilIso).getTime();
+            if (!isNaN(t)) {
+              expiryTimes.push(t);
+            }
+          }
+
+          if (!hasUnlimited && expiryTimes.length) {
+            const picked = g.anyActive ? Math.min(...expiryTimes) : Math.max(...expiryTimes);
+            computedExpiresAt = new Date(picked);
+          }
+        }
+
+        const count = g.doorIds.length;
+        const roomPreview = g.roomLabels.slice(0, 2).join(' | ') + (count > 2 ? ` +${count - 2}` : '');
+
+        const status: Booking['status'] = g.anyActive ? 'active' : 'completed';
+        const statusLabel = 'บัตรผ่านเข้าอาคาร';
+        const locationDetails = g.anyActive
+          ? `ใช้งานได้ • ${count} พื้นที่`
+          : `หมดอายุแล้ว • ${count} พื้นที่`;
+
+        const issuedAt = g.grantedAt || new Date();
+
+        return {
+          id: `access_pass:${g.buildingId}`,
+          itemKind: 'access_pass',
+          placeName: lot?.name || `อาคาร ${g.buildingId}`,
+          locationDetails,
+          bookingTime: issuedAt,
+          endTime: computedExpiresAt || issuedAt,
+          status,
+          statusLabel,
+          price: 0,
+          carBrand: '-',
+          licensePlate: '-',
+          bookingType: 'hourly',
+          building: '-',
+          floor: '-',
+          zone: '-',
+          slot: '-',
+          lat: lot?.lat || lot?.mapX,
+          lng: lot?.lng || lot?.mapY,
+          reservedAt: issuedAt,
+          passBuildingId: g.buildingId,
+          passDoorIds: g.doorIds,
+          passDoorCount: count,
+          passExpiresAt: computedExpiresAt,
+          passRoomPreview: roomPreview,
+        } as Booking;
+      });
+
+      this.accessPassBookings = mapped;
+      this.mergeAllBookings();
+    } catch (e) {
+      console.error('Error loading access passes:', e);
+      this.accessPassBookings = [];
+      this.mergeAllBookings();
+    }
+  }
+
+  getPassExpiresLabel(item: Booking): string {
+    if (!item?.passExpiresAt) return 'ไม่กำหนดวันหมดอายุ';
+    const d = item.passExpiresAt;
+    return `หมดอายุ ${d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  }
+
+  getPassExpiresTimeLabel(item: Booking): string {
+    if (!item?.passExpiresAt) return '';
+    const d = item.passExpiresAt;
+    const hh = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    return `${hh} น.`;
   }
 
   getBookingTypeLabel(type: string | undefined): string {
@@ -430,6 +675,11 @@ export class Tab2Page implements OnInit, OnDestroy {
   }
 
   async handleFooterClick(item: Booking) {
+    if (item?.itemKind === 'access_pass') {
+      await this.openAccessPassDetail(item);
+      return;
+    }
+
     const modal = await this.modalCtrl.create({
       component: ReservationDetailComponent,
       componentProps: { booking: item },
@@ -475,5 +725,23 @@ export class Tab2Page implements OnInit, OnDestroy {
         this.loadRealReservations();
       }
     }
+  }
+
+  private async openAccessPassDetail(item: Booking) {
+    const buildingId = item?.passBuildingId;
+    if (!buildingId) return;
+    const lot = this.parkingService.getParkingLotById(buildingId);
+    if (!lot) return;
+
+    const modal = await this.modalCtrl.create({
+      component: BuildingDetailComponent,
+      componentProps: { lot },
+      initialBreakpoint: 1,
+      breakpoints: [0, 1],
+      backdropDismiss: true,
+      showBackdrop: true,
+      cssClass: 'detail-sheet-modal',
+    });
+    await modal.present();
   }
 }

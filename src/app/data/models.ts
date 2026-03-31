@@ -77,6 +77,14 @@ export interface Booking {
     periodLabel?: string; // For special textual times like "เหมาจ่าย 24 ชั่วโมง" or "1 ธ.ค. - 31 ธ.ค."
     timeDetailLabel?: string; // For explicit time range text if needed
 
+    // Optional: non-reservation items (e.g., access passes) rendered in the same list UI
+    itemKind?: 'reservation' | 'access_pass';
+    passBuildingId?: string;
+    passDoorIds?: string[];
+    passDoorCount?: number;
+    passExpiresAt?: Date | null;
+    passRoomPreview?: string;
+
     // Detailed Location Fields for easier UI binding
     building?: string;
     floor?: string;

@@ -35,6 +35,7 @@ export class BuildingDetailComponent implements OnInit {
 
     isBookmarked: boolean = false;
     isLoadingAccessPass = true;
+    isQrFullscreenOpen = false;
     accessPassSummary: AccessPassSummary = {
         totalGranted: 0,
         roomLabels: [],
@@ -248,10 +249,19 @@ export class BuildingDetailComponent implements OnInit {
         }
     }
 
-    openTicketsPage() {
+    openBookingsPage() {
         this.modalCtrl.dismiss().then(() => {
             this.router.navigate(['/tabs/tab2']);
         });
+    }
+
+    openQrFullscreen() {
+        if (!this.accessPassSummary?.qrImageDataUrl) return;
+        this.isQrFullscreenOpen = true;
+    }
+
+    closeQrFullscreen() {
+        this.isQrFullscreenOpen = false;
     }
 
     private async generateQrDataUrl(payload: string): Promise<string> {
