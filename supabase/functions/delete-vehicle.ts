@@ -1,0 +1,119 @@
+import "@supabase/functions-js/edge-runtime.d.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+export const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders })
+    }
+
+    try {
+
+        const supabaseClient = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+            { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+        )
+
+        const { vehicleId } = await req.json()
+
+        if (!vehicleId
+            //|| !vehicle?.licensePlate 
+            //|| !vehicle?.model 
+            //|| !vehicle?.province
+        ) {
+            return new Response(
+                JSON.stringify({ error: 'Missing vehicleId' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            )
+        }
+
+        //--------------------------------------------------
+        // 1. Get current user
+        //--------------------------------------------------
+
+        const {
+            data: { user },
+            error: userError
+        } = await supabaseClient.auth.getUser()
+
+        if (userError || !user) {
+            return new Response(
+                JSON.stringify({ error: 'Unauthorized: User not logged in' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+            )
+        }
+
+        const userId = user.id
+
+        //--------------------------------------------------
+        // 2. Get profile
+        //--------------------------------------------------
+
+        const { data: profile, error: profileError } = await supabaseClient
+            .from('profiles')
+            .select('role, name')
+            .eq('id', userId)
+            .single()
+
+        if (profileError) {
+            throw new Error(profileError.message)
+        }
+
+        if (profile.role === 'Visitor') {
+            return new Response(
+                JSON.stringify({ error: 'ผู้ใช้งานทั่วไปไม่สามารถลบยานพาหนะได้' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+            )
+        }
+
+
+        //--------------------------------------------------
+        // 3. Call RPC (Update + Log)
+        //--------------------------------------------------
+
+        const { data, error } = await supabaseClient.rpc(
+            'delete_vehicle_with_log',
+            {
+                p_vehicle_id: vehicleId,
+                p_user_id: userId,
+                p_user_name: profile.name ?? user.email
+            }
+        )
+
+        if (error) {
+            throw error
+        }
+
+        //--------------------------------------------------
+        // 4. Return result
+        //--------------------------------------------------
+
+        return new Response(
+            JSON.stringify(data),
+            {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+            }
+        )
+
+    } catch (error: any) {
+
+        console.error('Edge Function Error:', error)
+
+        return new Response(
+            JSON.stringify({ error: error.message || 'Unknown error occurred' }),
+            {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 400
+            }
+        )
+    }
+
+})

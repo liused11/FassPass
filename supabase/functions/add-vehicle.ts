@@ -1,0 +1,133 @@
+
+import "@supabase/functions-js/edge-runtime.d.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
+
+    // Parse the payload
+    const { vehicle } = await req.json()
+
+    // 1. Get the current user from auth token
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser()
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: User not logged in' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const userId = user.id;
+
+    // 1.5. Check if user is Anonymous (Visitor)
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      return new Response(
+        JSON.stringify({ error: `Failed to fetch profile: ${profileError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    if (profile && profile.role === 'Visitor') {
+      return new Response(
+        JSON.stringify({ error: 'ผู้ใช้งานทั่วไป (Anonymous) ไม่สามารถลงทะเบียนรถได้ กรุณาเข้าสู่ระบบผ่านแถบเมนูเพื่อเริ่มใช้งาน' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+    // 2. Check if user already has 3 or more active vehicles
+    const { count, error: countError } = await supabaseClient
+      .from('cars')
+      .select('*', { count: 'exact', head: true })
+      .eq('profile_id', userId)
+      .eq('is_active', true)
+
+    if (countError) {
+      throw new Error(`Failed to check vehicle count: ${countError.message}`)
+    }
+
+    if (count && count >= 3) {
+      return new Response(
+        JSON.stringify({ error: 'Vehicle limit reached. Maximum of 3 vehicles allowed.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    // 3. (Rank calculation removed)
+
+    // 4. Insert the new vehicle
+    const newVehicleData = {
+      profile_id: userId,
+      vehicle_type: vehicle.type !== 'car' && vehicle.type !== 'ev' && vehicle.type !== 'motorcycle' ? 'other' : vehicle.type,
+      model: vehicle.type === 'other' || vehicle.customType
+        ? `[${vehicle.customType || 'อื่นๆ'}] ${vehicle.model}`
+        : vehicle.model,
+      license_plate: vehicle.licensePlate,
+      province: vehicle.province,
+      color: vehicle.color || null,
+      image: vehicle.image,
+      is_default: vehicle.isDefault || false
+      // Note: "status" and "rank" were removed
+    };
+
+    const { data, error: insertError } = await supabaseClient
+      .from('cars')
+      .insert([newVehicleData])
+      .select()
+      .single()
+
+    if (insertError) {
+      throw insertError
+    }
+
+    // 5. Return success
+    return new Response(
+      JSON.stringify(data),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+    )
+
+  } catch (error: any) {
+    console.error('Edge Function Error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+    )
+  }
+})
+
+/* To invoke locally:
+
+  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
+  2. Make an HTTP request:
+
+  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/add-vehicle' \
+    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
+    --header 'Content-Type: application/json' \
+    --data '{"name":"Functions"}'
+
+*/
