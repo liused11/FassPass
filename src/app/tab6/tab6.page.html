@@ -7,12 +7,12 @@
 <ion-content class="bg-gray-50">
     <div class="px-4 py-4">
 
-        <!-- Loading State -->
+        
         <div *ngIf="isLoading" class="flex justify-center items-center py-10">
             <ion-spinner name="crescent" color="primary"></ion-spinner>
         </div>
 
-        <!-- Empty State -->
+        
         <div *ngIf="!isLoading && savedPlaces.length === 0"
             class="flex flex-col items-center justify-center mt-20 p-6 text-center">
             <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
@@ -24,20 +24,20 @@
             </p>
         </div>
 
-        <!-- Saved Places List -->
+        
         <div *ngIf="!isLoading && savedPlaces.length > 0" class="flex flex-col gap-4">
             <div *ngFor="let place of savedPlaces"
                 class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.98] transition-all"
                 (click)="goToDetail(place)">
 
-                <!-- Assuming place.images exists or place.cover_image -->
+                
                 <div class="h-32 w-full bg-gray-200 relative">
                     <img *ngIf="place?.images && place.images.length > 0" [src]="place.images[0]"
                         class="w-full h-full object-cover">
                     <ion-icon *ngIf="!place?.images || place.images.length === 0" name="image-outline"
                         class="text-3xl text-gray-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></ion-icon>
 
-                    <!-- Bookmark Button (Active: click to remove) -->
+                    
                     <button
                         class="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 shadow-sm"
                         (click)="removeBookmark(place, $event)">

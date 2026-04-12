@@ -20,10 +20,7 @@ export class AccessControlService {
         private authService: AuthService
     ) { }
 
-    /**
-     * ดึงรายการ ID ประตูทั้งหมดที่ Profile ปัจจุบันมีสิทธิ์เข้าถึง (is_granted = true)
-     * และยังไม่หมดอายุ (หรือไม่มีวันหมดอายุ)
-     */
+    
     async getAccessibleDoors(): Promise<string[]> {
         const user = await this.authService.getCurrentUser();
         const profileId = user?.id;
@@ -34,7 +31,7 @@ export class AccessControlService {
         }
 
         try {
-            // ดึงข้อมูลจากตาราง user_door_access
+            
             const { data, error } = await this.supabase.client
                 .from('user_door_access')
                 .select('door_id')
@@ -46,7 +43,7 @@ export class AccessControlService {
                 return [];
             }
 
-            // ส่งกลับเฉพาะ array ของ door_id (string)
+            
             return (data || []).map(row => row.door_id);
 
         } catch (err) {

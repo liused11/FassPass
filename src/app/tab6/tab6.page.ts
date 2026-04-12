@@ -37,7 +37,7 @@ export class Tab6Page implements OnInit {
     }
 
     async goToDetail(building: any) {
-        // 0. Check if it's a building -> Open Building Detail Modal
+        
         if (building.category === 'building') {
             const modal = await this.modalCtrl.create({
                 component: BuildingDetailComponent,
@@ -54,7 +54,7 @@ export class Tab6Page implements OnInit {
             return;
         }
 
-        // 1. Show Booking Type Selector First
+        
         const typeModal = await this.modalCtrl.create({
             component: BookingTypeSelectorComponent,
             cssClass: 'auto-height-modal',
@@ -67,14 +67,14 @@ export class Tab6Page implements OnInit {
         await typeModal.present();
         const { data, role } = await typeModal.onDidDismiss();
 
-        // If user cancelled, stop here
+        
         if (role !== 'confirm' || !data) {
             return;
         }
 
-        const selectedBookingMode = data.bookingMode; // 'daily', 'monthly', 'flat24', 'monthly_night'
+        const selectedBookingMode = data.bookingMode; 
 
-        // 2. Open Parking Detail with Selected Mode
+        
         const modal = await this.modalCtrl.create({
             component: ParkingDetailComponent,
             componentProps: {

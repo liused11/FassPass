@@ -8,9 +8,9 @@
     </ion-buttons>
   </ion-toolbar>
 
-  <!-- Filter Dropdowns Row -->
+  
   <div class="flex gap-3 px-4 py-2.5 bg-white">
-    <!-- Date/Month Filter -->
+    
     <div
       class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-sm text-gray-500 bg-white">
       <ion-icon name="calendar-outline" class="text-base text-gray-400 mr-2"></ion-icon>
@@ -23,7 +23,7 @@
       <ion-icon name="chevron-down-outline" class="text-sm text-gray-300 pointer-events-none"></ion-icon>
     </div>
 
-    <!-- Category Filter -->
+    
     <div
       class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-sm text-gray-500 bg-white">
       <ion-icon name="layers-outline" class="text-base text-gray-400 mr-2"></ion-icon>
@@ -37,7 +37,7 @@
     </div>
   </div>
 
-  <!-- Status Tabs -->
+  
   <ion-toolbar class="bg-white pb-2" style="--background: white;">
     <ion-segment [(ngModel)]="selectedStatusSegment" (ionChange)="segmentChanged($event)" mode="md"
       class="bg-transparent">
@@ -60,7 +60,7 @@
 <ion-content [fullscreen]="true" class="bg-[#f7f8fa]">
   <div class="p-4 pb-10">
 
-    <!-- 1. Latest Bookings -->
+    
     <div class="mb-6">
       <div class="mb-3">
         <div class="text-sm font-semibold text-black m-0">รายการล่าสุด</div>
@@ -71,13 +71,13 @@
       <div *ngFor="let item of latestBookings"
         class="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-4 overflow-hidden border border-gray-100">
         <div class="p-4 pb-3">
-          <!-- Top Row -->
+          
           <div class="flex justify-between items-start mb-4">
-            <!-- TL: Status -->
+            
             <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
               <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
             </div>
-            <!-- TR: Time -->
+            
             <div class="text-right">
               <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">{{ item.bookingTime |
                 date:'EEE d MMM' }}</div>
@@ -86,9 +86,9 @@
             </div>
           </div>
 
-          <!-- Bottom Row -->
+          
           <div class="flex justify-between items-end mb-0">
-            <!-- BL: Location -->
+            
             <div>
               <div
                 class="text-xs text-gray-500 mb-0.5 flex items-center gap-1 before:content-[''] before:inline-block before:w-3 before:h-3 before:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%3Cpath%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22%20d=%22M256%2048c-79.5%200-144%2061.39-144%20137%200%2087%2096%20224.87%20131.25%20272.49a15.77%2015.77%200%200025.5%200C304%20409.89%20400%20272.07%20400%20185c0-75.61-64.5-137-144-137z%22/%3E%3Ccircle%20cx=%22256%22%20cy=%22192%22%20r=%2248%22%20fill=%22none%22%20stroke=%22%23666%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%20stroke-width=%2232%22/%3E%3C/svg%3E')] before:bg-contain before:bg-no-repeat">
@@ -97,7 +97,7 @@
                 {{ item.locationDetails }}
               </div>
             </div>
-            <!-- BR: Car / User -->
+            
             <div class="text-right">
               <div class="text-[10px] text-gray-500 uppercase mb-0.5 flex items-center justify-end gap-1"><ion-icon
                   name="car"></ion-icon> {{ item.carBrand }}</div>
@@ -106,7 +106,7 @@
           </div>
         </div>
 
-        <!-- Footer -->
+        
         <div class="px-4 py-3 flex justify-between items-center bg-[#0064FF] text-white"
           *ngIf="['active', 'pending_payment'].includes(item.status)">
           <div class="flex items-center gap-2 text-white text-xl font-bold">
@@ -123,7 +123,7 @@
       </div>
     </div>
 
-    <!-- 2. Flat 24h Bookings -->
+    
     <div class="mb-6">
       <div class="mb-3">
         <div class="text-sm font-semibold text-black m-0">รายการเหมาจ่าย 24 ชั่วโมง</div>
@@ -173,7 +173,7 @@
       </div>
     </div>
 
-    <!-- 3. Monthly Bookings -->
+    
     <div class="mb-6">
       <div class="mb-3">
         <div class="text-sm font-semibold text-black m-0">รายการสมาชิกรายเดือน</div>
@@ -222,7 +222,7 @@
       </div>
     </div>
 
-    <!-- 4. Monthly Night Bookings -->
+    
     <div class="mb-6">
       <div class="mb-3">
         <div class="text-sm font-semibold text-black m-0">รายการสมาชิกรายเดือนเฉพาะกลางคืน(18:00-08:00 น.)</div>

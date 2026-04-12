@@ -48,13 +48,13 @@
 
       <button id="type-trigger" class="filter-btn w-1/4 justify-center" *ngIf="bookingMode === 'hourly'">
         <ion-icon name="car-sport-outline" class="text-primary"></ion-icon>
-        <!-- <span class="truncate font-medium">{{ selectedTypeText }}</span> -->
+        
         <ion-icon name="chevron-down-outline" class="ml-1 text-gray-300 text-xs"></ion-icon>
       </button>
 
       <button id="interval-trigger" class="filter-btn w-1/4 justify-center" *ngIf="bookingMode === 'hourly'">
         <ion-icon name="timer-outline" class="text-gray-500"></ion-icon>
-        <!-- Simplified content for space -->
+        
         <ion-icon name="chevron-down-outline" class="ml-1 text-gray-300 text-xs"></ion-icon>
       </button>
     </div>
@@ -239,17 +239,17 @@
           <div class="text-[10px] text-gray-400 font-medium mb-0.5">เวลาที่เลือก</div>
 
           <div class="flex items-center justify-end gap-3 text-gray-800">
-            <!-- Start Time -->
+            
             <div class="flex flex-col items-center">
               <span class="text-2xl font-bold leading-none tracking-tight">{{ startSlot.timeText.split(' - ')[0]
                 }}</span>
               <span class="text-[10px] text-gray-500 mt-0.5 font-medium">{{ startSlot.dateTime | date:'d MMM' }}</span>
             </div>
 
-            <!-- Arrow -->
+            
             <ion-icon name="arrow-forward-outline" class="text-gray-300 text-sm"></ion-icon>
 
-            <!-- End Time -->
+            
             <div class="flex flex-col items-center">
               <span class="text-2xl font-bold leading-none tracking-tight">
                 {{ getEndTime() | date:'HH:mm' }}

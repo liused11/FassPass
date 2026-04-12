@@ -34,7 +34,7 @@ export class ReservationService {
     return this.testSlotId;
   }
 
-  // Check which slots are occupied in a given time range
+  
   async getOccupiedSlotIds(siteId: string, start: Date, end: Date): Promise<string[]> {
     const { data, error } = await this.supabaseService.client
       .from('reservations')
@@ -56,7 +56,7 @@ export class ReservationService {
     const { data, error } = await this.supabaseService.client
       .from('reservations')
       .insert({
-        profile_id: profileId, // Now referencing public.profiles(id)
+        profile_id: profileId, 
         parking_site_id: siteId,
         floor_id: floorId,
         slot_id: slotId,
@@ -66,7 +66,7 @@ export class ReservationService {
         vehicle_type: 'car',
         car_id: booking.carId,
         car_plate: booking.licensePlate,
-        booking_type: this.mapBookingTypeToEnum(booking.bookingType) // Map to DB Enum
+        booking_type: this.mapBookingTypeToEnum(booking.bookingType) 
       })
       .select()
       .single();
@@ -106,7 +106,7 @@ export class ReservationService {
         throw new Error('This slot is already booked. Please choose another.');
       }
 
-      // Try to extract the actual error message from Edge Function response body
+      
       if (error.message && error.message.includes('non-2xx status code') && (error as any).context) {
         try {
           const responseBody = await (error as any).context.json();
@@ -114,11 +114,11 @@ export class ReservationService {
             throw new Error(responseBody.error);
           }
         } catch (parseErr: any) {
-          // If the error is already the re-thrown Error from above, re-throw it
+          
           if (parseErr instanceof Error && parseErr.message !== error.message) {
             throw parseErr;
           }
-          // Otherwise fall through to throw original error
+          
         }
       }
 
@@ -196,7 +196,7 @@ export class ReservationService {
     return data || [];
   }
 
-  // Calculate live parking fee using Supabase Edge Function
+  
   async getParkingFee(reservationId: string): Promise<number> {
     const { data, error } = await this.supabaseService.client
       .functions.invoke('calculate-parking-fee', {
@@ -211,7 +211,7 @@ export class ReservationService {
     return data?.final_net_price ?? 0;
   }
 
-  // Apply E-Stamp discount using Supabase Edge Function
+  
   async applyEStamp(reservationId: string, shopId: string, discountAmount: number = 30) {
     const { data, error } = await this.supabaseService.client
       .functions.invoke('post_estamps', {
@@ -230,13 +230,7 @@ export class ReservationService {
     return data;
   }
 
-  /**
-   * Manually trigger auto-cancellation of expired pending reservations
-   * This calls the database function to cancel reservations that are
-   * still pending 15+ minutes after their start_time
-   * 
-   * @returns Promise<number> Number of cancelled reservations
-   */
+  
   async cleanupExpiredReservations(): Promise<number> {
     const { data, error } = await this.supabaseService.client
       .rpc('auto_cancel_expired_pending_reservations');
@@ -258,7 +252,7 @@ export class ReservationService {
       return [];
     }
 
-    // Check if the user is truly logged in at the Supabase session level
+    
     const { data: { user }, error: userError } = await this.supabaseService.client.auth.getUser();
 
     if (userError || !user) {
@@ -308,14 +302,14 @@ export class ReservationService {
       )
       .subscribe();
   }
-  // Helper to map simplified frontend types to legacy DB enum values
+  
   private mapBookingTypeToEnum(type: string): string {
     switch (type) {
       case 'daily': return 'hourly';
       case 'flat24': return 'flat_24h';
       case 'monthly': return 'monthly_regular';
 
-      default: return type; // Fallback to original if already correct or unknown
+      default: return type; 
     }
   }
 }

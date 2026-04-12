@@ -1,4 +1,4 @@
-// src/app/services/floorplan/floorplan-interaction.service.ts
+
 import { Injectable, NgZone, inject } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import * as THREE from 'three';
@@ -31,8 +31,8 @@ export class FloorplanInteractionService {
   private floorData: any;
   private raycaster = new THREE.Raycaster();
 
-  // --- State Management (แก้ไข) ---
-  public readonly permissionList$ = new BehaviorSubject<string[]>([]); // <--- ตัวใหม่
+  
+  public readonly permissionList$ = new BehaviorSubject<string[]>([]); 
   public readonly currentZoneId$ = new BehaviorSubject<string | null>(null);
   public readonly isDetailDialogVisible$ = new BehaviorSubject<boolean>(false);
   public readonly selectedObject$ = new BehaviorSubject<{ type: string, data: any } | null>(null);
@@ -40,62 +40,56 @@ export class FloorplanInteractionService {
   private focusRequestSubject = new Subject<{ type: string; data: any }>();
   public readonly focusRequest$ = this.focusRequestSubject.asObservable();
 
-  /**
-   * เริ่มต้น Service และรับข้อมูล floorData
-   */
+  
   public initialize(floorData: any): void {
     this.floorData = floorData;
-    this.floorBuilder.updateDoorMaterials(this.permissionList$.value); // <--- แก้ไข
+    this.floorBuilder.updateDoorMaterials(this.permissionList$.value); 
   }
 
   public getCurrentFloorData(): any {
     return this.floorData;
   }
 
-  /**
-   * (แทนที่) simulateAuthentication ด้วย setPermissionList
-   */
+  
   public setPermissionList(allowList: string[]): void {
     this.permissionList$.next(allowList);
-    this.floorBuilder.updateDoorMaterials(allowList); // <--- นี่คือที่แก้ Error 4
+    this.floorBuilder.updateDoorMaterials(allowList); 
 
-    // อัปเดต Dialog ถ้าเปิดอยู่
+    
     const currentSelection = this.selectedObject$.value;
     if (this.isDetailDialogVisible$.value && currentSelection?.type === 'door') {
       this.selectedObject$.next(currentSelection);
     }
   }
 
-  // [ปรับแก้] เพิ่ม Parameter 'showModal' (Default = true คือเปิด Modal ปกติ)
+  
   public focusOnAsset(assetId: string, showModal: boolean = true): void {
     if (!this.floorData?.zones) return;
     const match = this.findAssetById(assetId);
     if (!match) return;
 
-    // 1. จำค่า Object ที่เลือก (เพื่อให้ FloorPlanComponent รู้ว่าต้องล็อกกล้อง)
+    
     this.selectedObject$.next({ type: match.type, data: match.data });
 
-    // 2. เปิด/ปิด Modal ตามพารามิเตอร์
+    
     if (showModal) {
       this.isDetailDialogVisible$.next(true);
     } else {
       this.isDetailDialogVisible$.next(false);
     }
 
-    // 3. สั่งให้กล้องแพนไปหา
+    
     this.focusRequestSubject.next(match);
   }
 
-  // [เพิ่ม] ฟังก์ชันสำหรับปุ่ม "Back" ใน Bottom Sheet
+  
   public clearFocus(): void {
-    // เคลียร์ค่า เพื่อให้กล้องกลับไปเกาะที่ Player
+    
     this.selectedObject$.next(null);
     this.isDetailDialogVisible$.next(false);
   }
 
-  /**
-   * ตรวจสอบว่า Player อยู่ในโซนไหน
-   */
+  
   public checkPlayerZone(): void {
     if (!this.playerControls.player || !this.floorData.zones) return;
     const playerPos = this.playerControls.player.position;
@@ -127,9 +121,7 @@ export class FloorplanInteractionService {
     }
   }
 
-  /**
-   * จัดการการคลิกเมาส์
-   */
+  
   public handleMouseClick(event: MouseEvent, cameraLookAtTarget: THREE.Vector3): void {
     if (event.target !== this.threeScene.renderer.domElement || !this.threeScene.controls.enabled) {
       return;

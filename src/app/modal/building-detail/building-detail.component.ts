@@ -280,7 +280,7 @@ export class BuildingDetailComponent implements OnInit {
         }
     }
 
-    // --- Helper Methods ---
+    
     getFloorName(f: any): string {
         if (typeof f === 'string') return f;
         return f.name || '';
@@ -309,22 +309,22 @@ export class BuildingDetailComponent implements OnInit {
 
     selectSite(s: ParkingLot) {
         console.log('Selected site:', s);
-        // Update the current lot with selected site info
+        
         this.lot = s;
 
-        // Dismiss popover
+        
         const popover = document.querySelector('ion-popover.menu-popover') as any;
         if (popover && popover.dismiss) popover.dismiss();
     }
 
-    // --- Map Navigation ---
+    
     openMap(lat?: number, lng?: number) {
         if (!lat || !lng) {
             console.warn('Coordinates not available for this location.');
             return;
         }
 
-        // Always use Google Maps
+        
         const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
         window.open(url, '_blank');
     }

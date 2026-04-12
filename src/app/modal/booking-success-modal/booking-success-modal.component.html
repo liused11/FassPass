@@ -1,6 +1,6 @@
 <ion-content class="ion-padding">
   <div class="success-container">
-    <!-- Success Icon with Animation -->
+    
     <div class="success-checkmark">
       <div class="check-icon">
         <span class="icon-line line-tip"></span>
@@ -10,20 +10,20 @@
       </div>
     </div>
 
-    <!-- Success Message -->
+    
     <h2 class="success-title">{{ bookingData?.isInvite ? 'สร้างคำเชิญสำเร็จ!' : 'จองสำเร็จ!' }}</h2>
     <p class="success-subtitle" *ngIf="!bookingData?.isInvite">การจองของคุณได้รับการยืนยันแล้ว</p>
     <p class="success-subtitle" *ngIf="bookingData?.isInvite">ส่งรหัสนี้ให้ผู้มาติดต่อเพื่อใช้รับสิทธิ์การจอง</p>
 
-    <!-- Invite Code Display -->
+    
     <div class="invite-code-box" *ngIf="bookingData?.isInvite" style="background: #f1f5f9; border: 2px dashed #94a3b8; border-radius: 12px; margin: 16px 0; padding: 20px; text-align: center;">
       <p style="font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">รหัสคำเชิญที่จอดรถ</p>
       <h1 style="font-size: 32px; font-weight: 900; color: #0284c7; letter-spacing: 2px; margin: 0; font-family: monospace;">{{ bookingData?.inviteCode }}</h1>
     </div>
 
-    <!-- Booking Details Card -->
+    
     <div class="booking-details-card">
-      <!-- Parking Slot (Primary) -->
+      
       <div class="detail-row" *ngIf="bookingData?.selectedSlotId || bookingData?.locationDetails">
         <ion-icon name="car-outline" class="detail-icon"></ion-icon>
         <div class="detail-content">
@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <!-- Location -->
+      
       <div class="detail-row">
         <ion-icon name="location-outline" class="detail-icon"></ion-icon>
         <div class="detail-content">
@@ -42,7 +42,7 @@
         </div>
       </div>
 
-      <!-- Floor & Zone -->
+      
       <div class="detail-row" *ngIf="bookingData?.selectedFloors && bookingData?.selectedZones">
         <ion-icon name="layers-outline" class="detail-icon"></ion-icon>
         <div class="detail-content">
@@ -51,7 +51,7 @@
         </div>
       </div>
 
-      <!-- Start Time -->
+      
       <div class="detail-row">
         <ion-icon name="time-outline" class="detail-icon"></ion-icon>
         <div class="detail-content">
@@ -60,7 +60,7 @@
         </div>
       </div>
 
-      <!-- End Time -->
+      
       <div class="detail-row">
         <ion-icon name="time-outline" class="detail-icon"></ion-icon>
         <div class="detail-content">
@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <!-- Price -->
+      
       <div class="detail-row price-row">
         <ion-icon name="cash-outline" class="detail-icon"></ion-icon>
         <div class="detail-content">
@@ -79,13 +79,13 @@
       </div>
     </div>
 
-    <!-- Status (Outside Card) -->
+    
     <div class="status-badge" [class.status-pending]="bookingData?.status === 'pending' || bookingData?.status === 'pending_payment'" [class.status-confirmed]="bookingData?.status === 'confirmed'">
       <ion-icon [name]="getStatusIcon()" class="status-icon"></ion-icon>
       <span class="status-text">{{ getStatusText() }}</span>
     </div>
 
-    <!-- Action Buttons -->
+    
     <div class="action-buttons">
       <ion-button expand="block" shape="round" color="primary" (click)="goToBookings()" class="primary-button">
         <ion-icon name="list-outline" slot="start"></ion-icon>

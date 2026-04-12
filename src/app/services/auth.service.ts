@@ -40,7 +40,7 @@ export class AuthService {
     if (data) this.userProfileSubject.next(data);
   }
 
-  // Login ผ่าน LINE (เอา Token แลก Session)
+  
   async signInWithLineToken(idToken: string) {
     let { data: { user } } = await this.supabase.auth.getUser();
 
@@ -70,7 +70,7 @@ export class AuthService {
     return null;
   }
 
-  // Anti-Lock Logic
+  
   async getCurrentUser(): Promise<User | null> {
     const { data: sessionData } = await this.supabase.auth.getSession();
     if (sessionData.session?.user) {
@@ -174,9 +174,9 @@ export class AuthService {
     );
   }
 
-  // ==========================================
-  // Register & Rich Menu Flow
-  // ==========================================
+  
+  
+  
 
   async syncLineProfile(lineProfile: any): Promise<any> {
     try {
@@ -215,19 +215,19 @@ export class AuthService {
 
       if (error) throw error;
 
-      // Update the BehaviorSubject so the UI reacts instantly
+      
       if (data) {
         this.userProfileSubject.next(data);
       }
       return data;
     } catch (err) {
       console.error('Update Profile Error:', err);
-      throw err; // Throw the error so the component can show a toast
+      throw err; 
     }
   }
   async updateProfilev2(userId: string, updateData: any) {
     try {
-      // เรียกใช้ Edge Function ตามมาตรฐานใหม่
+      
       const { data, error } = await this.supabase.functions.invoke(
         'update-profile',
         {
@@ -240,7 +240,7 @@ export class AuthService {
 
       if (error) throw error;
 
-      // อัปเดต UI ทันที
+      
       if (data) {
         this.userProfileSubject.next(data);
       }
@@ -259,9 +259,9 @@ export class AuthService {
     return data;
   }
 
-  // ==========================================
-  // Logic เช็คสิทธิ์ประตู 
-  // ==========================================
+  
+  
+  
 
   getRoles(): Observable<RolePermission[]> {
     const request = this.supabase

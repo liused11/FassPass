@@ -17,10 +17,10 @@
 <ion-content class="bg-[#f8f9fa]" [scrollY]="true">
   <div class="p-4 space-y-4 pb-32">
 
-    <!-- Step 1: Summary -->
+    
     <div *ngIf="currentStep === 1" class="animate-fade-in">
 
-      <!-- Booking Mode Toggle -->
+      
       <ion-segment *ngIf="userRole === 'Host'" [(ngModel)]="bookingType" mode="ios" class="mb-4 bg-gray-100 p-1 rounded-xl">
         <ion-segment-button value="self" class="rounded-lg">
           <ion-label class="text-xs font-bold py-1">จองให้ตัวเอง</ion-label>
@@ -30,15 +30,15 @@
         </ion-segment-button>
       </ion-segment>
 
-      <!-- Ticket Summary Card -->
+      
       <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative mb-4">
-        <!-- Decor: Top Circles -->
+        
         <div class="absolute -left-3 top-24 w-6 h-6 rounded-full bg-[#f8f9fa]"></div>
         <div class="absolute -right-3 top-24 w-6 h-6 rounded-full bg-[#f8f9fa]"></div>
-        <!-- Decor: Dashed Line -->
+        
         <div class="absolute top-[106px] left-4 right-4 border-b-2 border-dashed border-gray-100"></div>
 
-        <!-- Section 1: Location & Date -->
+        
         <div class="p-5 pb-6">
           <div class="flex items-start gap-4 mb-4">
             <div class="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -68,9 +68,9 @@
           </div>
         </div>
 
-        <!-- Section 2: Slot & Vehicle -->
+        
         <div class="p-5 pt-6 bg-gray-50/50">
-          <!-- Result Slot -->
+          
           <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-gray-100 shadow-sm mb-3">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
@@ -87,7 +87,7 @@
             </div>
           </div>
 
-          <!-- Select Vehicle -->
+          
           <div *ngIf="bookingType === 'self'"
             class="relative w-full rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden text-left flex justify-between items-center p-3"
             id="trigger-car-popover">
@@ -116,7 +116,7 @@
             </div>
           </div>
 
-          <!-- Warning for Car Overlap -->
+          
           <div *ngIf="bookingType === 'self' && isCarOccupied" class="mt-2 text-center bg-red-50 border border-red-100 rounded-xl p-2 animate-pulse">
             <p class="text-[11px] text-red-500 font-bold flex items-center justify-center gap-1">
               <ion-icon name="alert-circle"></ion-icon>
@@ -142,7 +142,7 @@
         </div>
       </div>
 
-      <!-- Payment Method Selection -->
+      
       <div>
         <h3 class="text-sm font-bold text-gray-800 mb-3 px-1">เลือกช่องทางชำระเงิน</h3>
         <div class="space-y-2">
@@ -162,7 +162,7 @@
             </div>
 
             <div class="relative z-10">
-              <!-- Checkmark -->
+              
               <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center"
                 [class.border-gray-300]="selectedPaymentMethod !== method.id"
                 [class.border-blue-600]="selectedPaymentMethod === method.id"
@@ -181,25 +181,25 @@
 
     </div>
 
-    <!-- Step 2: Payment Action -->
+    
     <div *ngIf="currentStep === 2" class="animate-fade-in-right">
 
-      <!-- Header / Total -->
+      
       <div class="text-center mb-6">
         <p class="text-gray-500 text-sm mb-1">ยอดชำระที่ต้องจ่าย</p>
         <h1 class="text-4xl font-black text-blue-600 tracking-tight">{{ totalPrice | number }} <span
             class="text-lg text-gray-500 font-bold">บาท</span></h1>
         <div class="mt-2 inline-flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
           <ion-icon [name]="paymentMethods[0].icon" class="text-gray-500"></ion-icon>
-          <!-- Hack: Icon logic needed but simplified -->
+          
           <span class="text-xs font-bold text-gray-600">{{ selectedPaymentMethod | uppercase }}</span>
         </div>
       </div>
 
-      <!-- Payment Details Logic -->
+      
       <div class="mt-4">
 
-        <!-- PromptPay Detail -->
+        
         <div *ngIf="selectedPaymentMethod === 'promptpay'"
           class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm text-center">
           <div class="mb-4">
@@ -213,7 +213,7 @@
           <p class="text-xs text-red-500">กรุณาชำระเงินภายใน 15:00 นาที</p>
         </div>
 
-        <!-- Credit Card Detail -->
+        
         <div *ngIf="selectedPaymentMethod === 'creditcard'"
           class="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm space-y-4">
           <h3 class="font-bold text-gray-800 text-lg">กรอกข้อมูลบัตรเครดิต</h3>
@@ -244,7 +244,7 @@
           </div>
         </div>
 
-        <!-- TrueMoney Detail -->
+        
         <div *ngIf="selectedPaymentMethod === 'wallet'"
           class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm text-center">
           <div
@@ -257,7 +257,7 @@
           <p class="text-xs text-gray-400">ระบบจะส่งแจ้งเตือนการชำระเงินไปยังแอปพลิเคชันของท่าน</p>
         </div>
 
-        <!-- Pay Later Detail -->
+        
         <div *ngIf="selectedPaymentMethod === 'pay_later'"
           class="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm text-center">
           <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mx-auto mb-4">
@@ -278,7 +278,7 @@
 <ion-footer class="ion-no-border bg-white border-t border-gray-100">
   <div class="px-6 py-4 pb-6">
 
-    <!-- Step 1 Footer -->
+    
     <div *ngIf="currentStep === 1" class="animate-fade-in">
       <div class="flex justify-between items-end mb-4">
         <div>
@@ -303,7 +303,7 @@
       </ion-button>
     </div>
 
-    <!-- Step 2 Footer -->
+    
     <div *ngIf="currentStep === 2" class="animate-fade-in">
       <ion-button expand="block" shape="round" color="primary"
         class="rounded-full font-bold h-12 text-base shadow-lg shadow-blue-200" (click)="confirm()" [disabled]="bookingType === 'self' && isCarOccupied">

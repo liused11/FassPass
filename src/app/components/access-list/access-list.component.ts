@@ -49,7 +49,7 @@ interface RoomAccessSummary {
   styleUrls: ['./access-list.component.css']
 })
 export class AccessListComponent implements OnInit {
-  // เปลี่ยนชื่อ instance ให้สอดคล้องกับการใช้งานใหม่
+  
   private interaction = inject(FloorplanInteractionService);
   private builder = inject(FloorplanBuilderService);
   private bottomSheet = inject(BottomSheetService);
@@ -67,25 +67,25 @@ export class AccessListComponent implements OnInit {
     );
   }
 
-  // [ลบ] focusRoom (เดิม) และแทนที่ด้วย selectRoom
+  
   selectRoom(room: RoomAccessSummary) {
-    // 1) โฟกัสไปที่ห้องใน 3D โดยไม่เปิด Modal
+    
     this.interaction.focusOnAsset(room.id, false);
 
-    // 2) เปิด Bottom Sheet: Room Detail
+    
     this.bottomSheet.showRoomDetail(room);
   }
 
-  // [เพิ่ม] ฟังก์ชันสำหรับกดเลือกห้อง (เรียกจาก HTML)
+  
   focusRoom(room: RoomAccessSummary) {
-    console.log('Selecting room:', room.id); // เช็ค log
-    // 1. โฟกัสห้องใน 3D โดยไม่เปิด Modal
+    console.log('Selecting room:', room.id); 
+    
     this.interaction.focusOnAsset(room.id, false);
-    // 2. เปิด Bottom Sheet: Room Detail
+    
     this.bottomSheet.showRoomDetail(room);
   }
 
-  // [เพิ่ม] แยก "ห้อง" ออกจากชื่อห้อง
+  
   getRoomDisplay(fullName: string) {
     if (fullName && fullName.includes('ห้อง')) {
       return {
@@ -117,7 +117,7 @@ export class AccessListComponent implements OnInit {
 
         const anyAllowed = allowedSet.has(room.id) || doorStatuses.some(d => d.allowed);
         
-        // 🟢 Filter: insert only if user has access
+        
         if (!anyAllowed) return;
         
         const badgeColor = this.builder.getAssignedRoomColor(room.id) ?? room.color ?? '#94a3b8';
@@ -139,7 +139,7 @@ export class AccessListComponent implements OnInit {
       });
     });
 
-    // Sort rooms within each floor by name, then return sorted by floor
+    
     const result: { floor: number; rooms: RoomAccessSummary[] }[] = [];
     Array.from(floorMap.entries())
       .sort((a, b) => a[0] - b[0])
@@ -202,7 +202,7 @@ export class AccessListComponent implements OnInit {
     return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
   }
 
-  // [เพิ่ม] ฟังก์ชันคำนวณสีตัวอักษร (ขาว/ดำ) ตามความสว่างของพื้นหลัง
+  
   getContrastColor(hexColor: string): string {
     if (!hexColor) return '#000000';
     const sanitized = hexColor.startsWith('#') ? hexColor : `#${hexColor}`;
@@ -219,4 +219,3 @@ export class AccessListComponent implements OnInit {
   }
 }
 
-// หมายเหตุ: อย่าลืมเพิ่ม (click)="selectRoom(room)" ที่ <ion-item> ใน access-list.component.html

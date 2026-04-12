@@ -1,51 +1,51 @@
-// --- Filter Buttons ---
+
 :host {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-// ทำให้ ion-content ยืดพื้นที่ที่เหลือ เพื่อดัน footer ลงล่าง
+
 ion-content {
   flex: 1;
 }
 
-// ... (CSS ส่วนบนคงเดิม) ...
 
-// --- Footer Styling ---
+
+
 ion-footer {
-  background: transparent; // พื้นหลังใสเพื่อให้ custom-footer จัดการ
-  box-shadow: none; // ลบเงา Default ของ Ionic
+  background: transparent; 
+  box-shadow: none; 
 
   .custom-footer {
     background: white;
-    // ลบเส้นขอบ (border-top)
+    
     border: none;
 
-    // ✅ 1. ขยับเข้ามาข้างใน (เพิ่ม Padding ซ้ายขวา) & ปรับขนาดให้เล็ก (ลด Padding บนล่าง)
+    
     padding: 10px 24px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom));
 
-    // ใช้เงาบางๆ แทนเส้นขอบสีดำ
+    
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
 
-    // Optional: ถ้าอยากให้ Footer ลอยๆ โค้งๆ
-    // border-top-left-radius: 20px;
-    // border-top-right-radius: 20px;
+    
+    
+    
   }
 
   .confirm-btn {
-    // ✅ 2. ปรับปุ่มให้เล็กลง (จากเดิม 48px/h-12)
+    
     height: 42px;
     font-size: 14px;
     margin: 0;
-    --border-radius: 12px; // ปรับความมนให้เข้ากับขนาด
+    --border-radius: 12px; 
   }
 }
 
 .filter-btn {
   background: white;
-  border: 1px solid #f3f4f6; // สีขอบจางๆ
+  border: 1px solid #f3f4f6; 
   border-radius: 12px;
   padding: 0 12px;
   display: flex;
@@ -56,7 +56,7 @@ ion-footer {
   height: 42px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); // เงาบางๆ
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); 
 
   ion-icon[name="chevron-down-outline"] {
     transition: transform 0.2s;
@@ -69,9 +69,9 @@ ion-footer {
   }
 }
 
-// --- Popover / Menu Customization ---
+
 ::ng-deep ion-popover.menu-popover {
-  // ✅ 3. ปรับขนาดให้เล็กลง (จาก 260px)
+  
   --width: 240px;
   --box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   --backdrop-opacity: 0.2;
@@ -81,7 +81,7 @@ ion-footer {
   }
 
   ion-list {
-    // ✅ 1. ขยับเนื้อหาเข้ามา (เพิ่ม Padding รอบๆ)
+    
     padding: 8px;
   }
 
@@ -91,7 +91,7 @@ ion-footer {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #9ca3af;
-    // ปรับ padding header ให้ตรงกับ item
+    
     padding-left: 8px;
     padding-right: 8px;
     margin-bottom: 4px;
@@ -99,21 +99,21 @@ ion-footer {
   }
 
   ion-item {
-    // ✅ 3. ปรับความสูงแต่ละรายการให้เล็กลง (จาก 44px)
+    
     --min-height: 40px;
     font-size: 13px;
 
-    // ✅ 1. ปรับ Padding ของไอเท็มให้พอดี
+    
     --padding-start: 12px;
     --inner-padding-end: 12px;
 
-    // ✅ 2. ลบเส้นสีดำออก (บังคับลบขอบ)
+    
     --border-width: 0 !important;
     --inner-border-width: 0 !important;
 
-    // ✅ 1. เพิ่มความโค้งมน ให้ดูอยู่ "ข้างใน" กรอบ
+    
     border-radius: 8px;
-    margin-bottom: 2px; // เว้นระยะห่างระหว่างรายการนิดหน่อย
+    margin-bottom: 2px; 
 
     &.selected-item {
       --background: #eff6ff;
@@ -127,10 +127,10 @@ ion-footer {
   }
 }
 
-// --- Calendar Grid Buttons ---
+
 .slot-btn {
-  // flex: 1; // Removed fixed height approach
-  flex-direction: column; // Allow stacking time + status
+  
+  flex-direction: column; 
   gap: 2px;
   height: auto;
   min-height: 52px;
@@ -152,7 +152,7 @@ ion-footer {
     transform: scale(0.95);
   }
 
-  // สถานะไม่ว่าง
+  
   &.unavailable {
     background-color: #f9fafb;
     color: #d1d5db;
@@ -165,7 +165,7 @@ ion-footer {
     }
   }
 
-  // สถานะเลือก (หัว/ท้าย)
+  
   &.selected-start,
   &.selected-end {
     background-color: var(--ion-color-primary);
@@ -176,13 +176,13 @@ ion-footer {
     z-index: 1;
   }
 
-  // ช่วงตรงกลาง
+  
   &.in-range {
-    background-color: #e5e7eb; // Gray-200 (แทน Primary Tint)
+    background-color: #e5e7eb; 
     border-color: #e5e7eb;
-    color: #1f2937; // Gray-800 (สีตัวอักษรเข้ม)
+    color: #1f2937; 
     border-radius: 4px;
-    opacity: 1; // ปรับให้ชัดเต็มที่เพราะสีอ่อนแล้ว
+    opacity: 1; 
   }
 }
 
@@ -190,7 +190,7 @@ ion-footer {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-// Animation
+
 @keyframes fadeIn {
   from {
     opacity: 0;

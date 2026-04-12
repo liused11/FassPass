@@ -7,7 +7,7 @@
   min-height: 100%;
 }
 
-/* Success Checkmark Animation */
+
 .success-checkmark {
   width: 80px;
   height: 80px;
@@ -98,7 +98,7 @@
   background-color: #FFFFFF;
 }
 
-/* Animations */
+
 @keyframes rotate-circle {
   0% {
     transform: rotate(-45deg);
@@ -165,7 +165,7 @@
   }
 }
 
-/* Text Styles */
+
 .success-title {
   font-size: 28px;
   font-weight: bold;
@@ -181,7 +181,7 @@
   text-align: center;
 }
 
-/* Booking Details Card */
+
 .booking-details-card {
   width: 100%;
   background: #f8f9fa;
@@ -262,7 +262,7 @@
   color: #4CAF50 !important;
 }
 
-/* Status Badge (Outside Card) */
+
 .status-badge {
   display: flex;
   align-items: center;
@@ -286,7 +286,7 @@
   color: #4CAF50;
 }
 
-/* Status Variants */
+
 .status-badge.status-pending {
   background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 152, 0, 0.05) 100%);
   border-color: #FF9800;
@@ -307,7 +307,7 @@
   }
 }
 
-/* Action Buttons */
+
 .action-buttons {
   width: 100%;
   display: flex;

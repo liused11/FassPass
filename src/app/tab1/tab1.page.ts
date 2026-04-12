@@ -48,30 +48,30 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   visibleParkingLots: ParkingLot[] = [];
   filteredParkingLots: ParkingLot[] = [];
 
-  // --- Building Variables ---
+  
   buildingZones: any[] = [];
   allBuildingRooms: any[] = [];
   filteredBuildingRooms: any[] = [];
 
   userProfile: UserProfile | null = null;
 
-  // --- Active Reservation ---
+  
   activeReservation: any = null;
   currentParkingFee: number = 0;
   feeCalcInterval: any;
 
-  // --- User Coordinates (Default) ---
+  
   userLat = 13.6513;
   userLon = 100.4955;
 
-  // --- Map Variables ---
+  
   private map: any;
   private markers: any[] = [];
   private userMarker: any;
-  private geoHashBounds: any; // เลเยอร์กรอบสี่เหลี่ยม Geohash
+  private geoHashBounds: any; 
   private userGeoHash: string | null = null;
 
-  // --- Subscription & Animation ---
+  
   private animationFrameId: any;
   private sheetToggleSub!: Subscription;
   private timeCheckSub!: Subscription;
@@ -80,15 +80,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   private profileIdSub!: Subscription;
   private refreshSub!: Subscription;
   
-  private realtimeTimeout: any; // สำหรับกันการโหลดเบิ้ลเวลา Realtime เด้งรัวๆ
-  private realtimeChannel: any; // สำหรับเก็บช่องสัญญาณ Realtime ไว้ล้างตอนปิดหน้า
+  private realtimeTimeout: any; 
+  private realtimeChannel: any; 
 
-  // --- Search Subject ---
+  
   private searchSubject = new Subject<string>();
   isSearching = false;
 
-  // --- Bottom Sheet Config ---
-  sheetLevel = 1; // 0 = minimized, 1 = mid, 2 = full
+  
+  sheetLevel = 1; 
   currentSheetHeight = 250;
   isDragging = false;
   isSnapping = true;
@@ -97,7 +97,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   startLevel = 1;
   canScroll = false;
 
-  // Velocity tracking
+  
   lastY = 0;
   lastTime = 0;
   velocityY = 0;
@@ -108,16 +108,16 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     private modalCtrl: ModalController,
     private uiEventService: UiEventService,
     private platform: Platform,
-    private alertCtrl: AlertController, // ✅ Inject AlertController
-    private parkingDataService: ParkingDataService, // Renamed for clarity
-    private parkingApiService: ParkingService, // Inject new RPC Service
-    private supabaseService: SupabaseService, // Inject Supabase for Realtime
-    private reservationService: ReservationService, // ✅ Inject Reservation Service
-    private router: Router, // ✅ Inject Router
+    private alertCtrl: AlertController, 
+    private parkingDataService: ParkingDataService, 
+    private parkingApiService: ParkingService, 
+    private supabaseService: SupabaseService, 
+    private reservationService: ReservationService, 
+    private router: Router, 
     private bottomSheetService: BottomSheetService,
-    private bookmarkService: BookmarkService, // ✅ Inject Bookmark Service
+    private bookmarkService: BookmarkService, 
     @Inject(PLATFORM_ID) private platformId: Object,
-    private ngZone: NgZone // Inject NgZone for performance optimization
+    private ngZone: NgZone 
   ) { }
 
 
@@ -130,7 +130,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       });
     });
 
-    // เก็บ Subscription ลงตัวแปร
+    
     this.userProfileSub = this.parkingDataService.userProfile$.subscribe(p => {
       this.userProfile = p;
     });
@@ -167,7 +167,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     if (this.timeCheckSub) this.timeCheckSub.unsubscribe();
     if (this.searchSub) this.searchSub.unsubscribe();
     
-    // สิ่งที่เพิ่มเข้ามาเพื่อแก้ปัญหา Memory Leak & โหลดเบิ้ล
+    
     if (this.userProfileSub) this.userProfileSub.unsubscribe();
     if (this.profileIdSub) this.profileIdSub.unsubscribe();
     if (this.refreshSub) this.refreshSub.unsubscribe();
@@ -186,19 +186,19 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   async loadActiveReservation() {
     try {
-      // Get all reservations for the current user
+      
       const reservations = await this.reservationService.getUserReservationsFromEdge();
       
-      // Look for the currently active ones (status = active or checked_in)
+      
       this.activeReservation = reservations.find((r: any) => 
         r.status === 'active' || r.status === 'checked_in' || r.status === 'checked_in_pending_payment'
       );
 
       if (this.activeReservation) {
-        // Fetch initially
+        
         this.updateCurrentFee();
         
-        // Polling fee update every 1 minute
+        
         if (this.feeCalcInterval) clearInterval(this.feeCalcInterval);
         this.feeCalcInterval = setInterval(() => {
           this.updateCurrentFee();
@@ -238,7 +238,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   handleRealtimeUpdate() {
-    // Clear timeout เดิมทิ้งถ้ามีการอัปเดตเข้ามารัวๆ ในเสี้ยววินาที (Debounce)
+    
     if (this.realtimeTimeout) {
       clearTimeout(this.realtimeTimeout);
     }
@@ -266,7 +266,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
           if (realLots) {
             console.log('[Tab1] Applying Real Data (Count: ' + realLots.length + ')');
 
-            // Fetch bookmarks and apply to lots
+            
             const bookmarkedIds = await this.bookmarkService.getBookmarkedBuildingIds();
             realLots.forEach(lot => {
               lot.isBookmarked = bookmarkedIds.includes(lot.id);
@@ -275,7 +275,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
             this.allParkingLots = realLots;
             this.processScheduleData();
             this.updateParkingStatuses();
-            this.calculateDistances(); // Calculate distance & color here
+            this.calculateDistances(); 
             this.filterData();
 
             if (this.filteredParkingLots.length === 0) {
@@ -297,10 +297,10 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadBuildingData() {
-    // Instead of mapping rooms, we just want to create a Single Building Card from the JSON data.
+    
     this.buildingZones = [{ id: 'all', name: 'All Buildings' }];
 
-    // Create one single building record representing e12
+    
     const singleBuilding = {
       id: buildingFloorData.buildingId,
       name: buildingFloorData.buildingName,
@@ -363,7 +363,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
-    // 🌟 คำนวณค่าตัวแปรล่วงหน้าก่อนส่งไป HTML (ลดภาระ Change Detection)
+    
     results.forEach(lot => {
       (lot as any).displayAvailable = this.getDisplayAvailable(lot);
       (lot as any).displayStatusText = this.getStatusText(lot.status);
@@ -401,13 +401,13 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     const { data, role } = await modal.onDidDismiss();
     if (role === 'confirm' && data) {
-      // ✅ Handle Parking Invite Code
+      
       if (data.type === 'parking') {
         this.router.navigate(['/tabs/tab2']);
         return;
       }
 
-      // 🏢 Handle Building Access Code
+      
       let accessData: any = null;
 
       try {
@@ -444,11 +444,11 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   locationChanged(ev: any) {
     this.selectedLocation = ev.detail.value;
-    this.selectedTab = 'all'; // Reset tab when location changes
+    this.selectedTab = 'all'; 
     this.filterData();
   }
 
-  // Handle building click
+  
   async openBuildingDetails(building: any) {
     const modal = await this.modalCtrl.create({
       component: BuildingDetailComponent,
@@ -467,27 +467,27 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
 
 
-  //  ทำงานหลังจากหน้าเว็บโหลดเสร็จ (เพื่อโหลด Map)
+  
   async ngAfterViewInit() {
     if (isPlatformBrowser(this.platformId)) {
       await this.initMap();
       this.updateMarkers();
 
-      // ลองขอตำแหน่งทันทีเมื่อเข้าหน้า
-      // this.focusOnUser();
+      
+      
     }
   }
 
 
 
-  // ----------------------------------------------------------------
-  //  MAP LOGIC (Leaflet + Geohash + Error Handling)
-  // ----------------------------------------------------------------
+  
+  
+  
 
   private async initMap() {
     const L = await import('leaflet');
 
-    // ตั้งค่า Default Icon
+    
     const iconUrl = 'assets/icon/favicon.png';
     const DefaultIcon = L.Icon.extend({
       options: {
@@ -499,7 +499,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
     L.Marker.prototype.options.icon = new DefaultIcon();
 
-    // พิกัดเริ่มต้น (kmUTT)
+    
     const centerLat = 13.651336;
     const centerLng = 100.496472;
 
@@ -538,17 +538,17 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     if (!this.map) return;
     const L = await import('leaflet');
 
-    // ลบ Marker เก่า
+    
     this.markers.forEach(m => this.map.removeLayer(m));
     this.markers = [];
 
-    // วาด Marker ใหม่
+    
     this.visibleParkingLots.forEach((lot, index) => {
       if (lot.lat && lot.lng) {
-        // ใช้ border line color (distanceColor) หรือสีตั้งต้นถ้าไม่มีจาก API (lot.distanceColor ไม่ควรเป็นว่างถ้าคำนวณผ่าน calculateDistances())
+        
         const color = lot.distanceColor || '#6c757d';
 
-        // ลำดับ (Index + 1)
+        
         const rankNumber = (index + 1).toString();
 
         const icon = this.createPinIcon(L, color, rankNumber);
@@ -566,7 +566,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  // ✅ ฟังก์ชันหาตำแหน่ง + Geohash + Error Alert
+  
   public focusOnUser() {
     if (!navigator.geolocation) {
       this.showLocationError('เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง');
@@ -577,21 +577,21 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
 
-      // 1. คำนวณ Geohash (ความละเอียด 7 หลัก)
+      
       this.userGeoHash = ngeohash.encode(lat, lng, 7);
 
-      // --- อัปเดตพิกัด และ คำนวณระยะทาง/สีใหม่ ---
+      
       this.userLat = lat;
       this.userLon = lng;
       this.calculateDistances();
-      this.filterData(); // เพื่ออัปเดต UI หน้าจอทันที
+      this.filterData(); 
 
       if (this.map) {
         const L = await import('leaflet');
 
         this.map.flyTo([lat, lng], 17);
 
-        // 2. วาดจุดตำแหน่งผู้ใช้
+        
         if (!this.userMarker) {
           const userIcon = L.divIcon({
             html: `<div style="width: 15px; height: 15px; background: #4285F4; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
@@ -603,16 +603,16 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
           this.userMarker.setLatLng([lat, lng]);
         }
 
-        // 3. วาดกรอบสี่เหลี่ยม Geohash (Bounding Box)
+        
         if (this.geoHashBounds) {
           this.map.removeLayer(this.geoHashBounds);
         }
 
-        // Decode เพื่อหาขอบเขตสี่เหลี่ยม
+        
         const boundsArray = ngeohash.decode_bbox(this.userGeoHash);
         const bounds = [[boundsArray[0], boundsArray[1]], [boundsArray[2], boundsArray[3]]];
 
-        // @ts-ignore
+        
         this.geoHashBounds = L.rectangle(bounds, {
           color: '#4285f4',
           weight: 1,
@@ -621,15 +621,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         }).addTo(this.map);
       }
     }, (err) => {
-      //  จัดการ Error ที่นี่ (กรณี User กด Block หรือ GPS ไม่ทำงาน)
+      
       console.error('Error getting location', err);
 
       let message = 'ไม่สามารถระบุตำแหน่งได้';
-      if (err.code === 1) { // PERMISSION_DENIED
+      if (err.code === 1) { 
         message = 'กรุณาเปิดสิทธิ์การเข้าถึงตำแหน่ง (Location Permission) ที่การตั้งค่าของเบราว์เซอร์หรืออุปกรณ์';
-      } else if (err.code === 2) { // POSITION_UNAVAILABLE
+      } else if (err.code === 2) { 
         message = 'สัญญาณ GPS ขัดข้อง ไม่สามารถระบุตำแหน่งได้';
-      } else if (err.code === 3) { // TIMEOUT
+      } else if (err.code === 3) { 
         message = 'หมดเวลาในการค้นหาตำแหน่ง ลองใหม่อีกครั้ง';
       }
 
@@ -637,12 +637,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     }, {
       enableHighAccuracy: true,
-      timeout: 10000, // 10 วินาที
+      timeout: 10000, 
       maximumAge: 0
     });
   }
 
-  //  ฟังก์ชันแสดง Alert
+  
   async showLocationError(msg: string) {
     const alert = await this.alertCtrl.create({
       header: 'แจ้งเตือนพิกัด',
@@ -653,13 +653,13 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     await alert.present();
   }
 
-  // ----------------------------------------------------------------
-  //  LOGIC การ Filter และ Bottom Sheet 
-  // ----------------------------------------------------------------
+  
+  
+  
 
 
 
-  // Drag & Drop
+  
   getPixelHeightForLevel(level: number): number {
     const platformHeight = this.platform.height();
     if (level === 0) return 80;
@@ -680,7 +680,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     const touch = ev.touches ? ev.touches[0] : ev;
     this.startY = touch.clientY;
 
-    // Reset velocity trackers
+    
     this.lastY = this.startY;
     this.lastTime = Date.now();
     this.velocityY = 0;
@@ -692,7 +692,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.startLevel = this.sheetLevel;
     this.isDragging = false;
 
-    // Run outside Angular zone to prevent Change Detection on every pixel move
+    
     this.ngZone.runOutsideAngular(() => {
       window.addEventListener('mousemove', this.dragMove);
       window.addEventListener('mouseup', this.endDrag);
@@ -706,12 +706,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     const currentY = touch.clientY;
     const now = Date.now();
 
-    // Calculate instantaneous velocity (pixels per ms)
+    
     if (this.lastTime > 0) {
       const dt = now - this.lastTime;
       const dy = currentY - this.lastY;
       if (dt > 0) {
-        // Exponential moving average for smooth velocity
+        
         this.velocityY = (this.velocityY * 0.4) + ((dy / dt) * 0.6);
       }
     }
@@ -757,49 +757,49 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       this.animationFrameId = null;
     }
 
-    // Jump back into Angular zone to apply final state
+    
     this.ngZone.run(() => {
       if (this.isDragging) {
         const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
         const finalH = sheet.offsetHeight;
         const totalDragged = finalH - this.startHeight;
         const platformHeight = this.platform.height();
-        const dragThreshold = platformHeight * 0.05; // Very responsive pull (5% height)
+        const dragThreshold = platformHeight * 0.05; 
 
         const h0 = this.getPixelHeightForLevel(0);
         const h1 = this.getPixelHeightForLevel(1);
         const h2 = this.getPixelHeightForLevel(2);
 
-        // Detect flick gesture (Ionic modal characteristic)
-        const isFlickUp = this.velocityY < -0.6; // SWIPE UP = negative velocity (pixels moving up)
-        const isFlickDown = this.velocityY > 0.6; // SWIPE DOWN = positive velocity
+        
+        const isFlickUp = this.velocityY < -0.6; 
+        const isFlickDown = this.velocityY > 0.6; 
 
         if (isFlickUp) {
-          // Flicked Up -> go to next higher level
+          
           if (this.startLevel === 0) this.sheetLevel = 1;
           else if (this.startLevel === 1) this.sheetLevel = 2;
         } else if (isFlickDown) {
-          // Flicked Down -> go to next lower level
+          
           if (this.startLevel === 2) this.sheetLevel = 1;
           else if (this.startLevel === 1) this.sheetLevel = 0;
         } else {
-          // Distance based fallback if swiped slowly
+          
           if (totalDragged > dragThreshold) {
-            // Dragged UP: Snaps up
+            
             if (this.startLevel === 0) {
               this.sheetLevel = (finalH > h1 + dragThreshold) ? 2 : 1;
             } else if (this.startLevel === 1) {
               this.sheetLevel = 2;
             }
           } else if (totalDragged < -dragThreshold) {
-            // Dragged DOWN: Snaps down
+            
             if (this.startLevel === 2) {
               this.sheetLevel = (finalH < h1 - dragThreshold) ? 0 : 1;
             } else if (this.startLevel === 1) {
               this.sheetLevel = 0;
             }
           } else {
-            // Didn't drag enough, revert to start level
+            
             this.sheetLevel = this.startLevel;
           }
         }
@@ -816,8 +816,8 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.isSnapping = true;
     this.updateSheetHeightByLevel(this.sheetLevel);
 
-    // Explicitly set DOM height to override manual drag styles since Angular change detection might skip
-    // if `currentSheetHeight` hasn't mathematically changed but the DOM was manipulated during drag.
+    
+    
     const sheet = document.querySelector('.bottom-sheet') as HTMLElement;
     if (sheet) {
       sheet.classList.add('snapping');
@@ -846,7 +846,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     this.updateSheetHeightByLevel(this.sheetLevel);
   }
 
-  // Helper Functions
+  
   processScheduleData() {
     this.allParkingLots.forEach(lot => {
       if (lot.schedule && lot.schedule.length > 0) {
@@ -966,41 +966,41 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     return names.join(', ');
   }
 
-  // --- Distance Calculations ---
+  
   calculateDistances() {
     this.allParkingLots.forEach(lot => {
-      // Use lot.lat and lot.lng if available, otherwise default to mapX/mapY if they hold coordinates
+      
       const lotLat = lot.lat || lot.mapX;
       const lotLng = lot.lng || lot.mapY;
 
       if (lotLat && lotLng) {
-        // Calculate distance in km
+        
         const distKm = this.calculateDistance(this.userLat, this.userLon, lotLat, lotLng);
-        // Distance converted to meters
+        
         lot.distance = Math.round(distKm * 1000);
       } else {
         lot.distance = 999999;
       }
     });
 
-    // Sort lots by calculated distance
+    
     this.allParkingLots.sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
-    // Assign gradient color based on sorted rank (Blue to Gray)
+    
     const validLots = this.allParkingLots.filter(l => l.distance !== 999999);
     const totalValid = validLots.length;
 
     this.allParkingLots.forEach((lot, index) => {
       if (lot.distance === 999999) {
-        lot.distanceColor = 'hsl(214, 0%, 75%)'; // default gray
+        lot.distanceColor = 'hsl(214, 0%, 75%)'; 
       } else {
-        // Calculate transition from Primary Blue (hsl(214, 82%, 51%)) to Gray (hsl(214, 0%, 75%))
+        
         const ratio = totalValid > 1 ? index / (totalValid - 1) : 0;
 
-        // Saturation fades from 82% to 0% (Gray)
+        
         const saturation = Math.floor(82 - (ratio * 82));
 
-        // Lightness shifts from 51% (Blue) to 75% (Light Gray)
+        
         const lightness = Math.floor(51 + (ratio * 24));
 
         lot.distanceColor = `hsl(214, ${saturation}%, ${lightness}%)`;
@@ -1009,7 +1009,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Radius of the earth in km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a =
@@ -1038,9 +1038,9 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async viewLotDetails(lot: ParkingLot) {
-    // 0. Check if it's a building -> Open Building Detail Modal
+    
     if (lot.category === 'building') {
-      // Open Building Detail Modal
+      
       const modal = await this.modalCtrl.create({
         component: BuildingDetailComponent,
         componentProps: {
@@ -1050,24 +1050,24 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
         breakpoints: [0, 1],
         backdropDismiss: true,
         showBackdrop: true,
-        cssClass: 'detail-sheet-modal', // Reuse same class if appropriate
+        cssClass: 'detail-sheet-modal', 
       });
       await modal.present();
       return;
     }
 
-    // 1. Show Booking Type Selector First
-    this.isModalOpen = true; // Trigger Scale Down
+    
+    this.isModalOpen = true; 
 
-    // Minimize Sheet to lowest level
+    
     this.isSnapping = true;
     this.sheetLevel = 0;
     this.updateSheetHeightByLevel(0);
 
     const typeModal = await this.modalCtrl.create({
       component: BookingTypeSelectorComponent,
-      cssClass: 'auto-height-modal', // You might need to add this class or use 'detail-sheet-modal' if it fits
-      initialBreakpoint: 0.65, // Increased to move up
+      cssClass: 'auto-height-modal', 
+      initialBreakpoint: 0.65, 
       breakpoints: [0, 0.65, 1],
       showBackdrop: true,
       backdropDismiss: true
@@ -1077,15 +1077,15 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
     const { data, role } = await typeModal.onDidDismiss();
 
-    // If user cancelled, stop here
+    
     if (role !== 'confirm' || !data) {
-      this.isModalOpen = false; // Reset Scale Up
+      this.isModalOpen = false; 
       return;
     }
 
-    const selectedBookingMode = data.bookingMode; // 'daily', 'monthly', 'flat24', 'monthly_night'
+    const selectedBookingMode = data.bookingMode; 
 
-    // 2. Open Parking Detail with Selected Mode
+    
     this.isSnapping = true;
     this.sheetLevel = 0;
     this.updateSheetHeightByLevel(0);
@@ -1102,7 +1102,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
       componentProps: {
         lot: lot,
         initialType: this.selectedTab === 'all' ? 'normal' : this.selectedTab,
-        bookingMode: selectedBookingMode // PASS THE MODE
+        bookingMode: selectedBookingMode 
       },
       initialBreakpoint: 1,
       breakpoints: [0, 1],
@@ -1112,14 +1112,14 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     });
     await modal.present();
 
-    // Reset scale when Detail Modal closes? 
-    // User said "Tab1 to Booking Type Selection". 
-    // But logically, if we go to Detail, we might want to keep it or reset it.
-    // Usually, if Detail opens full screen, the background doesn't matter much.
-    // But if user closes Booking Modal, we MUST reset.
+    
+    
+    
+    
+    
 
     const detailRes = await modal.onDidDismiss();
-    this.isModalOpen = false; // Reset finally
+    this.isModalOpen = false; 
   }
 
   getMarkerColor(available: number | null, capacity: number) {
@@ -1150,7 +1150,7 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedTab === 'all') {
       return (lot.capacity.normal || 0) + (lot.capacity.ev || 0) + (lot.capacity.motorcycle || 0);
     }
-    // @ts-ignore
+    
     return lot.capacity[this.selectedTab] || 0;
   }
 
@@ -1159,12 +1159,12 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedTab === 'all') {
       return (lot.available.normal || 0) + (lot.available.ev || 0) + (lot.available.motorcycle || 0);
     }
-    // @ts-ignore
+    
     return lot.available[this.selectedTab] || 0;
   }
 
-  //  Mock Data พร้อมพิกัด (lat, lng)
-  // getMockData(): ParkingLot[] {
-  //   return TAB1_PARKING_LOTS;
-  // }
+  
+  
+  
+  
 }

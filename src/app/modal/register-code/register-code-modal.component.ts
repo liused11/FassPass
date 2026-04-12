@@ -35,7 +35,7 @@ export class RegisterCodeModalComponent {
 
     try {
       if (this.inviteCode.startsWith('PRK-')) {
-        // Handle Parking Reservation Invite via RPC (bypasses RLS issues)
+        
         const { data: result, error: rpcErr } = await this.supabase.client.rpc('claim_parking_invite', {
           p_code: this.inviteCode,
           p_visitor_id: visitorId
@@ -61,7 +61,7 @@ export class RegisterCodeModalComponent {
         return;
       }
 
-      // Default: Building Access Invite
+      
       const { data, error } = await this.supabase.client.rpc('claim_invite_code', {
         p_code: this.inviteCode,
         p_visitor_id: visitorId
@@ -70,7 +70,7 @@ export class RegisterCodeModalComponent {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.message || 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว');
 
-      // ดึง room_id (door_id) จากตาราง access_tickets
+      
       const { data: ticketData, error: ticketError } = await this.supabase.client
         .from('access_tickets')
         .select('room_id, expires_at')
@@ -78,7 +78,7 @@ export class RegisterCodeModalComponent {
         .maybeSingle();
 
       if (!ticketError && ticketData?.room_id) {
-        // บันทึก user_door_access เพื่อให้ access-list ดึงได้
+        
         await this.supabase.client.from('user_door_access').insert({
           profile_id: visitorId,
           door_id: ticketData.room_id,

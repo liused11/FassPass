@@ -28,10 +28,10 @@ export class Tab4Page implements OnInit {
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
-      const bId = params['buildingId'] || 'school-building-01'; // Default Fallback
+      const bId = params['buildingId'] || 'school-building-01'; 
       const floorParam = params['floor'];
 
-      // Auto-select floor if provided via queryParams
+      
       if (floorParam) {
         this.selectedFloor = parseInt(floorParam, 10);
       } else {
@@ -42,7 +42,7 @@ export class Tab4Page implements OnInit {
       this.loadBuilding(bId);
       this.loadDoorPermissions();
 
-      // 🟢 Open access-list automatically after permissions load
+      
       setTimeout(() => {
         this.bottomSheetService.open(
           'access-list',
@@ -63,7 +63,7 @@ export class Tab4Page implements OnInit {
     this.buildingService.getBuilding(id).subscribe(data => {
       this.buildingData = data;
 
-      // If a floor was pre-selected from navigation
+      
       if (this.selectedFloor !== null) {
         this.onFloorSelected(this.selectedFloor);
       }
@@ -73,15 +73,15 @@ export class Tab4Page implements OnInit {
   onFloorSelected(floorNumber: number | string) {
     if (!this.buildingData) return;
 
-    // หาข้อมูลชั้นจาก floors array
-    // Convert both to Number to ensure they match safely
+    
+    
     const numFloor = Number(floorNumber);
     const floor = this.buildingData.floors.find(f => Number(f.floor) === numFloor);
 
     if (floor) {
       this.selectedFloor = numFloor;
       this.selectedFloorData = floor;
-      // 🟢 Refresh permission when floor changes
+      
       this.loadDoorPermissions();
     } else {
       console.warn(`Floor ${floorNumber} not found in building data.`, this.buildingData.floors);

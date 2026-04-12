@@ -2,7 +2,7 @@
   padding-bottom: 24px;
 }
 
-/* Floor Section */
+
 .floor-section {
   margin-bottom: 24px;
 }
@@ -25,7 +25,7 @@
   color: #1f2937;
 }
 
-/* Header Styles (เหมือนเดิม) */
+
 .header-row {
   display: flex;
   align-items: center;
@@ -43,7 +43,7 @@
   color: var(--ion-color-medium);
 }
 
-/* [ใหม่] ปรับสไตล์รายการแบบกำหนดเองให้กับ Ion List */
+
 .custom-room-list {
   background: transparent;
   padding: 0 8px;
@@ -56,53 +56,53 @@
   margin-bottom: 12px;
 }
 
-/* [สำคัญ] กล่องสี่เหลี่ยมด้านซ้าย (แทนจุดวงกลมเดิม) */
+
 .room-box-square {
-  width: 72px;   /* ปรับได้ เช่น 60/72/80 */
-  height: 72px;  /* ให้เป็นจัตุรัส */
+  width: 72px;   
+  height: 72px;  
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 4px; /* ลด padding เพื่อให้มีที่เยอะขึ้น */
+  padding: 4px; 
   margin-right: 16px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);
   flex-shrink: 0;
 }
 
-/* [เพิ่มใหม่] Container ข้างในกล่อง */
+
 .room-box-inner {
   display: flex;
-  flex-direction: column; /* เรียงแนวตั้ง */
+  flex-direction: column; 
   align-items: center;
   justify-content: center;
-  line-height: 1; /* ลดระยะห่างบรรทัด */
+  line-height: 1; 
   text-align: center;
   width: 100%;
 }
 
-/* คำว่า "ห้อง" */
+
 .box-prefix {
-  font-size: 0.75rem; /* ตัวเล็กๆ */
+  font-size: 0.75rem; 
   font-weight: 500;
   margin-bottom: 2px;
   opacity: 0.9;
 }
 
-/* เลขห้อง "1A-1" */
+
 .box-number {
-  font-size: 1.3rem; /* ตัวใหญ่สะใจ */
+  font-size: 1.3rem; 
   font-weight: 700;
   word-break: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* ยอมให้ขึ้นบรรทัดใหม่ได้ถ้าเลขยาวมาก */
+  -webkit-line-clamp: 2; 
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.1;
 }
 
-/* ส่วนรายละเอียดด้านขวา */
+
 .room-details {
   display: flex;
   flex-direction: column;
@@ -130,7 +130,7 @@
   color: var(--ion-color-medium);
 }
 
-/* Door Tags */
+
 .door-tags {
   display: flex;
   flex-wrap: wrap;
@@ -149,7 +149,7 @@
   color: var(--ion-color-success);
 }
 
-/* Empty State Styles (เหมือนเดิม) */
+
 .empty-state {
   margin-top: 32px;
 }

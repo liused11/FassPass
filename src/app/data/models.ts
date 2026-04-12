@@ -20,8 +20,8 @@ export interface ParkingSlotDB {
 export interface ParkingLot {
     id: string;
     name: string;
-    category?: 'parking' | 'building'; // New field for location type
-    zone?: 'north' | 'south'; // Optional zone for buildings
+    category?: 'parking' | 'building'; 
+    zone?: 'north' | 'south'; 
     capacity: {
         normal: number;
         ev: number;
@@ -35,14 +35,14 @@ export interface ParkingLot {
     floors?: { id: string; name: string }[] | string[];
     mapX: number;
     mapY: number;
-    //  พิกัดสำหรับ Map (Latitude, Longitude)
+    
     lat?: number;
     lng?: number;
 
     status: 'available' | 'full' | 'closed' | 'low';
     isBookmarked: boolean;
     distance: number;
-    distanceColor?: string; // Color based on distance
+    distanceColor?: string; 
     hours: string;
     hasEVCharger: boolean;
     userTypes: string;
@@ -51,11 +51,11 @@ export interface ParkingLot {
     supportedTypes: string[];
     schedule?: ScheduleItem[];
     images?: string[];
-    note?: string; // e.g. "รองรับผู้มาติดต่อมหาลัย"
-    promotion?: string; // e.g. "จอดฟรี 1 ชม."
-    description?: string; // Additional details
+    note?: string; 
+    promotion?: string; 
+    description?: string; 
 
-    // UI Display helpers added for template binding
+    
     displayStatusText?: string;
     displayAvailable?: string | number;
     displaySupportedTypes?: string;
@@ -64,20 +64,20 @@ export interface ParkingLot {
 export interface Booking {
     id: string;
     placeName: string;
-    locationDetails: string; // e.g. "ชั้น 1 | โซน B | B04"
+    locationDetails: string; 
     bookingTime: Date;
     endTime: Date;
-    status: 'pending' | 'pending_payment' | 'pending_invite' | 'confirmed' | 'completed' | 'cancelled' | 'active' | 'checked_in' | 'checked_out' | 'checked_in_pending_payment'; // Added 'active' and 'check' states for parking
-    statusLabel?: string; // Optional override for status text
+    status: 'pending' | 'pending_payment' | 'pending_invite' | 'confirmed' | 'completed' | 'cancelled' | 'active' | 'checked_in' | 'checked_out' | 'checked_in_pending_payment'; 
+    statusLabel?: string; 
     price: number;
-    discountBadge?: string; // e.g. "ลด 15%"
-    carBrand: string;     // ยี่ห้อรถ
-    licensePlate: string; // ทะเบียนรถ
-    bookingType: 'hourly' | 'monthly_regular' | 'flat_24h' | 'daily' | 'monthly' | 'flat24'; // Updated types (legacy included if needed)
-    periodLabel?: string; // For special textual times like "เหมาจ่าย 24 ชั่วโมง" or "1 ธ.ค. - 31 ธ.ค."
-    timeDetailLabel?: string; // For explicit time range text if needed
+    discountBadge?: string; 
+    carBrand: string;     
+    licensePlate: string; 
+    bookingType: 'hourly' | 'monthly_regular' | 'flat_24h' | 'daily' | 'monthly' | 'flat24'; 
+    periodLabel?: string; 
+    timeDetailLabel?: string; 
 
-    // Optional: non-reservation items (e.g., access passes) rendered in the same list UI
+    
     itemKind?: 'reservation' | 'access_pass';
     passBuildingId?: string;
     passDoorIds?: string[];
@@ -85,7 +85,7 @@ export interface Booking {
     passExpiresAt?: Date | null;
     passRoomPreview?: string;
 
-    // Detailed Location Fields for easier UI binding
+    
     building?: string;
     floor?: string;
     zone?: string;
@@ -94,7 +94,7 @@ export interface Booking {
     carId?: string;
     dateLabel?: string;
     reservedAt?: Date;
-    // Coordinates for Navigation
+    
     lat?: number;
     lng?: number;
 
@@ -110,7 +110,7 @@ export interface UserProfile {
     phone: string;
     avatar: string;
     role: UserRole;
-    role_level?: number; // 0=Guest, 1=Visitor, 2=User, 3=Host
+    role_level?: number; 
     lineId?: string;
     email?: string;
 }
@@ -124,8 +124,8 @@ export interface Vehicle {
     isDefault: boolean;
     status: string;
     lastUpdate: string;
-    color?: string; // Added color field
-    type?: string;  // Added type field
+    color?: string; 
+    type?: string;  
 }
 
 export interface SettingItem {

@@ -18,7 +18,7 @@ export class CheckBookingComponent implements OnInit {
   durationText: string = '';
   timeDisplay: string = '';
   totalPrice: number = 0;
-  hourlyRate: number = 20; // 20 THB per hour
+  hourlyRate: number = 20; 
   isCarOccupied: boolean = false;
 
   floors: string[] = ['Floor 1', 'Floor 2', 'Floor 3'];
@@ -44,11 +44,11 @@ export class CheckBookingComponent implements OnInit {
   ];
   selectedPaymentMethod: string = 'promptpay';
 
-  // State
+  
   currentStep: number = 1;
   promptPayRef: string = '';
 
-  // Form Models
+  
   cardNumber: string = '';
   cardExpiry: string = '';
   cardCvv: string = '';
@@ -60,7 +60,7 @@ export class CheckBookingComponent implements OnInit {
 
   bookingType: 'self' | 'invite' = 'self';
   generatedInviteCode: string = '';
-  userRole: string = 'User'; // Default
+  userRole: string = 'User'; 
 
   constructor(
     private modalCtrl: ModalController,
@@ -117,7 +117,7 @@ export class CheckBookingComponent implements OnInit {
       this.assignedZone = this.data.selectedZone || (this.data.selectedZones.length === 1 ? this.data.selectedZones[0] : '');
     }
 
-    // New: Check car occupation initially
+    
     setTimeout(() => this.checkCurrentCarAvailability(), 500);
     this.fetchUserRole();
   }
@@ -242,25 +242,25 @@ export class CheckBookingComponent implements OnInit {
       return;
     }
 
-    // --- REAL SLOT FINDER ---
-    // If we have selectedZoneIds, we can search directly.
+    
+    
     const zoneIds = this.data.selectedZoneIds || [];
     if (zoneIds.length === 0) {
-      // Fallback logic if IDs are missing (should not happen with latest ParkingDetail)
+      
       console.warn('No real Zone IDs provided to CheckBooking. Cannot find real slot.');
       this.presentToast('ไม่พบข้อมูลโซนที่ถูกต้อง (No Zone IDs)');
       return;
     }
 
     const start = new Date(this.data.startSlot.dateTime);
-    // FIXED: Use the passed end time directly
+    
     const end = new Date(this.data.endSlot.dateTime);
 
-    // We only support picking ONE slot.
-    // Logic: Try the first selected zone.
+    
+    
     const targetZoneId = zoneIds[0];
 
-    // Provide visual feedback
+    
     const targetFloorName = this.data.selectedFloors[0] || 'Unknown Floor';
     const targetZoneName = this.data.selectedZones[0] || 'Unknown Zone';
 
@@ -272,7 +272,7 @@ export class CheckBookingComponent implements OnInit {
         this.assignedFloor = targetFloorName;
         this.assignedZone = targetZoneName;
 
-        // Show toast
+        
         this.presentToast(`ระบบเลือกให้: ${targetFloorName} - ${targetZoneName} (${result.slot_name || result.slot_id})`);
 
       } else {
@@ -298,10 +298,10 @@ export class CheckBookingComponent implements OnInit {
   calculateDurationAndPrice() {
     if (this.data?.startSlot?.dateTime && this.data?.endSlot?.dateTime) {
       const start = new Date(this.data.startSlot.dateTime).getTime();
-      // FIXED: Use the passed end time directly, as it's already calculated in parent
+      
       const end = new Date(this.data.endSlot.dateTime).getTime();
       const diffMs = end - start;
-      const roundedHours = Math.ceil(diffMs / (1000 * 60 * 60)); // Round up for pricing
+      const roundedHours = Math.ceil(diffMs / (1000 * 60 * 60)); 
 
       const diffHrs = Math.floor((diffMs / (1000 * 60 * 60)));
       const diffMins = Math.round(((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
@@ -314,14 +314,14 @@ export class CheckBookingComponent implements OnInit {
       this.durationText = durationStr || '1 ชม.';
       this.totalPrice = roundedHours * this.hourlyRate;
 
-      // Calculate formatted time display
+      
       const startDate = new Date(this.data.startSlot.dateTime);
       const endDate = new Date(end);
 
       const pad = (n: number) => n < 10 ? '0' + n : n;
       this.timeDisplay = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())} - ${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
 
-      // --- PRICE MAP FROM PARENT ---
+      
       if (this.data && this.data.price !== undefined) {
         this.totalPrice = this.data.price;
       } else {
@@ -337,7 +337,7 @@ export class CheckBookingComponent implements OnInit {
         }
       }
 
-      // --- TEXT UPDATE BY MODE ---
+      
       const modeText = this.data.bookingMode || 'daily';
       if (modeText === 'monthly') {
         this.durationText = 'รายเดือน (1 เดือน)';
@@ -386,10 +386,10 @@ export class CheckBookingComponent implements OnInit {
     }
 
     if (this.currentStep === 1) {
-      // Proceed to Payment Step
+      
       if (this.selectedPaymentMethod === 'pay_later') {
-        // Pay Later might just confirm immediately? Or show instructions as step 2?
-        // Let's show instructions as step 2 for consistency.
+        
+        
         this.currentStep = 2;
       } else {
         this.currentStep = 2;
@@ -397,7 +397,7 @@ export class CheckBookingComponent implements OnInit {
       return;
     }
 
-    // Step 2: Final Confirm
+    
     const isPayLater = this.selectedPaymentMethod === 'pay_later';
     const selectedCar = this.bookingType === 'invite' ? null : this.selectedCarInfo;
     const isInvite = this.bookingType === 'invite';

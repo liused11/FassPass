@@ -14,7 +14,7 @@ export class UiEventService {
 
   constructor() { }
 
-  // ฟังก์ชันนี้จะถูกเรียกจาก tabs.page.ts
+  
   toggleTab1Sheet() {
     this.toggleTab1SheetSubject.next();
   }

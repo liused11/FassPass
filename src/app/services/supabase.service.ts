@@ -7,7 +7,7 @@ import { environment } from 'src/environments/environment';
 export class SupabaseService {
   private supabase: SupabaseClient;
   constructor() {
-    // Check for existing instance to prevent multiple clients (and locks) during HMR
+    
     const w = window as any;
     if (w.__SUPABASE_CLIENT__) {
       this.supabase = w.__SUPABASE_CLIENT__;
@@ -17,7 +17,7 @@ export class SupabaseService {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          // Disable Navigator Lock to prevent timeout errors in Dev/HMR
+          
           lock: (name, acquireTimeout, fn) => fn(),
         }
       });

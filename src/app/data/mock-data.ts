@@ -6,9 +6,9 @@ import {
   Vehicle,
 } from './models';
 
-// =======================================================
-// MOCK DATA FOR TAB 1 (Parking List & Map)
-// =======================================================
+
+
+
 
 export const TAB1_PARKING_LOTS: ParkingLot[] = [
   {
@@ -166,7 +166,7 @@ export const TAB1_PARKING_LOTS: ParkingLot[] = [
       "normal"
     ]
   },
-  // --- Visitor Buildings ---
+  
   {
     id: 'school-building-01',
     name: 'อาคารเรียนรวม 12 ชั้น (E12)',
@@ -261,15 +261,15 @@ export const TAB1_PARKING_LOTS: ParkingLot[] = [
   }
 ];
 
-// =======================================================
-// MOCK DATA FOR TAB 2 (Bookings & History)
-// =======================================================
+
+
+
 
 export const TAB2_BOOKINGS: Booking[] = [];
 
-// =======================================================
-// MOCK DATA FOR TAB 3 (Profile & Settings)
-// =======================================================
+
+
+
 
 export const TAB3_USER_PROFILE: UserProfile = {
   name: 'Atsadawut FastPass',
@@ -336,9 +336,9 @@ export const TAB3_OTHER_SETTINGS: SettingItem[] = [
   },
 ];
 
-// =======================================================
-// MOCK DATA FOR PARKING DETAIL COMPONENT (Site Dropdown)
-// =======================================================
+
+
+
 
 export const PARKING_DETAIL_MOCK_SITES: ParkingLot[] = [
   {

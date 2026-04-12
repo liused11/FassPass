@@ -33,7 +33,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: '/tabs/explore', // ตั้งให้หน้า Explore เป็นหน้าแรก
+        redirectTo: '/tabs/explore', 
         pathMatch: 'full',
       },
     ],

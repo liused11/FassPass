@@ -1,11 +1,11 @@
-// Custom Font? No, rely on Tailwind / Ionic
-// But we want a refined look.
+
+
 
 ion-content {
   --background: #ffffff;
 }
 
-// 1. Header (Sticky)
+
 .sticky {
   position: sticky;
   top: 0;
@@ -13,15 +13,15 @@ ion-content {
   transition: all 0.2s;
 }
 
-// 2. Image Gallery
+
 .snap-center {
   scroll-snap-align: center;
 }
 
-// 3. Filters
-// See below
 
-// --- Refined Styles ---
+
+
+
 
 .shadow-lg-up {
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
@@ -37,16 +37,16 @@ ion-content {
 
 .no-scrollbar {
   -ms-overflow-style: none;
-  /* IE and Edge */
+  
   scrollbar-width: none;
 
-  /* Firefox */
+  
   &::-webkit-scrollbar {
     display: none;
   }
 }
 
-// Calendar Grid Buttons (Refined)
+
 .slot-btn {
   border-radius: 12px;
   border: 1px solid #f3f4f6;
@@ -63,7 +63,7 @@ ion-content {
     transform: scale(0.96);
   }
 
-  // Unavailable
+  
   &.unavailable {
     background-color: #f9fafb;
     color: #d1d5db;
@@ -75,10 +75,10 @@ ion-content {
     }
   }
 
-  // Selected (Start/End)
+  
   &.selected-start,
   &.selected-end {
-    background-color: var(--ion-color-primary); // Deep Blue
+    background-color: var(--ion-color-primary); 
     color: white;
     border-color: var(--ion-color-primary);
     box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.25);
@@ -89,20 +89,20 @@ ion-content {
     }
   }
 
-  // In Range
+  
   &.in-range {
-    background-color: #eff6ff; // Blue-50
-    border-color: #dbeafe; // Blue-100
+    background-color: #eff6ff; 
+    border-color: #dbeafe; 
     color: var(--ion-color-primary);
-    border-radius: 4px; // Square it up a bit to look connected
+    border-radius: 4px; 
     z-index: 1;
   }
 
-  // Reserved by User (Small Green Box)
+  
   &.reserved-by-user {
-    background-color: #ecfdf5; // Green-50
-    border-color: #10b981; // Green-500
-    color: #047857; // Green-700
+    background-color: #ecfdf5; 
+    border-color: #10b981; 
+    color: #047857; 
     cursor: default;
 
     &:active {
@@ -116,7 +116,7 @@ ion-content {
   }
 }
 
-// Filter Button Refined
+
 .filter-btn {
   background: white;
   border: 1px solid #f3f4f6;
@@ -135,7 +135,7 @@ ion-content {
   }
 }
 
-// Circle Close Button
+
 .circle-btn {
   width: 36px;
   height: 36px;
@@ -153,7 +153,7 @@ ion-content {
   }
 }
 
-// Animation
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -170,7 +170,7 @@ ion-content {
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-// Custom Popover overrides
+
 ::ng-deep ion-popover.menu-popover {
   --width: 260px;
   --box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);

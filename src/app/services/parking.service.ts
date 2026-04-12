@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
 import { from, Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { ParkingLot } from '../data/models'; // Import existing model
+import { ParkingLot } from '../data/models'; 
 
 @Injectable({
   providedIn: 'root'
@@ -11,16 +11,10 @@ export class ParkingService {
 
   constructor(private supabase: SupabaseService) { }
 
-  /**
-   * Fetches buildings for a specific site using Supabase RPC.
-   * @param siteId The ID of the site (e.g., '1-1')
-   * @param lat User's current latitude
-   * @param lng User's current longitude
-   * @param userId Optional User ID for bookmark status
-   */
+  
   getSiteBuildings(siteId: string, lat: number = 0, lng: number = 0, profileId: string | null = null): Observable<ParkingLot[]> {
     return from((async () => {
-      // 1. Fetch from Edge Function
+      
       const response = await this.supabase.client.functions.invoke('get-parking-lots', {
         body: {
           site_id: siteId,
@@ -36,9 +30,9 @@ export class ParkingService {
 
       let lots = response.data as ParkingLot[];
 
-      // 2. Client-Side Price Override (Bypass Edge Function RLS Issue)
-      // Since Edge Function runs as ANON and RLS blocks profile fetching, 
-      // we fetch the profile here using the Client's valid Auth Token, then override the prices.
+      
+      
+      
       if (profileId) {
         try {
           const { data: profile } = await this.supabase.client
@@ -58,7 +52,7 @@ export class ParkingService {
               };
               const exactRoleKey = roleKeyMap[roleStr] || 'Visitor';
               
-              // If Edge Function forwarded the role_prices JSON, use it, else keep original lot.price
+              
               const rolePrices = (lot as any).role_prices;
               if (rolePrices && rolePrices[exactRoleKey] !== undefined) {
                  lot.price = rolePrices[exactRoleKey];
@@ -86,9 +80,7 @@ export class ParkingService {
     );
   }
 
-  /**
-   * Fetches availability for a building within a specific time range.
-   */
+  
   getAvailability(buildingId: string, startTime: Date, endTime: Date, vehicleType: string = 'car'): Observable<any[]> {
     const rpcName = 'get_building_availability';
     const params = {
@@ -103,7 +95,7 @@ export class ParkingService {
     ).pipe(
       map(response => {
         if (response.error) throw response.error;
-        return response.data || []; // Return raw data (Floor/Zone structure)
+        return response.data || []; 
       }),
       catchError(err => {
         console.error('Availability RPC Call Failed:', err);
@@ -112,16 +104,14 @@ export class ParkingService {
     );
   }
 
-  /**
-   * Fetches time slot availability for a building.
-   */
+  
   getBuildingTimeSlots(
     buildingId: string,
     startTime: Date,
     endTime: Date,
     intervalMinutes: number = 60,
     vehicleType: string = 'car',
-    durationMinutes: number | null = null // New Argument
+    durationMinutes: number | null = null 
   ): Observable<any[]> {
     const rpcName = 'get_building_slots_availability';
     const params = {
@@ -153,9 +143,7 @@ export class ParkingService {
     );
   }
 
-  /**
-   * Finds the best available slot ID in a given zone and time range.
-   */
+  
   findBestAvailableSlot(zoneId: string, startTime: Date, endTime: Date): Observable<any> {
     const rpcName = 'find_best_available_slot';
     const params = {
@@ -169,7 +157,7 @@ export class ParkingService {
     ).pipe(
       map(response => {
         if (response.error) throw response.error;
-        return response.data; // { slot_id: '...', slot_name: '...' } or null
+        return response.data; 
       }),
       catchError(err => {
         console.error('Find Slot RPC Call Failed:', err);

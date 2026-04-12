@@ -17,7 +17,7 @@ export class BookingSuccessModalComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    // Animation trigger
+    
     setTimeout(() => {
       const checkmark = document.querySelector('.success-checkmark');
       if (checkmark) {

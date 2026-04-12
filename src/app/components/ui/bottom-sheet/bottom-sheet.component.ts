@@ -5,7 +5,7 @@ import { BottomSheetService, SheetData, ExpansionState } from '../../../services
 import { AccessListComponent } from '../../access-list/access-list.component';
 import { FloorplanInteractionService } from '../../../services/floorplan/floorplan-interaction.service';
 
-// 1. Import addIcons และชื่อ Icon ที่ใช้
+
 import { addIcons } from 'ionicons';
 import {
   business,
@@ -14,7 +14,7 @@ import {
   cubeOutline,
   navigateOutline,
   chevronForwardOutline,
-  arrowBack // เพิ่ม icon ย้อนกลับ
+  arrowBack 
 } from 'ionicons/icons';
 
 @Component({
@@ -27,7 +27,7 @@ import {
 export class BottomSheetComponent implements OnInit {
   public bottomSheetService = inject(BottomSheetService);
   private renderer = inject(Renderer2);
-  private interactionService = inject(FloorplanInteractionService); // inject เพื่อเรียก clearFocus
+  private interactionService = inject(FloorplanInteractionService); 
 
   @ViewChild('sheet') sheetRef!: ElementRef;
 
@@ -39,7 +39,7 @@ export class BottomSheetComponent implements OnInit {
   private isDragging = false;
 
   constructor() {
-    // 2. Register Icon ทั้งหมดที่ใช้ใน HTML ของหน้านี้
+    
     addIcons({
       business,
       businessOutline,
@@ -47,12 +47,12 @@ export class BottomSheetComponent implements OnInit {
       cubeOutline,
       navigateOutline,
       chevronForwardOutline,
-      arrowBack // register icon ใหม่
+      arrowBack 
     });
   }
 
   ngOnInit() {
-    // 1. Subscribe Content
+    
     this.bottomSheetService.sheetState$.subscribe(data => {
       this.currentData = data;
       if (data.mode === 'hidden') {
@@ -64,13 +64,13 @@ export class BottomSheetComponent implements OnInit {
       this.setState(nextState);
     });
 
-    // 2. Subscribe Height State
+    
     this.bottomSheetService.expansionState$.subscribe(state => {
       this.setState(state);
     });
   }
 
-  // --- Logic การลาก (เหมือนเดิม) ---
+  
   onTouchStart(event: TouchEvent | MouseEvent) {
     this.isDragging = true;
     this.startY = this.getClientY(event);
@@ -98,7 +98,7 @@ export class BottomSheetComponent implements OnInit {
     this.renderer.setStyle(el, 'transition', 'height 0.4s cubic-bezier(0.25, 1, 0.5, 1)');
     this.renderer.removeStyle(el, 'height');
 
-    // [แก้ไข] เลือก State ที่ใกล้ที่สุดจาก snap points (รวม partial)
+    
     const currentHeight = el.offsetHeight;
     const snaps: { state: ExpansionState; height: number }[] = [
       { state: 'peek', height: this.getSnapPoint('peek') },
@@ -135,13 +135,13 @@ export class BottomSheetComponent implements OnInit {
     this.bottomSheetService.close();
   }
 
-  // ฟังก์ชันกดปุ่มย้อนกลับจากหน้า Room Detail
+  
   onBackFromDetail() {
-    // 1. เคลียร์ Focus กล้อง 3D (ให้กลับไปหาผู้เล่น)
+    
     this.interactionService.clearFocus();
 
-    // 2. สั่ง Bottom Sheet ย้อนกลับไปหน้า Access List (ส่งข้อมูลเดิมกลับไปแบบง่ายๆ)
-    const previousData: any[] = []; // สามารถดึงจาก floorData/permission ปัจจุบันมาแทนได้ภายหลัง
+    
+    const previousData: any[] = []; 
     this.bottomSheetService.goBackToAccessList(previousData);
   }
 
@@ -195,10 +195,10 @@ export class BottomSheetComponent implements OnInit {
     };
   }
 
-  // [เพิ่ม] คำนวณความสูง snap ต่อ state (peek/partial/default/expanded)
+  
   private getSnapPoint(state: ExpansionState): number {
     switch (state) {
-      case 'peek': return 80; // ให้สอดคล้องกับ CSS
+      case 'peek': return 80; 
       case 'partial': return Math.round(window.innerHeight * 0.3);
       case 'default': return Math.round(window.innerHeight * 0.5);
       case 'expanded': return Math.round(window.innerHeight);

@@ -1,6 +1,6 @@
 <ion-content class="bg-white">
 
-  <!-- 1. Header Section (Sticky) -->
+  
   <div class="sticky top-0 bg-white z-20 pb-2 shadow-sm">
     <div class="px-4 pt-6 pb-2">
       <div class="flex justify-between items-start">
@@ -53,7 +53,7 @@
     </div>
   </div>
 
-  <!-- 2. Image Gallery -->
+  
   <div class="pl-4 pb-4 border-b border-gray-100 bg-white" *ngIf="lot.images && lot.images.length > 0">
     <div class="flex overflow-x-auto gap-3 no-scrollbar pr-4">
       <div *ngFor="let img of lot.images"
@@ -64,11 +64,11 @@
     </div>
   </div>
 
-  <!-- 3. Filters (Type / Interval) -->
+  
   <div class="bg-white border-b border-gray-100 px-4 py-3">
 
     <div class="flex gap-2 mb-3">
-      <!-- Booking Mode Selector (Style as Type Selector) -->
+      
       <div class="w-full">
         <button id="mode-detail-trigger" class="filter-btn w-full px-3 py-2 flex items-center justify-between">
           <div class="flex items-center gap-2 overflow-hidden w-full">
@@ -84,7 +84,7 @@
     </div>
 
     <div class="flex gap-2">
-      <!-- Type Selector -->
+      
       <button id="type-detail-trigger" class="filter-btn flex-1 min-w-0 pr-2">
         <div class="flex items-center gap-2 overflow-hidden w-full">
           <ion-icon
@@ -99,7 +99,7 @@
         </div>
       </button>
 
-      <!-- Interval Selector -->
+      
       <button id="interval-detail-trigger" *ngIf="bookingMode === 'daily'"
         class="filter-btn flex-none px-3 min-w-[30%] max-w-[40%] justify-between">
         <div class="flex items-center gap-2 w-full overflow-hidden">
@@ -118,8 +118,8 @@
         </div>
       </button>
 
-      <!-- Cross Day Toggle -->
-      <!-- Cross Day Selector (Dropdown) -->
+      
+      
       <button id="cross-day-trigger" *ngIf="bookingMode === 'daily'"
         class="filter-btn px-2.5 flex-none transition-all duration-300" [class.border-blue-600]="crossDayCount > 1"
         [class.text-blue-600]="crossDayCount > 1" [class.bg-blue-50]="crossDayCount > 1"
@@ -156,7 +156,7 @@
     </div>
   </div>
 
-  <!-- Popovers -->
+  
   <ion-popover trigger="mode-detail-trigger" dismissOnSelect="true" class="mode-popover menu-popover">
     <ng-template>
       <ion-list lines="none">
@@ -214,15 +214,15 @@
     </ng-template>
   </ion-popover>
 
-  <!-- 4. Content Scroll -->
+  
   <div class="pb-6">
 
-    <!-- Date Selector  -->
+    
     <div id="month-section-header"
       class="bg-white sticky top-[72px] z-10 shadow-sm border-b border-gray-100 pb-2 scroll-mt-[80px]">
-      <!-- Month Header -->
+      
       <div class="px-4 py-2 text-gray-800 text-base font-bold flex justify-between items-center">
-        <!-- Clickable Month Label for Picker -->
+        
         <button id="date-picker-trigger" [disabled]="bookingMode !== 'monthly'"
           class="flex items-center gap-1 bg-transparent -ml-2 px-2 py-1 rounded-lg hover:bg-gray-50">
           <span>{{ currentMonthLabel }}</span>
@@ -231,7 +231,7 @@
         </button>
 
         <div class="flex gap-1" *ngIf="bookingMode === 'monthly'">
-          <!-- Navigation for Calendar -->
+          
           <button
             class="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 border border-gray-100"
             (click)="changeMonth(-1)" [disabled]="isPrevMonthDisabled">
@@ -245,7 +245,7 @@
         </div>
       </div>
 
-      <!-- Date Picker Popover -->
+      
       <ion-popover trigger="date-picker-trigger" dismissOnSelect="true" class="date-picker-popover"
         *ngIf="bookingMode === 'monthly'">
         <ng-template>
@@ -254,7 +254,7 @@
         </ng-template>
       </ion-popover>
 
-      <!-- DAILY/HOURLY/24H VIEW: Horizontal Scroll -->
+      
       <div class="flex overflow-x-auto px-4 pb-2 gap-3 no-scrollbar items-center" *ngIf="bookingMode !== 'monthly'">
         <button *ngFor="let day of displayDays; let i = index"
           class="flex flex-col items-center justify-center min-w-[80px] h-[64px] rounded-xl transition-all duration-200 border relative overflow-hidden"
@@ -270,18 +270,18 @@
         </button>
       </div>
 
-      <!-- MONTHLY VIEW: Grid Calendar (1-31) -->
+      
       <div class="grid grid-cols-7 gap-1 px-4 pb-2 mb-2" *ngIf="bookingMode === 'monthly'">
-        <!-- Headers -->
+        
         <div class="text-[10px] text-gray-400 text-center font-normal"
           *ngFor="let d of ['อา','จ','อ','พ','พฤ','ศ','ส']">{{d}}</div>
 
-        <!-- Dates (Includes Padding) -->
+        
         <ng-container *ngFor="let day of displayDays; let i = index">
-          <!-- Empty Slot (Padding) -->
+          
           <div *ngIf="day.timeLabel === 'padding'" class="aspect-square"></div>
 
-          <!-- Real Day -->
+          
           <button *ngIf="day.timeLabel !== 'padding'" (click)="onSlotClick(day.slots[0], $event); selectDate(i)"
             class="aspect-square rounded-lg flex flex-col items-center justify-center text-sm font-medium relative border transition-all"
             [class.bg-blue-600]="day.slots[0].isSelected" [class.text-white]="day.slots[0].isSelected"
@@ -295,7 +295,7 @@
       </div>
     </div>
 
-    <!-- Time Selection (Only for Selected Day, Hide for Monthly as they pick Date directly) -->
+    
     <div id="time-selection-section" class="px-4 mt-6 mb-6" *ngIf="bookingMode !== 'monthly'">
 
       <ng-container *ngFor="let dayIndex of dayIndices">
@@ -353,10 +353,10 @@
 
     <div class="w-full h-2 bg-gray-50 border-t border-b border-gray-100 mb-6"></div>
 
-    <!-- Floor & Zone Selection (Hidden until Time Selected) -->
+    
     <div id="location-section" class="px-4 mb-6 relative min-h-[200px]">
 
-      <!-- Placeholder Message -->
+      
       <div *ngIf="!startSlot || !endSlot" class="absolute inset-0 z-10 flex items-center justify-center">
         <div class="flex flex-col items-center gap-3 p-6 text-center animate-fade-in">
           <div class="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 mb-2">
@@ -369,15 +369,15 @@
         </div>
       </div>
 
-      <!-- Actual Content (Blurred/Hidden if no time) -->
+      
       <div class="flex gap-4 transition-all duration-300" [class.opacity-0]="!startSlot || !endSlot"
         [class.pointer-events-none]="!startSlot || !endSlot" [class.blur-sm]="!startSlot || !endSlot">
 
-        <!-- Left: Floor -->
+        
         <div class="flex-[1] min-w-0 flex flex-col gap-2">
           <div class="flex items-center justify-between">
             <span class="text-base font-black text-gray-900 uppercase tracking-wider">ชั้น</span>
-            <!-- REMOVED: Select All Button -->
+            
           </div>
 
           <div class="flex flex-col gap-2">
@@ -397,7 +397,7 @@
               <div *ngIf="isFloorSelected(floor.id)" class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
             </button>
 
-            <!-- Skeletions -->
+            
             <ng-container *ngIf="floorData.length === 0">
               <div class="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
               <div class="h-10 bg-gray-100 rounded-lg animate-pulse"></div>
@@ -405,11 +405,11 @@
           </div>
         </div>
 
-        <!-- Right: Zone -->
+        
         <div class="flex-[2] min-w-0 flex flex-col gap-2 border-l border-gray-100 pl-4">
           <div class="flex items-center justify-between">
             <span class="text-base font-black text-gray-900 uppercase tracking-wider">โซน</span>
-            <!-- REMOVED: Select All Button -->
+            
           </div>
 
           <div class="grid grid-cols-3 gap-2">
@@ -431,7 +431,7 @@
               </span>
             </button>
 
-            <!-- Skeletons if no floors selected -->
+            
             <ng-container *ngIf="selectedFloorIds.length === 0 && floorData.length > 0">
               <div class="col-span-3 text-center py-6 bg-gray-50 rounded-xl border border-dashed text-sm text-gray-400">
                 กรุณาเลือกชั้น
@@ -442,7 +442,7 @@
       </div>
     </div>
 
-    <!-- Info Accordion -->
+    
     <div class="px-4 mt-6">
       <ion-accordion-group class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <ion-accordion value="hours">
@@ -476,11 +476,11 @@
   </div>
 </ion-content>
 
-<!-- ION FOOTER -->
+
 <ion-footer class="ion-no-border bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
   <div class="p-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
 
-    <!-- Single Line Summary Card -->
+    
     <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 mb-4 flex items-center gap-3">
       <div
         class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-blue-600 shadow-sm shrink-0">

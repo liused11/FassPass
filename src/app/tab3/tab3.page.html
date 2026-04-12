@@ -10,7 +10,7 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <!-- Profile Card -->
+  
   <div class="px-4 pt-6 pb-4">
     <div class="bg-white border border-gray-300 rounded-xl p-4 shadow-sm">
       <div class="flex items-center">
@@ -23,7 +23,7 @@
         </ion-avatar>
         <div class="flex-1">
           <h2 class="m-0 text-lg font-bold text-[#0056b3]">{{ userProfile.name || 'ผู้เยี่ยมชม' }}</h2>
-          <!-- Role Badge -->
+          
           <div class="mt-1 mb-1" *ngIf="userProfile.role">
             <span
               class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-200">
@@ -39,7 +39,7 @@
         </div>
       </div>
 
-      <!-- LINE Connection Section -->
+      
       <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
         <div class="flex items-center gap-4">
           <div class="flex flex-col">
@@ -57,7 +57,7 @@
             </ion-button>
           </div>
 
-          <!-- DevTool: Switch Role -->
+          
           <div class="border-l border-gray-200 pl-4">
             <ion-button (click)="openSwitchMenu()" size="small" fill="outline" color="medium" class="h-8 text-xs font-bold">
               <ion-icon name="options-outline" slot="start"></ion-icon>
@@ -76,7 +76,7 @@
     </div>
   </div>
 
-  <!-- Segment Control -->
+  
   <div class="border-b-2 border-gray-300">
     <ion-segment [value]="selectedSegment" (ionChange)="segmentChanged($event)" mode="md" class="bg-transparent">
       <ion-segment-button value="dashboard"
@@ -90,13 +90,13 @@
     </ion-segment>
   </div>
 
-  <!-- Dashboard View -->
+  
   <div *ngIf="selectedSegment === 'dashboard'">
 
-    <!-- Top Section: Background Gray -->
+    
     <div class="bg-[#f8f9fa] py-6">
-      <!-- Vehicle Horizontal Scroll -->
-      <!-- Empty State -->
+      
+      
       <div *ngIf="vehicles.length === 0"
         class="flex flex-col items-center justify-center py-8 text-center bg-white border-2 border-dashed border-gray-300 rounded-2xl mx-4">
         <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
@@ -111,14 +111,14 @@
         </ion-button>
       </div>
 
-      <!-- Vehicle Horizontal Scroll (Show only if vehicles exist) -->
+      
       <div *ngIf="vehicles.length > 0"
         class="flex overflow-x-auto px-4 pt-5 gap-4 snap-x snap-mandatory scrollbar-hide pb-4">
         <div
           class="w-full bg-white border-2 border-[#1a73e8] rounded-2xl p-4 snap-center relative shrink-0 cursor-pointer"
           *ngFor="let vehicle of vehicles" (click)="selectVehicle(vehicle.id)">
 
-          <!-- Badge: Show only if Default -->
+          
           <div *ngIf="vehicle.isDefault"
             class="absolute -top-3.5 right-4 bg-[#1a73e8] text-white px-4 py-1 rounded-lg text-sm font-bold z-10 shadow-sm">
             เลือกแล้ว
@@ -172,9 +172,9 @@
       </div>
     </div>
 
-    <!-- Bottom Section: Settings (White/Default) -->
+    
     <div class="bg-white">
-      <!-- Settings Sections -->
+      
       <div class="px-4 pb-24">
         <h3 class="text-base font-semibold mb-3 mt-6 text-[#666] pl-1">การตั้งค่าทั่วไป</h3>
         <ion-list class="bg-white rounded-2xl p-0 overflow-hidden shadow-sm border border-gray-100">
@@ -202,10 +202,10 @@
     </div>
   </div>
 
-  <!-- List View -->
+  
   <div *ngIf="selectedSegment === 'list'" class="bg-white min-h-full pb-20">
 
-    <!-- Empty State for List View -->
+    
     <div *ngIf="vehicles.length === 0" class="flex flex-col items-center justify-center py-10 mt-10 text-center mx-4">
       <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
         <ion-icon name="car-sport-outline" class="text-4xl text-gray-400"></ion-icon>
@@ -214,11 +214,11 @@
       <p class="text-sm text-gray-500 mb-6">เพิ่มรถของคุณเพื่อเริ่มใช้งาน</p>
     </div>
 
-    <!-- Vehicle Lists (Show only if vehicles exist) -->
+    
     <div *ngIf="vehicles.length > 0">
       <div class="text-lg font-bold m-4 mb-3 text-black">ใช้งานล่าสุด</div>
 
-      <!-- Active Vehicle Card -->
+      
       <div class="mx-4 mb-6 bg-white border-2 border-[#1a73e8] rounded-xl p-0 relative overflow-visible"
         *ngFor="let vehicle of vehicles" [class.hidden]="!vehicle.isDefault">
         <div class="absolute -top-3 right-4 bg-[#1a73e8] text-white px-3 py-1 rounded text-xs font-bold z-10">เลือกแล้ว
@@ -267,7 +267,7 @@
 
       <div class="text-lg font-bold m-4 mb-3 text-black">รถทั้งหมด</div>
 
-      <!-- Other Vehicles List -->
+      
       <div class="mx-4 mb-4 bg-white border border-gray-300 rounded-xl p-4 shadow-sm" *ngFor="let vehicle of vehicles"
         [class.hidden]="vehicle.isDefault" (click)="selectVehicle(vehicle.id)">
         <div class="flex justify-between items-start gap-3 mb-3">
@@ -304,7 +304,7 @@
       </div>
     </div>
 
-    <!-- Add New Vehicle Button -->
+    
     <div class="py-4">
       <div class="mx-4 mb-2 text-center text-xs text-red-500 font-medium" *ngIf="vehicles.length >= 3">
         * ไม่สามารถเพิ่มยานพาหนะได้ (สูงสุด 3 คัน)

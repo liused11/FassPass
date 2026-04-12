@@ -28,9 +28,9 @@
     </ng-container>
   </ion-toolbar>
 
-  <!-- Filter Dropdowns Row -->
+  
   <div class="flex gap-3 px-4 py-2.5 bg-white">
-    <!-- Date/Month Filter -->
+    
     <div id="month-filter-trigger"
       class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-[13px] text-gray-700 bg-white cursor-pointer active:bg-gray-50 transition-colors">
       <div class="flex items-center overflow-hidden">
@@ -55,7 +55,7 @@
       </ng-template>
     </ion-popover>
 
-    <!-- Category Filter -->
+    
     <div id="category-filter-trigger"
       class="flex-1 flex items-center justify-between border border-gray-300 rounded-lg h-10 px-3 text-[13px] text-gray-700 bg-white cursor-pointer active:bg-gray-50 transition-colors">
       <div class="flex items-center overflow-hidden">
@@ -82,7 +82,7 @@
     </ion-popover>
   </div>
 
-  <!-- Status Tabs -->
+  
   <ion-toolbar class="bg-white pb-2 status-toolbar">
     <ion-segment [(ngModel)]="selectedStatusSegment" (ionChange)="segmentChanged($event)" mode="md"
       class="bg-transparent">
@@ -114,7 +114,7 @@
 
   <div class="p-4 pb-10" *ngIf="!isLoading">
 
-    <!-- Combined Bookings List -->
+    
     <div class="mb-6">
       <div class="mb-3 flex justify-between items-center">
         <div class="text-[15px] font-bold text-gray-900 m-0">รายการจองล่าสุด</div>
@@ -134,9 +134,9 @@
         class="bg-white rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.06)] mb-4 overflow-hidden border border-gray-100 transition-transform active:scale-[0.98] cursor-pointer"
         (click)="handleFooterClick(item)">
         <div class="p-4 pb-3" *ngIf="item.itemKind !== 'access_pass'; else accessPassCard">
-          <!-- Top Row -->
+          
           <div class="flex justify-between items-start mb-4">
-            <!-- TL: Status -->
+            
             <div class="flex flex-col">
               <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
                 <ion-icon name="car-sport" class="text-lg"></ion-icon> {{ item.statusLabel }}
@@ -146,7 +146,7 @@
                   {{ getVehicleTypeLabel(item.vehicleType) }}
                 </span>
               </div>
-              <!-- Added Booking Type Label -->
+              
               <div class="pl-6 mt-1.5 flex items-center">
                 <span class="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide"
                   [ngClass]="getBookingTypeClass(item.bookingType)">
@@ -154,7 +154,7 @@
                 </span>
               </div>
             </div>
-            <!-- TR: Time -->
+            
             <div class="text-right">
               <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">
                 {{ item.dateLabel ? item.dateLabel : (item.bookingTime | date:'EEE d MMM') }}
@@ -166,9 +166,9 @@
             </div>
           </div>
 
-          <!-- Bottom Row -->
+          
           <div class="flex justify-between items-end mb-0">
-            <!-- BL: Location -->
+            
             <div>
               <div class="text-xs text-gray-500 mb-0.5 flex flex-wrap items-center gap-2">
                 <span
@@ -190,7 +190,7 @@
                 <span class="text-base text-[var(--ion-color-primary)]">{{ item.slot }}</span>
               </div>
             </div>
-            <!-- BR: Car / User -->
+            
             <div class="text-right">
               <div class="text-[10px] text-gray-500 uppercase mb-0.5 flex items-center justify-end gap-1 font-bold">
                 <ion-icon name="car"></ion-icon> {{ item.carBrand }}
@@ -202,9 +202,9 @@
 
         <ng-template #accessPassCard>
           <div class="p-4 pb-3">
-            <!-- Top Row -->
+            
             <div class="flex justify-between items-start mb-4">
-              <!-- TL: Status -->
+              
               <div class="flex flex-col">
                 <div class="flex items-center gap-1.5 text-[15px] font-bold" [ngClass]="getStatusClass(item)">
                   <ion-icon name="ticket-outline" class="text-lg"></ion-icon> {{ item.statusLabel }}
@@ -213,7 +213,7 @@
                   <span>{{ item.locationDetails }}</span>
                 </div>
               </div>
-              <!-- TR: Expiry -->
+              
               <div class="text-right">
                 <div class="text-[15px] font-semibold text-[var(--ion-color-primary)] mb-0.5">
                   {{ getPassExpiresLabel(item) }}
@@ -224,9 +224,9 @@
               </div>
             </div>
 
-            <!-- Bottom Row -->
+            
             <div class="flex justify-between items-end mb-0">
-              <!-- BL: Location -->
+              
               <div>
                 <div class="text-xs text-gray-500 mb-0.5 flex flex-wrap items-center gap-2">
                   <span

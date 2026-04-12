@@ -17,11 +17,11 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 })
 export class Tab2Page implements OnInit, OnDestroy {
 
-  // Dropdown options
+  
   selectedMonth: string = 'all';
   selectedCategory: string = 'all';
 
-  // Search
+  
   searchQuery: string = '';
   showSearch: boolean = false;
   isSearching: boolean = false;
@@ -29,7 +29,7 @@ export class Tab2Page implements OnInit, OnDestroy {
   private searchSubject = new Subject<string>();
   private searchSub!: Subscription;
 
-  // Options for Selectors
+  
   monthOptions: { value: string, label: string }[] = [
     { value: 'all', label: 'ทั้งหมด' }
   ];
@@ -41,23 +41,23 @@ export class Tab2Page implements OnInit, OnDestroy {
     { value: 'monthly_regular', label: 'รายเดือน' },
   ];
 
-  // Segment for Status
-  selectedStatusSegment: string = 'in_progress'; // 'in_progress' | 'completed' | 'cancelled'
+  
+  selectedStatusSegment: string = 'in_progress'; 
 
-  // Combined Display Array
+  
   displayBookings: Booking[] = [];
 
-  // Expanded state for the single list
+  
   isExpanded: boolean = false;
 
   allBookings: Booking[] = [];
   private reservationBookings: Booking[] = [];
   private accessPassBookings: Booking[] = [];
 
-  // Subscription for Realtime updates
+  
   reservationsSubscription: any;
 
-  // Loading State
+  
   isLoading: boolean = false;
 
   constructor(
@@ -67,7 +67,7 @@ export class Tab2Page implements OnInit, OnDestroy {
     private toastCtrl: ToastController,
     private supabaseService: SupabaseService,
   ) { }
-  //d
+  
   ngOnInit() {
     this.parkingService.bookings$.subscribe(bookings => {
       this.reservationBookings = bookings || [];
@@ -533,9 +533,9 @@ export class Tab2Page implements OnInit, OnDestroy {
       const mapped = Array.from(groups.values()).map((g) => {
         const lot = this.parkingService.getParkingLotById(g.buildingId);
 
-        // Expiry display logic:
-        // - if any active: show nearest upcoming expiry (min)
-        // - if fully expired: show most recent expiry (max)
+        
+        
+        
         let computedExpiresAt: Date | null = null;
         if (g.doorIds?.length) {
           let hasUnlimited = false;

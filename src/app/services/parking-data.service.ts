@@ -2,20 +2,20 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Booking, ParkingLot, UserProfile, Vehicle } from '../data/models';
 import { SupabaseService } from './supabase.service';
-import { ReservationService } from './reservation.service'; // Import ReservationService
+import { ReservationService } from './reservation.service'; 
 
 @Injectable({
     providedIn: 'root'
 })
 export class ParkingDataService {
 
-    // Data Sources (BehaviorSubjects hold the current value)
+    
     private parkingLotsSubject = new BehaviorSubject<ParkingLot[]>([]);
     private bookingsSubject = new BehaviorSubject<Booking[]>([]);
-    private userProfileSubject = new BehaviorSubject<UserProfile | any>(null); // Initialize with null or empty
+    private userProfileSubject = new BehaviorSubject<UserProfile | any>(null); 
     private vehiclesSubject = new BehaviorSubject<Vehicle[]>([]);
 
-    // Observables for Components to subscribe to
+    
     parkingLots$ = this.parkingLotsSubject.asObservable();
     bookings$ = this.bookingsSubject.asObservable();
     userProfile$ = this.userProfileSubject.asObservable();
@@ -26,7 +26,7 @@ export class ParkingDataService {
         private reservationService: ReservationService
     ) {
         this.loadParkingLots();
-        // Subscribe to user ID changes
+        
         this.reservationService.currentProfileId$.subscribe(userId => {
             if (userId) {
                 console.log('[ParkingDataService] User ID Changed:', userId);
@@ -43,7 +43,7 @@ export class ParkingDataService {
 
         if (error) {
             console.error('Error loading parking lots:', error);
-            // Fallback to empty array on error
+            
             if (this.parkingLotsSubject.value.length === 0) {
                 this.parkingLotsSubject.next([]);
             }
@@ -122,7 +122,7 @@ export class ParkingDataService {
     }
 
     async loadUserVehicles(userId: string) {
-        if (!userId) return; // Prevent querying without Auth
+        if (!userId) return; 
         const { data, error } = await this.supabaseService.client
             .from('cars')
             .select('*')
@@ -131,7 +131,7 @@ export class ParkingDataService {
 
         if (error) {
             console.error('Error loading user vehicles:', error);
-            // Fallback to empty if error
+            
             this.vehiclesSubject.next([]);
             return;
         }
@@ -145,16 +145,16 @@ export class ParkingDataService {
                 image: item.image,
                 isDefault: item.is_default,
                 status: item.status,
-                lastUpdate: this.formatThaiDateTime(item.updated_at || item.created_at) // Use real DB time
+                lastUpdate: this.formatThaiDateTime(item.updated_at || item.created_at) 
             }));
             this.vehiclesSubject.next(vehicles);
         } else {
-            // If DB is empty, use empty
+            
             this.vehiclesSubject.next([]);
         }
     }
 
-    // --- Booking Management ---
+    
 
     getBookingById(id: string): Booking | undefined {
         return this.bookingsSubject.value.find(b => b.id === id);
@@ -162,7 +162,7 @@ export class ParkingDataService {
 
     addBooking(booking: Booking) {
         const currentBookings = this.bookingsSubject.value;
-        // Prepend new booking to show it at the top
+        
         const updatedBookings = [booking, ...currentBookings];
         this.bookingsSubject.next(updatedBookings);
     }
@@ -178,15 +178,15 @@ export class ParkingDataService {
         this.bookingsSubject.next(updatedBookings);
     }
 
-    // --- Vehicle Management ---
+    
 
     async addVehicle(vehicle: Partial<Vehicle>) {
         const currentVehicles = this.vehiclesSubject.value;
 
-        // Ensure user is loaded
+        
         const userId = this.reservationService.getCurrentProfileId();
 
-        // 1. Check if vehicle exists for this user by license_plate
+        
         const { data: existingCars, error: checkError } = await this.supabaseService.client
             .from('cars')
             .select('*')
@@ -201,12 +201,12 @@ export class ParkingDataService {
         if (existingCars && existingCars.length > 0) {
             const existingCar = existingCars[0];
 
-            // Case A: Exists and is active
+            
             if (existingCar.is_active) {
                 throw new Error("รถป้ายทะเบียนนี้มีอยู่ในระบบแล้ว");
             }
 
-            // Case B: Exists but is inactive (soft deleted) - Update it
+            
             console.log('[ParkingDataService] Reactivating soft-deleted vehicle:', existingCar.id);
 
             const updateData = {
@@ -215,7 +215,7 @@ export class ParkingDataService {
                 color: vehicle.color || existingCar.color,
                 image: vehicle.image || existingCar.image,
                 is_default: vehicle.isDefault ?? existingCar.is_default,
-                is_active: true, // Reactivate
+                is_active: true, 
                 updated_at: new Date().toISOString()
             };
 
@@ -249,15 +249,15 @@ export class ParkingDataService {
             return reactivatedVehicle;
         }
 
-        // Case C: Does not exist - Insert new vehicle
-        // Pass the profile_id directly if missing, just in case
+        
+        
         const payload = {
             ...vehicle,
             profile_id: userId
         };
 
         try {
-            // Call the Edge Function instead of doing client-side insert
+            
             const { data, error } = await this.supabaseService.client.functions.invoke('add-vehicle-v2', {
                 body: { vehicle: payload },
             });
@@ -273,10 +273,10 @@ export class ParkingDataService {
                 throw error;
             }
 
-            // The edge function returns the inserted row
+            
             const newCarRecord = data;
 
-            // Map back to frontend Vehicle model
+            
             const newVehicle: Vehicle = {
                 id: newCarRecord.id,
                 model: newCarRecord.model,
@@ -286,7 +286,7 @@ export class ParkingDataService {
                 image: newCarRecord.image,
                 isDefault: newCarRecord.is_default,
                 status: newCarRecord.status || 'active',
-                lastUpdate: this.formatThaiDateTime(newCarRecord.created_at) // Or updated_at
+                lastUpdate: this.formatThaiDateTime(newCarRecord.created_at) 
             };
 
             const updated = [...currentVehicles, newVehicle];
@@ -368,7 +368,7 @@ export class ParkingDataService {
     }
 
     async setDefaultVehicle(id: number | string) {
-        // 1. Update local state immediately for fast UI response
+        
         const currentVehicles = this.vehiclesSubject.value;
         const updated = currentVehicles.map(v => ({
             ...v,
@@ -376,17 +376,17 @@ export class ParkingDataService {
         }));
         this.vehiclesSubject.next(updated);
 
-        // 2. Persist to Backend
+        
         try {
             const userId = this.reservationService.getCurrentProfileId();
 
-            // Set all vehicles for this user to is_default = false
+            
             await this.supabaseService.client
                 .from('cars')
                 .update({ is_default: false })
                 .eq('profile_id', userId);
 
-            // Set the selected vehicle to is_default = true
+            
             const { error: setTrueError } = await this.supabaseService.client
                 .from('cars')
                 .update({ is_default: true, updated_at: new Date().toISOString() })
@@ -398,7 +398,7 @@ export class ParkingDataService {
 
         } catch (error) {
             console.error('[ParkingDataService] Error setting default vehicle to DB:', error);
-            // Revert on failure
+            
             const reverted = currentVehicles.map(v => ({
                 ...v,
                 isDefault: v.id === id ? false : v.isDefault
@@ -423,7 +423,7 @@ export class ParkingDataService {
                 throw error;
             }
 
-            // Update local state after successful DB deletion
+            
             const currentVehicles = this.vehiclesSubject.value.filter(v => v.id !== id);
             this.vehiclesSubject.next(currentVehicles);
 
@@ -434,19 +434,19 @@ export class ParkingDataService {
         }
     }
 
-    // --- Parking Lot Management ---
+    
 
     getParkingLotById(id: string): ParkingLot | undefined {
         return this.parkingLotsSubject.value.find(p => p.id === id);
     }
 
-    // --- Profile Management ---
+    
 
     updateProfile(profile: UserProfile) {
         this.userProfileSubject.next(profile);
     }
 
-    // --- Helper Methods ---
+    
     private formatThaiDateTime(isoString: string | null | undefined): string {
         if (!isoString) return 'ไม่ทราบเวลา';
 
@@ -460,11 +460,11 @@ export class ParkingDataService {
 
         const day = date.getDate();
         const month = thaiMonths[date.getMonth()];
-        const year = date.getFullYear() + 543; // Convert to Buddhist Era
+        const year = date.getFullYear() + 543; 
         let hours = date.getHours().toString();
         let minutes = date.getMinutes().toString();
 
-        // Pad single digit
+        
         if (hours.length < 2) hours = '0' + hours;
         if (minutes.length < 2) minutes = '0' + minutes;
 

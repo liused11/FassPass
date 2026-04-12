@@ -18,9 +18,7 @@ export class BuildingDataService {
   constructor() { }
 
 
-  /**
-   * 1. ดึงข้อมูลอาคาร (สำหรับการดูแผนผัง)
-   */
+  
   getBuilding(buildingId: string): Observable<BuildingData> {
     const request = this.supabaseService.client
       .from('buildings')
@@ -42,13 +40,13 @@ export class BuildingDataService {
       map(response => {
         if (response.error || !response.data) {
           console.warn('[BuildingData] Supabase error or not found:', response.error);
-          return FALLBACK_BUILDING; // Use fallback if not found in DB
+          return FALLBACK_BUILDING; 
         }
 
         const b = response.data as any;
 
-        // Transform the DB structure to match the frontend BuildingData format
-        // The DB returns floors as an array with layout_data inside
+        
+        
         const mappedFloors = (b.floors || []).map((f: any) => {
           const layout = f.layout_data || {};
           return {
@@ -60,7 +58,7 @@ export class BuildingDataService {
           };
         });
 
-        // Sort floors by level_order
+        
         mappedFloors.sort((a: any, b: any) => a.floor - b.floor);
 
         const apiBuilding: BuildingData = {
@@ -79,9 +77,7 @@ export class BuildingDataService {
     );
   }
 
-  /**
-   * 2. ดึงรายละเอียด Asset (สำหรับ Access List)
-   */
+  
   getAssetDetails(assetIds: string[]): Observable<Asset[]> {
     if (!assetIds || assetIds.length === 0) {
       return of([]);

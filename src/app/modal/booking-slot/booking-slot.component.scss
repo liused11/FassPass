@@ -1,4 +1,4 @@
-// ซ่อน Scrollbar แต่ยังเลื่อนได้
+
 .custom-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -16,16 +16,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-//  ลบ :active transform scale ออก เพื่อไม่ให้กระพริบ/ยุบตัว
+
 button {
   outline: none;
-  -webkit-tap-highlight-color: transparent; // ลบไฮไลท์สีเทาบนมือถือเวลาแตะ
+  -webkit-tap-highlight-color: transparent; 
 
   ion-icon {
     transition: opacity 0.2s;
   }
   
-  // ให้ transition เฉพาะสี background/border นุ่มๆ
+  
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 

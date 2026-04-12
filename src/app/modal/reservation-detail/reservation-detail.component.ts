@@ -38,20 +38,20 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
     }
 
     setupRealtimeListener() {
-        // สร้างช่องทางฟังข้อมูล Realtime เฉพาะของจองรายการนี้
+        
         this.realtimeChannel = this.supabaseService.client
             .channel(`e-stamp-updates-${this.booking.id}`)
             .on(
                 'postgres_changes',
                 {
-                    event: '*', // ฟังทั้ง Insert, Update, Delete
+                    event: '*', 
                     schema: 'public',
                     table: 'e_stamps',
                     filter: `reservation_id=eq.${this.booking.id}` 
                 },
                 (payload) => {
                     console.log('[ReservationDetail] Realtime update detected:', payload);
-                    // เมื่อมีการเปลี่ยนแปลงส่วนลด ให้โหลดราคาใหม่ทันที
+                    
                     this.fetchCurrentFee();
                 }
             )
@@ -202,7 +202,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     async handleCheckoutConfirm() {
         try {
-            // FIX: Send 'confirmed' to database instead of 'completed' as requested in earlier turns
+            
             await this.reservationService.updateReservationStatusv2(this.booking.id, 'confirmed');
             this.internalStatus = 'confirmed';
             this.booking.status = 'confirmed';
@@ -249,7 +249,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
 
     async handleApplyStamp() {
         try {
-            // ดึง ID ผู้ใช้ปัจจุบันจาก Service โดยตรง (เสถียรกว่า)
+            
             const userId = this.reservationService.getCurrentProfileId();
             
             if (!userId) {
@@ -260,7 +260,7 @@ export class ReservationDetailComponent implements OnInit, OnDestroy {
             const res = await this.reservationService.applyEStamp(this.booking.id, userId);
             if (res.success) {
                 this.showToast(res.message || 'ลดราคาสำเร็จ!', 'success');
-                // Refresh ราคาทันทีหลังลดสำเร็จ
+                
                 await this.fetchCurrentFee();
             } else {
                 this.showToast(res.error || 'ไม่สามารถลดราคาได้', 'danger');

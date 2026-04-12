@@ -11,7 +11,7 @@ export class ThreeSceneService {
   public renderer!: THREE.WebGLRenderer;
   public controls!: OrbitControls;
 
-  private coloredGroundPlane!: THREE.Mesh; // เพิ่ม Property นี้
+  private coloredGroundPlane!: THREE.Mesh; 
 
   private frustumSize = 60;
   private canvas!: HTMLCanvasElement;
@@ -20,10 +20,7 @@ export class ThreeSceneService {
 
   constructor(private ngZone: NgZone) { }
 
-  /**
-   * เริ่มต้นการตั้งค่า THREE.js ทั้งหมด
-   * @param canvas Element ที่จะใช้ render
-   */
+  
   public initialize(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
     this.scene = new THREE.Scene();
@@ -40,7 +37,7 @@ export class ThreeSceneService {
     this.controls.enableDamping = true;
     this.controls.target.set(0, 0, -6);
     
-    // เพิ่มแสงพื้นฐาน
+    
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     ambientLight.name = 'ambientLight';
     this.scene.add(ambientLight);
@@ -51,27 +48,24 @@ export class ThreeSceneService {
     directionalLight.name = 'directionalLight';
     this.scene.add(directionalLight);
     
-    // Ground Plane (ย้ายมาจาก createScene เดิม)
-    // const groundGeometry = new THREE.PlaneGeometry(100, 100);
-    // const groundMaterial = new THREE.MeshStandardMaterial({
-    //   color: 0xeeeeee,
-    //   side: THREE.DoubleSide,
-    // });
     
-    // // แก้ไขตรงนี้: ลบ const แล้ว assign ให้กับ property ของ class
-    // this.coloredGroundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
-    // this.coloredGroundPlane.rotation.x = -Math.PI / 2;
-    // this.coloredGroundPlane.position.y = -0.01;
-    // this.coloredGroundPlane.renderOrder = -1;
-    // this.scene.add(this.coloredGroundPlane); // เพิ่ม this.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-    // this.resize(); // ตั้งค่าขนาดเริ่มต้น
+    
   }
 
-  /**
-   * เริ่มต้น Render Loop
-   * @param onUpdate Callback function ที่จะถูกเรียกทุก frame (สำหรับ logic เช่น update player)
-   */
+  
   public startRenderingLoop(onUpdate: () => void): void {
     this.onUpdateCallback = onUpdate;
     
@@ -79,7 +73,7 @@ export class ThreeSceneService {
       const render = () => {
         this.frameId = requestAnimationFrame(render);
         
-        // เรียก callback ที่ component ส่งมา
+        
         if (this.onUpdateCallback) {
           this.onUpdateCallback();
         }
@@ -91,9 +85,7 @@ export class ThreeSceneService {
     });
   }
 
-  /**
-   * หยุด Render Loop
-   */
+  
   public stopRenderingLoop(): void {
     if (this.frameId) {
       cancelAnimationFrame(this.frameId);
@@ -102,9 +94,7 @@ export class ThreeSceneService {
     this.onUpdateCallback = null;
   }
 
-  /**
-   * จัดการการปรับขนาดหน้าจอ
-   */
+  
   public resize(): void {
     if (!this.renderer || !this.camera) return;
 
@@ -123,18 +113,14 @@ export class ThreeSceneService {
     }
   }
 
-  /**
-   * อัปเดตสีของพื้นหลัง (Ground Plane)
-   */
+  
   public setGroundPlaneColor(color: THREE.Color | string | number): void {
     if (this.coloredGroundPlane) {
       (this.coloredGroundPlane.material as THREE.MeshStandardMaterial).color.set(color);
     }
   }
 
-  /**
-   * คืนค่าทรัพยากร
-   */
+  
   public destroy(): void {
     this.stopRenderingLoop();
     this.controls?.dispose();

@@ -10,11 +10,11 @@ import { ParkingDataService } from '../services/parking-data.service';
 })
 export class Tab2Page implements OnInit {
 
-  // Dropdown options
-  selectedMonth: string = 'all'; // Default to show all for easier demo, or '2025-12'
+  
+  selectedMonth: string = 'all'; 
   selectedCategory: string = 'all';
 
-  // Options for Selectors
+  
   monthOptions = [
     { value: 'all', label: 'ทั้งหมด' },
     { value: '2025-12', label: 'ธันวาคม 2568' },
@@ -29,16 +29,16 @@ export class Tab2Page implements OnInit {
     { value: 'monthly_night', label: 'รายเดือน (คืน)' }
   ];
 
-  // Segment for Status
-  selectedStatusSegment: string = 'in_progress'; // 'in_progress' | 'completed' | 'cancelled'
+  
+  selectedStatusSegment: string = 'in_progress'; 
 
-  // Arrays for 4 Categories
+  
   latestBookings: Booking[] = [];
   flat24Bookings: Booking[] = [];
   monthlyBookings: Booking[] = [];
   nightlyBookings: Booking[] = [];
 
-  // Mock Data
+  
   allBookings: Booking[] = [];
 
   constructor(private parkingService: ParkingDataService) { }
@@ -61,7 +61,7 @@ export class Tab2Page implements OnInit {
 
   updateFilter() {
     let filtered = this.allBookings.filter(b => {
-      // 1. Status Filter
+      
       let statusMatch = false;
       if (this.selectedStatusSegment === 'in_progress') {
         statusMatch = ['active', 'confirmed', 'pending_payment'].includes(b.status);
@@ -71,7 +71,7 @@ export class Tab2Page implements OnInit {
         statusMatch = b.status === 'completed';
       }
 
-      // 2. Month Filter
+      
       let monthMatch = true;
       if (this.selectedMonth !== 'all') {
         const d = new Date(b.bookingTime);
@@ -81,7 +81,7 @@ export class Tab2Page implements OnInit {
         monthMatch = key === this.selectedMonth;
       }
 
-      // 3. Category Filter
+      
       let catMatch = true;
       if (this.selectedCategory !== 'all') {
         catMatch = b.bookingType === this.selectedCategory;
@@ -90,16 +90,16 @@ export class Tab2Page implements OnInit {
       return statusMatch && monthMatch && catMatch;
     });
 
-    // Valid statuses for display logic
+    
     this.latestBookings = filtered.filter(b => b.bookingType === 'daily');
     this.flat24Bookings = filtered.filter(b => b.bookingType === 'flat24');
     this.monthlyBookings = filtered.filter(b => b.bookingType === 'monthly');
     this.nightlyBookings = filtered.filter(b => b.bookingType === 'monthly_night');
   }
 
-  // Helper for Tailwind classes based on status
+  
   getStatusClass(item: Booking): string {
-    if (item.status === 'pending_payment') return 'text-[#FFB800]'; // Specific Yellow from image
+    if (item.status === 'pending_payment') return 'text-[#FFB800]'; 
     if (item.status === 'active') return 'text-[#FFB800]';
     if (item.status === 'confirmed') return 'text-[var(--ion-color-primary)]';
     if (item.status === 'completed') return 'text-green-500';

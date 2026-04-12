@@ -11,12 +11,12 @@ import { Vehicle } from '../../data/models';
 })
 export class AddVehicleModalComponent implements OnInit {
 
-  @Input() editVehicle?: Vehicle; // Add Input to accept vehicle for editing
+  @Input() editVehicle?: Vehicle; 
 
   vehicleForm: FormGroup;
   isEditMode: boolean = false;
 
-  // Mock Data for Selectors
+  
   vehicleTypes = [
     { value: 'car', label: 'รถยนต์ทั่วไป', icon: 'car-sport' },
     { value: 'ev', label: 'รถไฟฟ้า (EV)', icon: 'flash' },
@@ -42,7 +42,7 @@ export class AddVehicleModalComponent implements OnInit {
 
   selectedImage: string | null = null;
 
-  // Custom states for ion-popover logic
+  
   selectedTypeLabel: string = 'เลือกประเภท';
   selectedBrandLabel: string = 'เลือกยี่ห้อ';
   selectedProvinceLabel: string = 'จังหวัด';
@@ -53,12 +53,12 @@ export class AddVehicleModalComponent implements OnInit {
   ) {
     this.vehicleForm = this.fb.group({
       type: ['car', Validators.required],
-      customType: [''], // Optional, required contextually via UI
+      customType: [''], 
       brand: ['', Validators.required],
-      customBrand: [''], // Optional, required contextually via UI
+      customBrand: [''], 
       model: ['', Validators.required],
       color: ['', Validators.required],
-      licensePlate: ['', [Validators.required, Validators.pattern(/^[0-9ก-ฮ]{1,3}[0-9ก-ฮ]{1,2} [0-9]{1,4}$/)]], // Basic Thai plate regex
+      licensePlate: ['', [Validators.required, Validators.pattern(/^[0-9ก-ฮ]{1,3}[0-9ก-ฮ]{1,2} [0-9]{1,4}$/)]], 
       province: ['กรุงเทพมหานคร', Validators.required]
     });
   }
@@ -68,19 +68,19 @@ export class AddVehicleModalComponent implements OnInit {
       this.isEditMode = true;
       this.selectedImage = this.editVehicle.image || null;
 
-      // Attempt to split model into brand and model part if they were concatenated
+      
       let brand = '';
       let modelPart = this.editVehicle.model || '';
 
-      // Parse prepended custom type (if present) like "[รถบัส] Honda Civic"
+      
       let parsedType = 'car';
       const typeMatch = modelPart.match(/^\[(.*?)\]\s?(.*)/);
       if (typeMatch) {
-        parsedType = typeMatch[1]; // e.g. "รถบัส"
-        modelPart = typeMatch[2]; // e.g. "Honda Civic"
+        parsedType = typeMatch[1]; 
+        modelPart = typeMatch[2]; 
       }
 
-      // Basic splitting logic for brand and model
+      
       if (modelPart.includes(' ')) {
         const parts = modelPart.split(' ');
         brand = parts[0];
@@ -90,7 +90,7 @@ export class AddVehicleModalComponent implements OnInit {
         modelPart = '';
       }
 
-      // Determine initialType based on parsedType and vehicle_type_code (if we had it, fallback to parsing)
+      
       const isKnownType = ['car', 'ev', 'motorcycle'].includes(parsedType);
       const initialType = isKnownType ? parsedType : 'other';
       const initialCustomType = isKnownType ? '' : parsedType;
@@ -109,14 +109,14 @@ export class AddVehicleModalComponent implements OnInit {
         province: initialProvince
       });
 
-      // Update selected popover labels for edit mode
+      
       const typeOption = this.vehicleTypes.find(t => t.value === initialType);
       if (typeOption) this.selectedTypeLabel = typeOption.label;
       if (initialBrand) this.selectedBrandLabel = initialBrand;
       if (initialProvince) this.selectedProvinceLabel = initialProvince;
 
     } else {
-      // Default image based on type
+      
       this.updateDefaultImage();
     }
   }
@@ -132,7 +132,7 @@ export class AddVehicleModalComponent implements OnInit {
     }
   }
 
-  // Popover Selectors Methods
+  
   selectType(val: string, label: string) {
     this.vehicleForm.patchValue({ type: val });
     this.selectedTypeLabel = label;
@@ -149,11 +149,11 @@ export class AddVehicleModalComponent implements OnInit {
   }
 
   updateDefaultImage() {
-    if (this.selectedImage) return; // User uploaded overrides default
+    if (this.selectedImage) return; 
 
-    // Simple placeholder logic
+    
     const type = this.vehicleForm.get('type')?.value;
-    // In real app, map to assets. For now use placeholder.
+    
   }
 
   close() {
@@ -166,37 +166,37 @@ export class AddVehicleModalComponent implements OnInit {
       console.log('[AddVehicleModal] Form is valid');
       const formValue = this.vehicleForm.value;
 
-      // Extract actual type and brand, using custom inputs if 'other' is selected
+      
       const actualType = formValue.type === 'other' ? formValue.customType : formValue.type;
       const actualBrand = formValue.brand === 'อื่นๆ' ? formValue.customBrand : formValue.brand;
 
-      // Ensure custom values are not empty if 'other' is selected
+      
       if (formValue.type === 'other' && !actualType) {
         this.vehicleForm.get('customType')?.setErrors({ required: true });
         this.vehicleForm.get('customType')?.markAsTouched();
-        return; // Stop submission
+        return; 
       }
 
       if (formValue.brand === 'อื่นๆ' && !actualBrand) {
         this.vehicleForm.get('customBrand')?.setErrors({ required: true });
         this.vehicleForm.get('customBrand')?.markAsTouched();
-        return; // Stop submission
+        return; 
       }
 
-      // Compose the model string prepending the actual custom type
+      
       const finalModelName = `${actualBrand} ${formValue.model}`.trim();
       const dbModelString = actualType && !['car', 'ev', 'motorcycle'].includes(actualType)
         ? `[${actualType}] ${finalModelName}`
         : finalModelName;
 
-      // Construct Vehicle Object
+      
       const newVehicle: Partial<Vehicle> = {
-        type: actualType, // Keep it for local usage, but it won't be sent to DB
+        type: actualType, 
         model: dbModelString,
-        licensePlate: formValue.licensePlate, // Send clean plate, province is separate
+        licensePlate: formValue.licensePlate, 
         province: formValue.province,
-        color: formValue.color, // Add color
-        image: this.selectedImage || 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg', // Fallback
+        color: formValue.color, 
+        image: this.selectedImage || 'https://img.freepik.com/free-photo/blue-car-speed-motion-stretch-style_53876-126838.jpg', 
         isDefault: this.isEditMode ? this.editVehicle?.isDefault : false,
         status: this.isEditMode ? this.editVehicle?.status : 'active',
         lastUpdate: 'เพิ่งเพิ่ม'
@@ -211,7 +211,7 @@ export class AddVehicleModalComponent implements OnInit {
       console.warn('[AddVehicleModal] Form is invalid');
       this.vehicleForm.markAllAsTouched();
 
-      // Log errors
+      
       Object.keys(this.vehicleForm.controls).forEach(key => {
         const controlErrors = this.vehicleForm.get(key)?.errors;
         if (controlErrors) {
@@ -221,7 +221,7 @@ export class AddVehicleModalComponent implements OnInit {
     }
   }
 
-  // Helper for validation display
+  
   isControlInvalid(controlName: string): boolean {
     const control = this.vehicleForm.get(controlName);
     return !!(control && control.invalid && control.touched);

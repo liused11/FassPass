@@ -6,7 +6,7 @@
             </ion-button>
         </ion-buttons>
         <ion-title class="font-bold text-gray-900 text-[16px] text-center">รายละเอียดการจอง</ion-title>
-        <!-- Placeholder for right spacing -->
+        
         <ion-buttons slot="end">
             <ion-button disabled></ion-button>
         </ion-buttons>
@@ -16,14 +16,14 @@
 <ion-content class="bg-[#f7f8fa]">
     <div class="px-5 py-6 pb-12 bg-white h-full relative min-h-[calc(100vh-56px)]">
 
-        <!-- Status Indicator -->
+        
         <div class="flex items-center justify-center gap-1.5 mb-8">
             <div class="w-2.5 h-2.5 rounded-full" [ngClass]="getDotColor()"></div>
             <span class="text-sm font-semibold" [ngClass]="getTextColor()">{{ statusLabel }}</span>
         </div>
 
 
-        <!-- วันเวลา -->
+        
         <div class="flex justify-between items-center mb-4 px-1">
             <div class="text-[14px] font-bold text-gray-900">
                 {{ booking.dateLabel ? booking.dateLabel : (booking.bookingTime | date:'EEE d MMM':'':'th-TH') }}
@@ -34,7 +34,7 @@
             </div>
         </div>
 
-        <!-- Card สถานที่ -->
+        
         <div class="border border-gray-200 rounded-xl p-3 mb-3 bg-white shadow-sm flex items-start gap-3">
             <ion-icon name="location-outline" class="text-gray-400 mt-1.5 text-lg"></ion-icon>
             <div>
@@ -48,9 +48,9 @@
             </div>
         </div>
 
-        <!-- Card แถวคู่ (ยานพาหนะ และ ราคา) -->
+        
         <div class="flex gap-3 mb-8">
-            <!-- ทะเบียนรถ -->
+            
             <div class="flex-1 border border-gray-200 rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
                 <div class="text-[11px] text-gray-500 mb-2 flex items-center gap-1">
                     <ion-icon name="car"></ion-icon>
@@ -68,7 +68,7 @@
                 </div>
             </div>
 
-            <!-- ราคา -->
+            
             <div class="flex-1 border border-gray-200 rounded-xl p-3 bg-white shadow-sm flex flex-col justify-center">
                 <div class="text-[11px] text-gray-500 mb-1 flex items-center gap-1">
                     <ion-icon name="cash-outline"></ion-icon>
@@ -86,11 +86,11 @@
             </div>
         </div>
 
-        <!-- Action Buttons สลับ Switch-Case ของ Angular ตรงนี้ -->
+        
         <div class="mt-auto px-1 pt-6 border-t border-gray-100">
             <ng-container [ngSwitch]="internalStatus">
 
-                <!-- ถ้าเป็น active หรือ checked_in -->
+                
                 <ng-container
                     *ngSwitchCase="internalStatus === 'active' || internalStatus === 'checked_in' ? internalStatus : ''">
                     <ion-button expand="block" shape="round" color="primary"
@@ -106,7 +106,7 @@
                     </ion-button>
                 </ng-container>
 
-                <!-- ถ้าเป็น confirmed (เสร็จสิ้น) -->
+                
                 <ng-container *ngSwitchCase="'confirmed'">
                     <ion-button expand="block" shape="round" color="medium"
                         class="h-[50px] font-bold text-[15px]" (click)="dismiss()">
@@ -115,7 +115,7 @@
                     </ion-button>
                 </ng-container>
 
-                <!-- ถ้าเป็น pending (รออนุมัติ) -->
+                
                 <ng-container *ngSwitchCase="'pending'">
                     <ion-button expand="block" shape="round" color="primary"
                         class="mb-3 h-[50px] font-bold text-[15px]" (click)="handleSimulateCheckIn()">
@@ -129,7 +129,7 @@
                     </ion-button>
                 </ng-container>
 
-                <!-- ถ้าเป็น completed -->
+                
                 <ng-container
                     *ngSwitchCase="internalStatus === 'completed' || internalStatus === 'checked_out' ? internalStatus : ''">
                     <ion-button expand="block" shape="round" color="primary"
@@ -143,7 +143,7 @@
                     </ion-button>
                 </ng-container>
 
-                <!-- ถ้าเป็น pending_payment (รอชำระเงิน) -->
+                
                 <ng-container *ngSwitchCase="'pending_payment'">
                     <ion-button expand="block" shape="round" color="primary"
                         class="mb-3 h-[50px] font-bold text-[15px]" (click)="handlePay()">
@@ -162,7 +162,7 @@
                     </ion-button>
                 </ng-container>
 
-                <!-- ถ้าเป็น checked_in_pending_payment (เข้าจอดแล้วแต่ยังไม่จ่าย) -->
+                
                 <ng-container *ngSwitchCase="'checked_in_pending_payment'">
                     <ion-button expand="block" shape="round" color="primary"
                         class="mb-3 h-[50px] font-bold text-[15px]" (click)="handleApplyStamp()">
@@ -180,7 +180,7 @@
                     </ion-button>
                 </ng-container>
 
-                <!-- ถ้าเป็น cancelled -->
+                
                 <ng-container *ngSwitchCase="'cancelled'">
                     <ion-button expand="block" shape="round" color="medium"
                         class="h-[50px] font-bold text-[15px] shadow-sm opacity-80" (click)="dismiss()">

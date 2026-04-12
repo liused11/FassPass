@@ -103,7 +103,7 @@ export class FloorPlanComponent implements AfterViewInit, OnChanges, OnDestroy {
   private isInitialized = false;
   private subscriptions = new Subscription();
 
-  // Zoom configuration
+  
   private currentZoomLevel = 1.0;
   private readonly minZoomLevel = 0.5;
   private readonly maxZoomLevel = 4.0;
@@ -185,7 +185,7 @@ export class FloorPlanComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.resizeObserver = undefined;
   }
 
-  // --- UI Action Methods ---
+  
 
   setView(view: any): void {
     const viewMode = view as 'iso' | 'top';
@@ -261,7 +261,7 @@ export class FloorPlanComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.threeScene.resize();
   }
 
-  // --- Private Helpers ---
+  
 
   private initializeSceneIfNeeded(): void {
     if (this.isInitialized) return;
@@ -314,7 +314,7 @@ export class FloorPlanComponent implements AfterViewInit, OnChanges, OnDestroy {
   private updateCameraPosition(): void {
     if (!this.playerControls.player) return;
 
-    // ใช้ selectedObject$.value เพื่อตัดสินใจล็อกกล้อง
+    
     if (!this.interaction.selectedObject$.value) {
       this.cameraLookAtTarget.copy(this.playerControls.player.position);
     }

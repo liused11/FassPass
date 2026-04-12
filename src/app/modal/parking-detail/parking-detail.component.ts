@@ -15,12 +15,12 @@ import { UiEventService } from '../../services/ui-event';
 import { AddVehicleModalComponent } from '../add-vehicle/add-vehicle-modal.component';
 import { take } from 'rxjs/operators';
 
-// --- Interfaces copied from ParkingReservations ---
+
 interface DaySection {
   date: Date;
-  dateLabel: string; // Full label for backup
-  dayName: string;   // e.g. "Thu"
-  dateNumber: string; // e.g. "15"
+  dateLabel: string; 
+  dayName: string;   
+  dateNumber: string; 
   timeLabel: string;
   slots: TimeSlot[];
   available: number;
@@ -35,8 +35,8 @@ interface TimeSlot {
   isSelected: boolean;
   isInRange: boolean;
   remaining: number;
-  isUserReserved?: boolean; // NEW: If car already has reservation during this slot
-  originalRemaining?: number; // Store raw availability from API
+  isUserReserved?: boolean; 
+  originalRemaining?: number; 
   duration?: number;
 }
 
@@ -86,39 +86,39 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   availableSites: ParkingLot[] = [];
   weeklySchedule: DailySchedule[] = [];
   isOpenNow = false;
-  todayCloseTime: string = '20:00'; // Default
+  todayCloseTime: string = '20:00'; 
 
   selectedType = 'normal';
 
-  // --- Time Selection State ---
-  slotInterval: number = 60; // -1 = Full Day, -2 = Half Day
+  
+  slotInterval: number = 60; 
   displayDays: DaySection[] = [];
-  selectedDateIndex: number = 0; // NEW: Track selected date
-  currentMonthLabel: string = ''; // NEW: Month Year Label (e.g. January 2026)
-  currentDisplayedDate: Date = new Date(); // NEW: For Month Navigation
+  selectedDateIndex: number = 0; 
+  currentMonthLabel: string = ''; 
+  currentDisplayedDate: Date = new Date(); 
 
   startSlot: TimeSlot | null = null;
   endSlot: TimeSlot | null = null;
 
-  // --- Floor & Zone Data ---
+  
   floorData: FloorData[] = [];
 
-  // Selection State (Multiple Floors)
+  
   selectedFloorIds: string[] = [];
 
-  // Selection State (Multiple Zones - actual IDs)
+  
   selectedZoneIds: string[] = [];
 
-  // Aggregated Zones for Display
+  
   displayZones: AggregatedZone[] = [];
 
   userCarReservations: {start_time: string, end_time: string}[] = [];
 
   currentImageIndex = 0;
-  isSpecificSlot: boolean = true; // Default to true per user intent (selecting zones)
+  isSpecificSlot: boolean = true; 
   crossDayCount: number = 1;
-  minDate: string = new Date().toISOString(); // Validator
-  isBooking: boolean = false; // Loading state for booking process
+  minDate: string = new Date().toISOString(); 
+  isBooking: boolean = false; 
   private realtimeChannel: RealtimeChannel | null = null;
 
   constructor(
@@ -126,8 +126,8 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
     private alertCtrl: AlertController,
-    private parkingDataService: ParkingDataService, // Old Mock
-    private parkingApiService: ParkingService, // New RPC Service
+    private parkingDataService: ParkingDataService, 
+    private parkingApiService: ParkingService, 
     private reservationService: ReservationService,
     private uiEventService: UiEventService,
     private router: Router,
@@ -136,38 +136,38 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    // Subscribe to ParkingDataService (Keep as backup or for other components)
+    
     this.parkingDataService.parkingLots$.subscribe(sites => {
       if (this.availableSites.length === 0) {
         this.availableSites = sites;
       }
     });
 
-    // --- CRITICAL FIX: Fetch Real Data from RPC ---
-    // The initial 'lot' input might lack schedule data if it came from a simplified source.
-    // We explicitly fetch the site buildings via the proper Service (Edge Function/RPC) 
-    // to guarantee we have the 'schedule' field populated.
+    
+    
+    
+    
     if (this.lot && this.lot.id) {
       const siteId = this.lot.id.split('-')[0];
-      const profileId = this.reservationService.getCurrentProfileId(); // Get current user id
+      const profileId = this.reservationService.getCurrentProfileId(); 
       
       this.parkingApiService.getSiteBuildings(siteId, 0, 0, profileId).subscribe(realSites => {
         if (realSites && realSites.length > 0) {
           console.log('Refreshed Site Data from RPC:', realSites);
           this.availableSites = realSites;
 
-          // Update current lot with fresh data (containing schedule)
+          
           const freshLot = realSites.find(s => s.id === this.lot.id);
           if (freshLot) {
             console.log('Updated ' + this.lot.name + ' with fresh schedule:', freshLot.schedule);
             this.lot = freshLot;
 
-            // Re-run initialization with correct data
+            
             this.checkOpenStatus();
             this.generateWeeklySchedule();
             this.generateTimeSlots();
 
-            // Refresh Realtime Data
+            
             this.refreshRealtimeData();
           }
         }
@@ -183,10 +183,10 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.checkOpenStatus();
     this.generateWeeklySchedule();
 
-    // Generate Time Slots initially (will be regenerated when RPC returns)
+    
     this.generateTimeSlots();
 
-    // Subscribe to Realtime Updates (Reservations Table)
+    
     this.realtimeChannel = this.supabaseService.client
       .channel('public:reservations')
       .on(
@@ -199,7 +199,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       )
       .subscribe();
 
-    // Fetch user car reservations initially
+    
     this.loadUserCarReservations();
   }
 
@@ -209,7 +209,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         try {
           const res = await this.reservationService.getCarReservations(vehicles[0].id);
           this.userCarReservations = res;
-          this.generateTimeSlots(); // Re-generate to apply disable logic
+          this.generateTimeSlots(); 
         } catch (e) {
           console.error('Error loading car reservations:', e);
         }
@@ -224,53 +224,53 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   refreshRealtimeData() {
-    // 0. Refresh Car Reservations (to handle cancellations)
+    
     this.loadUserCarReservations();
 
-    // 1. Refresh Time Slots (Counts)
+    
     this.fetchTimeSlotAvailability();
 
-    // 2. Refresh Floor/Zone logic if a slot is selected
+    
     if (this.startSlot && this.endSlot) {
       this.loadAvailability(true);
     }
   }
 
-  // --- Date Selection ---
+  
   selectDate(index: number) {
     this.selectedDateIndex = index;
-    // this.updateMonthLabel(); // Removed: specific to slot gen now
+    
     this.updateSelectionUI();
   }
 
-  // --- Month Navigation ---
+  
   changeMonth(offset: number) {
     const newDate = new Date(this.currentDisplayedDate);
     newDate.setMonth(newDate.getMonth() + offset);
 
-    // Prevent going back before current month
+    
     const today = new Date();
     if (offset < 0 && newDate.getMonth() < today.getMonth() && newDate.getFullYear() <= today.getFullYear()) {
-      // Don't go back further than current month 
-      // Although ion-datetime handles [min], manual nav needs check
-      // Actually simpler: just don't disable if same month
+      
+      
+      
     }
     this.currentDisplayedDate = newDate;
 
-    // Reset selection when changing month in Monthly mode? Maybe yes.
-    // this.resetTimeSelection(); // Optional: Keep it or clear it. 
+    
+    
     this.generateTimeSlots();
   }
 
   get isPrevMonthDisabled(): boolean {
     const today = new Date();
-    // Compare Year & Month
+    
     return this.currentDisplayedDate.getFullYear() <= today.getFullYear() &&
       this.currentDisplayedDate.getMonth() <= today.getMonth();
   }
 
   updateMonthLabel() {
-    // Label is now set in generateTimeSlots for Monthly, or dynamic for Daily
+    
     if (this.bookingMode === 'daily' || this.bookingMode === 'flat24') {
       if (this.displayDays.length > 0 && this.displayDays[this.selectedDateIndex]) {
         const date = this.displayDays[this.selectedDateIndex].date;
@@ -280,19 +280,19 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- Time Selection Logic ---
+  
 
   selectInterval(minutes: number) {
     this.slotInterval = minutes;
-    // Capture old time
+    
     const oldTime = this.startSlot ? this.startSlot.dateTime.getTime() : null;
 
     this.resetTimeSelection(false);
     this.generateTimeSlots();
 
-    // Try to restore selection
+    
     if (oldTime) {
-      // Find matching slot in NEW slots
+      
       let newSlot: TimeSlot | undefined;
       for (const day of this.displayDays) {
         newSlot = day.slots.find(s => s.dateTime.getTime() === oldTime);
@@ -302,7 +302,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       if (newSlot) {
         this.startSlot = newSlot;
         this.endSlot = newSlot;
-        // Trigger UI update and Load Detail
+        
         this.updateSelectionUI();
         this.loadAvailability(true);
       }
@@ -319,13 +319,13 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   selectCrossDayCount(count: number) {
     this.crossDayCount = count;
     this.resetTimeSelection();
-    // Dismiss popover
+    
     const popovers = document.querySelectorAll('ion-popover');
     popovers.forEach((p: any) => p.dismiss());
 
     this.cdr.detectChanges();
 
-    // Auto-scroll logic similar to before
+    
     if (this.crossDayCount > 1) {
       setTimeout(() => {
         const el = document.getElementById('month-section-header');
@@ -337,10 +337,10 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   get dayIndices(): number[] {
-    // Returns [0], [0,1], [0,1,2] etc based on crossDayCount
-    // But relative to selectedDateIndex. 
-    // Wait, the original logic was: let dayIndex of (isCrossDay ? [selectedDateIndex, selectedDateIndex + 1] : [selectedDateIndex])
-    // So we should generate indices starting from selectedDateIndex
+    
+    
+    
+    
     return Array.from({ length: this.crossDayCount }, (_, i) => this.selectedDateIndex + i);
   }
 
@@ -349,7 +349,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.endSlot = null;
     if (fullReset) {
       this.selectedDateIndex = 0;
-      // Do NOT reset currentDisplayedDate here, keep invisible state
+      
     }
     this.floorData = [];
     this.selectedFloorIds = [];
@@ -362,16 +362,16 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     console.log('Generating slots for:', this.lot?.name, 'Mode:', this.bookingMode);
 
     this.displayDays = [];
-    // Use currentDisplayedDate for Monthly, today for others (unless we want navigable daily?) 
-    // Usually Daily starts from Today.
+    
+    
     const baseDate = (this.bookingMode === 'monthly') ? this.currentDisplayedDate : new Date();
 
-    // Thai Days (Full Names)
+    
     const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const thaiMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
     if (this.bookingMode === 'monthly') {
-      // --- MONTHLY MODE: REAL CALENDAR VIEW ---
+      
       this.currentMonthLabel = `${thaiMonths[baseDate.getMonth()]} ${baseDate.getFullYear() + 543}`;
 
       const year = baseDate.getFullYear();
@@ -379,18 +379,18 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       const firstDay = new Date(year, month, 1);
       const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      // Calculate padding (0=Sun, 6=Sat)
+      
       const startDay = firstDay.getDay();
 
-      // Add Emtpy Slots for Padding
+      
       for (let i = 0; i < startDay; i++) {
         this.displayDays.push({
-          date: new Date(year, month, 0), // Dummy
+          date: new Date(year, month, 0), 
           dateLabel: '',
           dayName: '',
           dateNumber: '',
           timeLabel: 'padding',
-          slots: [], // Empty slots = Padding
+          slots: [], 
           available: 0,
           capacity: 0
         });
@@ -401,16 +401,16 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         const dayIndex = targetDate.getDay();
         const dailyCapacity = this.getCurrentCapacity();
 
-        // Check if Past Date
+        
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const isPast = targetDate < today;
 
-        // Deterministic: Use date and capacity to determine available count
-        // Pattern: Even days have 80% availability, Odd days have 40%
-        // Deterministic: Always show full availability as requested
+        
+        
+        
         let dailyAvailable = dailyCapacity;
-        if (isPast) dailyAvailable = 0; // Past dates unavailable
+        if (isPast) dailyAvailable = 0; 
 
         const timeStr = this.bookingMode === 'monthly' ? 'เริ่มสัญญา' : 'เริ่ม 18:00';
 
@@ -418,7 +418,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           id: `${targetDate.toISOString()}-MONTHLY`,
           timeText: timeStr,
           dateTime: new Date(targetDate),
-          isAvailable: !isPast, // Disable logic
+          isAvailable: !isPast, 
           remaining: dailyAvailable,
           isSelected: false,
           isInRange: false,
@@ -438,8 +438,8 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       }
 
     } else {
-      // --- DAILY / HOURLY / 24H MODE ---
-      // Use Today for these modes
+      
+      
       const today = new Date();
 
       for (let i = 0; i < 5; i++) {
@@ -451,14 +451,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         const dateNumber = targetDate.getDate().toString();
         const dateLabel = `${dayName} ${dateNumber}`;
 
-        // Mock capacity/availability
+        
         const dailyCapacity = this.getCurrentCapacity();
         let dailyAvailable = 0;
-        // Deterministic: 
+        
         if (i === 0) {
           dailyAvailable = Math.min(this.getCurrentAvailable(), dailyCapacity);
         } else {
-          // Deterministic: Always show full availability as requested
+          
           dailyAvailable = dailyCapacity;
         }
 
@@ -480,11 +480,11 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
             endH = cH; endM = cM;
             timeLabel = `${schedule.open_time.slice(0, 5)} - ${schedule.close_time.slice(0, 5)}`;
           } else {
-            // Schedule exists but not for this day -> Closed
+            
             isOpen = false;
           }
         } else {
-          // Fallback: 24 Hours
+          
           isOpen = true;
           timeLabel = '24 ชั่วโมง';
           startH = 0; endH = 24;
@@ -501,14 +501,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
         const totalOpenMinutes = Math.floor((closingTime.getTime() - startTime.getTime()) / 60000);
 
         if (!isOpen) {
-          // Closed logic handled below by empty slots
+          
         } else {
 
-          // --- ADAPTED LOGIC FOR BOOKING MODES ---
-          // NOTE: flat24 moved to loop logic below to allow start time selection
+          
+          
 
           if (this.slotInterval === -1) {
-            // Full Day
+            
             const timeStr = `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
             const isPast = startTime < new Date();
             let remaining = 0;
@@ -525,7 +525,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
               duration: totalOpenMinutes
             });
           } else if (this.slotInterval === -2) {
-            // Half Day logic...
+            
             const halfDuration = Math.floor(totalOpenMinutes / 2);
             const slot1Time = new Date(startTime);
             this.createSingleSlot(slots, targetDate, slot1Time, dailyCapacity, halfDuration);
@@ -534,23 +534,23 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
               this.createSingleSlot(slots, targetDate, slot2Time, dailyCapacity, halfDuration);
             }
           } else {
-            // Interval (Standard OR Flat24)
-            // If Flat24, we use interval for start times, but duration is 24h (1440 min)
-            // And maybe we want to show "10:00 (+1 day)" label style in createSingleSlot?
+            
+            
+            
 
             let currentBtnTime = new Date(startTime);
             while (currentBtnTime < closingTime) {
-              // Valid Start Time
+              
               let duration = this.slotInterval;
               if (this.bookingMode === 'flat24') {
-                duration = 1440; // 24 Hours fixed
+                duration = 1440; 
               }
 
               this.createSingleSlot(slots, targetDate, currentBtnTime, dailyCapacity, duration);
 
-              // Increment Step:
-              // For 'daily' (Hourly/4h), step by the interval itself to create distinct rounds (8-12, 12-16)
-              // For 'flat24', step by 60 mins to allow flexible start times (8-8, 9-9)
+              
+              
+              
               const step = this.bookingMode === 'flat24' ? 60 : this.slotInterval;
               currentBtnTime.setMinutes(currentBtnTime.getMinutes() + step);
             }
@@ -568,22 +568,22 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           capacity: dailyCapacity
         });
       }
-      this.updateMonthLabel(); // Only for daily modes
+      this.updateMonthLabel(); 
     }
 
-    // Fetch real availability for the generated slots
+    
     this.fetchTimeSlotAvailability();
 
     this.updateSelectionUI();
   }
 
-  // --- Date Picker Handler ---
+  
   onMonthSelected(event: any) {
     const val = event.detail.value;
     if (val) {
       this.currentDisplayedDate = new Date(val);
       this.generateTimeSlots();
-      // Dismiss popover programmatically if needed, or let backdrop handle it
+      
       const popover = document.querySelector('ion-popover.date-picker-popover') as any;
       if (popover) popover.dismiss();
     }
@@ -598,20 +598,20 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     let timeStr = `${this.pad(startH)}:${this.pad(startM)} - ${this.pad(endH)}:${this.pad(endM)}`;
 
-    // Custom label for Flat 24
+    
     if (this.bookingMode === 'flat24') {
       timeStr = `${this.pad(startH)}:${this.pad(startM)} (24 ชม.)`;
     }
 
     const isPast = timeObj < new Date();
-    // Default to 0, will be updated by fetchTimeSlotAvailability
+    
     let remaining = isPast ? 0 : capacity;
 
     slots.push({
       id: `${targetDate.toISOString()}-${timeStr}`,
       timeText: timeStr,
       dateTime: new Date(timeObj),
-      isAvailable: !isPast, // Optimistic, will update
+      isAvailable: !isPast, 
       remaining: remaining,
       isSelected: false,
       isInRange: false,
@@ -622,14 +622,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   fetchTimeSlotAvailability() {
     if (!this.lot || !this.parkingApiService || this.displayDays.length === 0) return;
 
-    // Default to the first day's date
+    
     let startDate = new Date(this.displayDays[0].date);
 
-    // Force start date to midnight initially
+    
     startDate.setHours(0, 0, 0, 0);
 
-    // ADJUST START TIME TO MATCH BUILDING OPEN TIME
-    // This ensures the generated time series (p_start_time + n * interval) matches the actual slot times
+    
+    
     if (this.lot && this.lot.schedule) {
       const daysKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const dayKey = daysKey[startDate.getDay()];
@@ -642,45 +642,45 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     const lastDay = this.displayDays[this.displayDays.length - 1].date;
     const endDate = new Date(lastDay);
-    // Extend end date by 2 days to ensure we cover the full duration of bookings 
-    // starting on the last day (e.g. 24h flat rate extending into the next day)
+    
+    
     endDate.setDate(endDate.getDate() + 2);
     endDate.setHours(23, 59, 59, 999);
 
-    // Determine interval from booking mode
+    
     let interval = this.slotInterval;
 
     if (this.bookingMode === 'flat24') {
-      interval = 60; // Fetch hourly for flat24 too? Or larger?
+      interval = 60; 
     } else if (interval < 0) {
-      // For Full Day (-1) or Half Day (-2), use the duration of the generated slots
-      // This ensures the API checks the full required duration (e.g. 12 hours) 
-      // instead of just 1 hour availability at the start time.
+      
+      
+      
       const firstDayWithSlots = this.displayDays.find(d => d.slots.length > 0);
       if (firstDayWithSlots && firstDayWithSlots.slots.length > 0) {
         interval = firstDayWithSlots.slots[0].duration || 720;
       } else {
-        interval = 720; // Default 12 hours if no slots found yet
+        interval = 720; 
       }
     }
 
-    if (interval <= 0) interval = 60; // Safety fallback
+    if (interval <= 0) interval = 60; 
 
     const buildingId = this.lot.id;
-    // Check if selectedLot.id is actually the building ID or site ID?
-    // In getSiteBuildings, likely building.id.
+    
+    
 
-    // Convert vehicle type? The component might calculate this.
+    
     const vehicleType = this.selectedType === 'motorcycle' ? 'motorcycle' : (this.selectedType === 'ev' ? 'ev' : 'car');
 
-    // Pass 'duration' explicitly for overlapping checks (e.g. 1440 for flat24)
-    // For normal daily mode, interval == duration usually.
+    
+    
     let durationToCheck = interval;
     if (this.bookingMode === 'flat24') {
       durationToCheck = 1440;
     } else if (interval < 0) {
-      // Full day / Half day logic
-      const firstDayWithSlots = this.displayDays.find(d => d.slots.length > 0); // Re-declare or ensure scope
+      
+      const firstDayWithSlots = this.displayDays.find(d => d.slots.length > 0); 
       if (firstDayWithSlots && firstDayWithSlots.slots.length > 0) {
         durationToCheck = firstDayWithSlots.slots[0].duration || 720;
       } else {
@@ -690,40 +690,40 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     this.parkingApiService.getBuildingTimeSlots(buildingId, startDate, endDate, interval, vehicleType, durationToCheck)
       .subscribe(data => {
-        // Map data to slots
-        // data: { slot_time: string, available_count: number, ... }[]
+        
+        
 
-        // Create a lookup map for speed
-        // ✅ 1. ใช้ Map ที่เก็บ Key เป็น ISO String เพื่อความเป็นกลางทาง Timezone
+        
+        
         const availabilityMap = new Map<string, number>();
         data.forEach((row: any) => {
-          // Normalize time string to match slot.dateTime.toISOString() or similar comparison
-          // User updated RPC to return 't_start' and aligned times
+          
+          
           const timeVal = row.t_start || row.slot_time;
           if (timeVal) {
-            // แปลงเป็น ISO String และล้างวินาที/มิลลิวินาทีให้สะอาด
+            
             const d = new Date(timeVal);
             d.setSeconds(0, 0);
             availabilityMap.set(d.toISOString(), row.available_count);
           }
         });
 
-        // Update slots
-        // ✅ 2. อัปเดต UI โดยการเทียบ Key ในรูปแบบเดียวกัน
+        
+        
         const intervalMs = interval * 60000;
 
         this.displayDays.forEach(day => {
           day.slots.forEach(slot => {
             const slotTime = slot.dateTime.getTime();
 
-            // Generate aligned key: Find the interval bucket that contains this slot
-            // Since SQL generated series from Midnight with 'interval' steps, we align to that.
-            // Using local time offset logic might be needed if Midnight is local, but Date.getTime() is UTC.
-            // Assuming the series generation in SQL (timestamp with time zone) and JS match.
-            // Simplest alignment: Round down to nearest interval from the base StartDate (Midnight)
-            // But simplified: Round down to nearest interval modulus.
+            
+            
+            
+            
+            
+            
 
-            // To be safe against timezone shifts, we align to the 'startDate' (Timezone aware midnight) we defined earlier
+            
             const timeSinceStart = slotTime - startDate.getTime();
             const alignedOffset = Math.floor(timeSinceStart / intervalMs) * intervalMs;
             const alignedTime = new Date(startDate.getTime() + alignedOffset);
@@ -731,12 +731,12 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
             const slotIsoKey = alignedTime.toISOString();
 
             let minAvailable = 0;
-            // Direct lookup: The API now returns the correct 'min available' (bottleneck capacity) 
-            // for the requested duration starting at this time.
+            
+            
             if (availabilityMap.has(slotIsoKey)) {
               minAvailable = availabilityMap.get(slotIsoKey) || 0;
             } else {
-              // Fallback: If aligned key missing (e.g. due to slightly different TZ handling), try exact slot time
+              
               const exactD = new Date(slot.dateTime);
               exactD.setSeconds(0, 0);
               if (availabilityMap.has(exactD.toISOString())) {
@@ -744,7 +744,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
               }
             }
 
-            // Check if THIS slot overlaps with user's existing car reservations
+            
             const duration = slot.duration || this.slotInterval || 60;
             const slotStart = slot.dateTime.getTime();
             const slotEnd = slotStart + (duration * 60000);
@@ -753,7 +753,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
             for (const res of this.userCarReservations) {
               const resStart = new Date(res.start_time).getTime();
               const resEnd = new Date(res.end_time).getTime();
-              // Overlap check: (SlotStart < ResEnd) AND (SlotEnd > ResStart)
+              
               if (slotStart < resEnd && slotEnd > resStart) {
                 isReservedByThisCar = true;
                 break;
@@ -763,12 +763,12 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
             slot.isUserReserved = isReservedByThisCar;
             slot.remaining = isReservedByThisCar ? 0 : minAvailable;
             slot.originalRemaining = minAvailable;
-            // ตรวจสอบว่ามีที่ว่างและยังไม่เลยเวลาปัจจุบัน และไม่ทับซ้อนกับรถตัวเอง
+            
             slot.isAvailable = slot.remaining > 0 && slot.dateTime > new Date() && !isReservedByThisCar;
           });
         });
 
-        // Update UI to reflect minimum availability for selected range
+        
         this.updateSelectionUI();
       });
   }
@@ -780,66 +780,66 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     }
     if (!slot.isAvailable) return;
 
-    // --- REFINED SELECTION LOGIC ---
+    
     if (this.bookingMode === 'daily') {
-      // Range Selection for Daily
-      // Case 0: No Selection -> Start New
+      
+      
       if (!this.startSlot || !this.endSlot) {
         this.startSlot = slot;
         this.endSlot = slot;
       }
-      // Case 1: Single Slot Selected (Start == End)
+      
       else if (this.startSlot.id === this.endSlot.id) {
         if (slot.id === this.startSlot.id) {
-          // Clicked same slot -> Deselect (Reset)
+          
           this.resetTimeSelection(false);
           return;
         } else {
-          // Clicked different slot -> Form Range
+          
           if (slot.dateTime.getTime() < this.startSlot.dateTime.getTime()) {
-            // Clicked before -> Range is [Clicked, Start]
+            
             const oldStart = this.startSlot;
             this.startSlot = slot;
             this.endSlot = oldStart;
           } else {
-            // Clicked after -> Range is [Start, Clicked]
+            
             this.endSlot = slot;
           }
         }
       }
-      // Case 2: Range Selected (Start != End)
+      
       else {
-        // If clicked Start or End -> Reset (User Request)
+        
         if (slot.id === this.startSlot.id || slot.id === this.endSlot.id) {
           this.resetTimeSelection(false);
           return;
         }
         else {
-          // Clicked a new 3rd slot -> Start New Single Selection
+          
           this.startSlot = slot;
           this.endSlot = slot;
         }
       }
     } else {
-      // SINGLE SELECTION for Monthly, MonthlyNight, Flat24
-      // Just click to select
+      
+      
       this.startSlot = slot;
-      this.endSlot = slot; // Physically same slot, logic handles duration later
+      this.endSlot = slot; 
     }
 
     this.updateSelectionUI();
 
-    // Generate Floor/Zone data if we have a valid range
+    
     if (this.startSlot && this.endSlot) {
       this.loadAvailability();
 
-      // Auto-Scroll removed
-      // setTimeout(() => {
-      //   const el = document.getElementById('location-section');
-      //   if (el) {
-      //     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      //   }
-      // }, 300);
+      
+      
+      
+      
+      
+      
+      
     } else {
       this.floorData = [];
     }
@@ -852,39 +852,39 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
     this.displayDays.forEach(day => {
       day.slots.forEach(s => {
-        // 1. Restore original availability if available (to clear previous calculations)
+        
         if (s.originalRemaining !== undefined) {
           s.remaining = s.originalRemaining;
         }
 
-        // 2. Determine Selection State
+        
         const isStart = !!this.startSlot && s.id === this.startSlot.id;
         const isEnd = !!this.endSlot && s.id === this.endSlot.id;
         s.isSelected = isStart || isEnd;
 
-        // 3. Determine Range State
+        
         if (this.startSlot && this.endSlot) {
           const sTime = s.dateTime.getTime();
           const startT = this.startSlot.dateTime.getTime();
           const endT = this.endSlot.dateTime.getTime();
 
-          // Collect slots strictly within the selected range [Start, End] for min calculation
-          // FIX: For continuous time ranges, the end slot marks the END of the booking period.
-          // We should check slots from Start up to (but not including) End, OR include End if it's the only slot.
-          // Currently UI treats EndSlot as the last INCLUSIVE 1-hour block if selection mode is range.
-          // IF the user selects 9:00 and 10:00 (Range 9:00 - 11:00), we need 9:00 and 10:00 slots.
-          // IF the user selects 9:00 only (Range 9:00 - 10:00), we need 9:00 slot.
+          
+          
+          
+          
+          
+          
 
-          // Logic: Include slot if it falls within the range. 
-          // Since our slots represent blocks (e.g. 9:00 is 9-10), we usually include start and end slots in the set.
+          
+          
           if (sTime >= startT && sTime <= endT) {
             slotsInRange.push(s);
           }
 
-          // Visual In-Range flag (exclusive of start/end usually)
+          
           s.isInRange = sTime > startT && sTime < endT;
 
-          // Explicitly exclude start/end from in-range visual style
+          
           if (isStart || isEnd) {
             s.isInRange = false;
           }
@@ -894,7 +894,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       });
     });
 
-    // 4. Calculate Minimum Availability in Range and Update Display
+    
     if (slotsInRange.length > 0) {
       const minAvailable = Math.min(...slotsInRange.map(s => s.remaining));
       slotsInRange.forEach(s => {
@@ -903,31 +903,31 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- Mock Data Generation ---
+  
 
-  // --- Real Data Generation ---
+  
   loadAvailability(preserveSelection: boolean = false) {
-    // --- REAL DATA INTEGRATION ---
+    
     if (!this.startSlot || !this.endSlot) return;
 
-    // Loading State? (Optional interaction improvement)
+    
     this.floorData = [];
 
-    // Calculate accurate End Time (EndSlot Start + Duration)
+    
     const endTime = new Date(this.endSlot.dateTime.getTime() + (this.endSlot.duration || 60) * 60000);
 
     this.parkingApiService.getAvailability(
       this.lot.id,
       this.startSlot.dateTime,
       endTime,
-      this.selectedType // 'normal'/'car', 'ev', 'motorcycle' passed here
+      this.selectedType 
     ).subscribe({
       next: (data) => {
         console.log('Real Availability Data:', data);
-        this.floorData = data; // API matches structure roughly
+        this.floorData = data; 
 
-        // ✅ Update the selected slot's remaining count to match the SUM of floor availability
-        // This ensures the "366" (daily avg) becomes "363" (actual range availability)
+        
+        
         const totalRangeAvailable = this.floorData.reduce((sum, f) => sum + (f.totalAvailable || 0), 0);
 
         if (this.startSlot && this.endSlot) {
@@ -944,29 +944,29 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           });
         }
 
-        // Default Select First Floor
+        
         if (this.floorData.length > 0) {
           if (preserveSelection) {
-            // Keep selection if possible
+            
             const validFloors = this.selectedFloorIds.filter(id => this.floorData.some(f => f.id === id));
             if (validFloors.length > 0) {
               this.selectedFloorIds = validFloors;
             } else {
-              // If previously selected floor is gone, select first
+              
               this.selectedFloorIds = [this.floorData[0].id];
-              this.clearAllZones(); // Reset zones if floor changed
+              this.clearAllZones(); 
             }
             this.updateDisplayZones();
 
-            // Validate Zone Selection: If any selected zone is now FULL, deselect it.
+            
             this.displayZones.forEach(z => {
               if (this.isZoneSelected(z.name) && z.status === 'full') {
-                // Remove these IDs from selectedZoneIds
+                
                 this.selectedZoneIds = this.selectedZoneIds.filter(id => !z.ids.includes(id));
               }
             });
           } else {
-            // Default Select First Floor (Reset)
+            
             this.selectedFloorIds = [this.floorData[0].id];
             this.updateDisplayZones();
             this.clearAllZones();
@@ -975,19 +975,19 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Error loading detailed availability', err);
-        // Fallback or Toast?
+        
       }
     });
   }
 
-  // --- Floor Selection (Single) ---
+  
   toggleFloor(floor: FloorData) {
-    // Single Selection Mode: Always replace
+    
     if (this.isFloorSelected(floor.id)) {
-      // Optional: Allow deselecting if clicking the same one? 
-      // User said "Select only one", implies radio behavior usually. 
-      // But let's allow deselecting to be safe, or just keep it selected.
-      // Let's allow deselecting for now.
+      
+      
+      
+      
       this.selectedFloorIds = [];
     } else {
       this.selectedFloorIds = [floor.id];
@@ -997,7 +997,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   selectAllFloors() {
-    // Removed feature
+    
   }
 
   clearAllFloors() {
@@ -1011,10 +1011,10 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   isAllFloorsSelected(): boolean {
-    return false; // Feature removed
+    return false; 
   }
 
-  // --- Zone Aggregation Logic ---
+  
   updateDisplayZones() {
     const aggMap = new Map<string, AggregatedZone>();
 
@@ -1046,14 +1046,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.displayZones = Array.from(aggMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  // --- Zone Selection (Single) ---
+  
   toggleZone(aggZone: AggregatedZone) {
     const isSelected = this.isZoneSelected(aggZone.name);
 
     if (isSelected) {
       this.selectedZoneIds = [];
     } else {
-      // Single Selection: Replace all
+      
       this.selectedZoneIds = [...aggZone.ids];
     }
   }
@@ -1065,7 +1065,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   selectAllZones() {
-    // Removed
+    
   }
 
   clearAllZones() {
@@ -1080,7 +1080,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     return this.displayZones.filter(z => this.isZoneSelected(z.name)).length;
   }
 
-  // --- General ---
+  
   selectSite(site: ParkingLot) {
     console.log('--- [ParkingDetail] Switching Site ---');
     console.log('New Site:', site.name, site.id);
@@ -1093,7 +1093,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.checkOpenStatus();
     this.generateWeeklySchedule();
     this.resetTimeSelection();
-    // Ensure we start fresh
+    
     this.selectedDateIndex = 0;
     this.generateTimeSlots();
 
@@ -1108,7 +1108,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     this.resetTimeSelection();
     this.generateTimeSlots();
 
-    // Dismiss popovers
+    
     const popovers = document.querySelectorAll('ion-popover');
     popovers.forEach((p: any) => p.dismiss());
 
@@ -1116,52 +1116,52 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
   }
 
   async selectBookingMode(mode: 'daily' | 'monthly' | 'flat24') {
-    // 1. Dismiss any open popovers immediately
+    
     const popovers = document.querySelectorAll('ion-popover');
     if (popovers.length > 0) {
       await Promise.all(Array.from(popovers).map((p: any) => p.dismiss()));
     }
 
-    // 2. Update Mode
+    
     this.bookingMode = mode;
     this.crossDayCount = 1;
-    this.displayDays = []; // Clear immediately to prevent stale UI
+    this.displayDays = []; 
 
-    // 3. Reset State Forcefully
+    
     this.resetTimeSelection(true);
 
-    // Set default interval based on mode to prevent stale state
+    
     if (this.bookingMode === 'daily' || this.bookingMode === 'flat24') {
-      this.slotInterval = 60; // Default 1 hour
+      this.slotInterval = 60; 
     } else {
-      this.slotInterval = -1; // Full/fixed for other modes usually
+      this.slotInterval = -1; 
     }
 
-    // 4. Force Regenerate with Delay to ensure UI cleans up
+    
     setTimeout(() => {
       this.generateTimeSlots();
       this.updateSelectionUI();
-    }, 50); // Small delay to allow DOM to react to mode change
+    }, 50); 
   }
 
-  // --- Single Line Summary ---
-  // --- Single Line Summary ---
+  
+  
   get singleLineSummary(): string {
     if (!this.startSlot || !this.endSlot) return '';
 
     const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
     const sDate = this.startSlot.dateTime;
 
-    // --- ADAPTED SUMMARY FOR MODES ---
+    
     if (this.bookingMode === 'monthly') {
-      // Monthly: Show Start - End Date same as Logic
-      // Logic: Start -> Start + 1 Month
+      
+      
       const eDate = new Date(sDate);
       eDate.setMonth(sDate.getMonth() + 1);
 
-      const sDateStr = `${sDate.getDate()} ${thaiMonths[sDate.getMonth()]}`; // Short Year?
-      // User Example: "11 ม.ค. - 11 ก.พ."
-      // If Cross Year? "11 ธ.ค. - 11 ม.ค."
+      const sDateStr = `${sDate.getDate()} ${thaiMonths[sDate.getMonth()]}`; 
+      
+      
       const eDateStr = `${eDate.getDate()} ${thaiMonths[eDate.getMonth()]}`;
 
       return `ใช้งานได้ ${sDateStr} - ${eDateStr} (${this.getModeLabel()})`;
@@ -1183,17 +1183,17 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     let datePart = '';
 
     if (sDate.getDate() !== eDate.getDate()) {
-      // Cross Day: "13 ม.ค. 19:00 - 14 ม.ค. 08:00"
+      
       const eDateStr = `${eDate.getDate()} ${thaiMonths[eDate.getMonth()]}`;
       const eTimeStr = `${this.pad(eDate.getHours())}:${this.pad(eDate.getMinutes())}`;
       datePart = `${sDateStr} ${sTimeStr} - ${eDateStr} ${eTimeStr}`;
     } else {
-      // Single Day: "13 ม.ค. 19:00 - 20:00"
+      
       const eTimeStr = `${this.pad(eDate.getHours())}:${this.pad(eDate.getMinutes())}`;
       datePart = `${sDateStr} ${sTimeStr} - ${eTimeStr}`;
     }
 
-    // Location Part
+    
     if (this.selectedFloorIds.length === 0) return datePart;
 
     const fNames = this.floorData.filter(f => this.selectedFloorIds.includes(f.id)).map(f => f.name.replace('Floor', 'F').replace(' ', '')).join(', ');
@@ -1236,16 +1236,16 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate Zone Selection
+    
     if (this.selectedZoneIds.length === 0) {
       this.presentToast('กรุณาเลือกโซน');
       return;
     }
 
-    // --- Vehicle Check ---
+    
     this.parkingDataService.vehicles$.pipe(take(1)).subscribe(async (vehicles) => {
       if (!vehicles || vehicles.length === 0) {
-        // No vehicles, show Add Vehicle modal
+        
         const addModal = await this.modalCtrl.create({
           component: AddVehicleModalComponent,
           breakpoints: [0, 1],
@@ -1269,16 +1269,16 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           }
         }
       } else {
-        // User has at least 1 vehicle, proceed to booking processing
+        
         this.processBooking();
       }
     });
   }
 
   private async processBooking() {
-    if (!this.startSlot || !this.endSlot) return; // TS guard
+    if (!this.startSlot || !this.endSlot) return; 
 
-    // --- LOGIC FOR BOOKING MODES ---
+    
     let finalStart = new Date(this.startSlot.dateTime);
     let finalEnd = new Date(this.endSlot.dateTime);
 
@@ -1292,7 +1292,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     else if (this.bookingMode === 'flat24') {
       finalEnd = new Date(finalStart.getTime() + (24 * 60 * 60 * 1000));
     } else {
-      // Daily Mode: Use exact duration from endSlot for both single and range selections
+      
       const duration = this.endSlot.duration || 60;
       finalEnd = new Date(this.endSlot.dateTime.getTime() + (duration * 60000));
     }
@@ -1328,7 +1328,7 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
 
       const { data: result, role } = await modal.onDidDismiss();
       if (role === 'confirm' && result && result.confirmed) {
-        // Show loading indicator
+        
         const loading = await this.loadingCtrl.create({
           message: 'กำลังดำเนินการจอง...',
           spinner: 'crescent',
@@ -1373,14 +1373,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
             bookingData.selectedSlotId
           );
 
-          // Hide loading
+          
           await loading.dismiss();
           this.isBooking = false;
 
-          // Trigger Data Refresh
+          
           this.uiEventService.triggerRefreshParkingData();
 
-          // Show success modal with complete data
+          
           const successData = {
             ...newBooking,
             selectedSlotId: bookingData.selectedSlotId,
@@ -1395,13 +1395,13 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
           await this.showSuccessModal(successData);
 
         } catch (e: any) {
-          // Hide loading
+          
           await loading.dismiss();
           this.isBooking = false;
 
           console.error('Reservation Failed', e);
 
-          // Show detailed error
+          
           await this.showErrorAlert(e);
         }
       }
@@ -1418,12 +1418,12 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     
     const hourlyRate = this.lot?.price !== undefined ? this.lot.price : 20;
     
-    if (this.bookingMode === 'monthly') return 1500; // Mock monthly rate
-    if (this.bookingMode === 'flat24') return hourlyRate * 10; // e.g. cap at 10 hours for flat24
+    if (this.bookingMode === 'monthly') return 1500; 
+    if (this.bookingMode === 'flat24') return hourlyRate * 10; 
     return hours * hourlyRate;
   }
 
-  // Helpers
+  
   onImageScroll(event: any) {
     const scrollLeft = event.target.scrollLeft;
     const width = event.target.offsetWidth;
@@ -1442,36 +1442,36 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     let closeH = 20, closeM = 0;
     let isTodayClosed = false;
 
-    // 1. Determine Hours
+    
     if (this.lot && this.lot.schedule && this.lot.schedule.length > 0) {
-      // Have schedule data
+      
       const todaySchedule = this.lot.schedule.find(s => s.days.includes(currentDayName));
       if (todaySchedule) {
         [openH, openM] = todaySchedule.open_time.split(':').map(Number);
         [closeH, closeM] = todaySchedule.close_time.split(':').map(Number);
         this.todayCloseTime = todaySchedule.close_time.slice(0, 5);
       } else {
-        // Schedule exists but not for today -> Closed
+        
         isTodayClosed = true;
       }
     } else {
-      // No schedule -> Fallback to 24 Hours
+      
       openH = 0; openM = 0;
       closeH = 24; closeM = 0;
       this.todayCloseTime = '24:00';
     }
 
-    // 2. Check Open Status
+    
     if (isTodayClosed) {
       this.isOpenNow = false;
-      this.todayCloseTime = ''; // Closed
+      this.todayCloseTime = ''; 
     } else {
       const openTime = new Date(now);
       openTime.setHours(openH, openM, 0, 0);
 
       const closeTime = new Date(now);
 
-      // Handle 24:00 (Next Day 00:00)
+      
       if (closeH === 24) {
         closeTime.setDate(closeTime.getDate() + 1);
         closeTime.setHours(0, 0, 0, 0);
@@ -1546,11 +1546,11 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     let errorMessage = 'ไม่สามารถดำเนินการจองได้ กรุณาลองใหม่อีกครั้ง';
     let errorButtons: any[] = ['ตกลง'];
 
-    // Extract clean message (remove error code prefix like "USER_BLACKLISTED: ...")
+    
     const rawMessage: string = error.message || '';
     const cleanMessage = rawMessage.includes(':') ? rawMessage.substring(rawMessage.indexOf(':') + 1).trim() : rawMessage;
 
-    // Determine error type and customize message
+    
     if (rawMessage.includes('USER_BLACKLISTED')) {
       errorTitle = 'ไม่สามารถจองได้';
       errorMessage = cleanMessage || 'คุณถูกระงับการใช้งานการจอง กรุณาติดต่อเจ้าหน้าที่';
@@ -1589,14 +1589,14 @@ export class ParkingDetailComponent implements OnInit, OnDestroy {
     await alert.present();
   }
 
-  // --- Map Navigation ---
+  
   openMap(lat?: number, lng?: number) {
     if (!lat || !lng) {
       console.warn('Coordinates not available for this location.');
       return;
     }
 
-    // Always use Google Maps
+    
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     window.open(url, '_blank');
   }

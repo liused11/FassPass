@@ -27,16 +27,16 @@ export class Building3dModalComponent implements OnInit {
     ngOnInit() {
         this.buildingName = this.buildingData?.name || 'Building';
 
-        // Fallback to imported JSON if not provided directly in buildingData
+        
         if (this.buildingData?.floors) {
             this.floors = this.buildingData.floors;
         } else {
             this.floors = buildingFloorData.floors;
         }
 
-        // Set a default selected floor or leave null
+        
         if (this.floors && this.floors.length > 0) {
-            // this.selectedFloor = 1; 
+            
         }
     }
 
@@ -48,7 +48,7 @@ export class Building3dModalComponent implements OnInit {
         console.log('Selected floor:', floorNum);
         this.selectedFloor = floorNum;
 
-        // Add a slight delay so the user sees the floor get highlighted before navigating
+        
         setTimeout(() => {
             this.modalCtrl.dismiss().then(() => {
                 this.router.navigate(['/tabs/tab4'], {

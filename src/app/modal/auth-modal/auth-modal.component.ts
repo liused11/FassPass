@@ -21,7 +21,7 @@ export class AuthModalComponent implements OnInit {
   ) { }
 
   async ngOnInit() {
-    // LINE Browser
+    
     if (this.lineService.isLoggedIn()) {
       console.log('🔄 Detected LINE session, starting sync flow...');
       await this.handleSyncFlow();
@@ -59,7 +59,7 @@ export class AuthModalComponent implements OnInit {
     }
   }
 
-  // Guest
+  
   continueAsGuest() {
     this.modalCtrl.dismiss({ role: 'guest' });
   }

@@ -12,7 +12,7 @@ import { AuthService } from '../../services/auth.service';
   imports: [IonicModule, CommonModule, ReactiveFormsModule]
 })
 export class EditProfileModalComponent implements OnInit {
-  @Input() currentProfile: any; // Passed from parent page
+  @Input() currentProfile: any; 
 
   profileForm: FormGroup;
 
@@ -57,7 +57,7 @@ export class EditProfileModalComponent implements OnInit {
       const user = await this.authService.getCurrentUser();
       if (!user) throw new Error('ผู้ใช้งานไม่ได้เข้าสู่ระบบ');
 
-      // Note: We use user.id because the auth user ID is identical to the profile ID
+      
       await this.authService.updateProfilev2(user.id, updateData);
 
       await this.showToast('บันทึกข้อมูลเรียบร้อยแล้ว', 'success');

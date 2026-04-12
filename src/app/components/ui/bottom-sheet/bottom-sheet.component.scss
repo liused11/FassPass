@@ -34,7 +34,7 @@
   border: 1px solid rgba(0,0,0,0.05);
 }
 
-/* --- States --- */
+
 .sheet-container.state-hidden {
   height: 0 !important;
   transform: translateY(100%);
@@ -45,7 +45,7 @@
   height: var(--peek-height);
 }
 
-/* [เพิ่มใหม่] State: Partial (ประมาณ 30% ของจอ) */
+
 .sheet-container.state-partial {
   height: 30vh;
   transition: height 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
@@ -59,7 +59,7 @@
   height: var(--expanded-height, calc(100vh - 4.5rem - 24px));
 }
 
-/* --- Handle --- */
+
 .sheet-header {
   height: var(--handle-height);
   width: 100%;
@@ -84,7 +84,7 @@
   border-radius: 10px;
 }
 
-/* --- Content --- */
+
 .sheet-content {
   flex: 1;
   overflow-y: auto;
