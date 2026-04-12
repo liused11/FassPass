@@ -15,22 +15,15 @@
 
 ## 🚀 How to Run (Local Development)
 
-### 1. การตั้งค่า Environment
-\`\`\`typescript
-export const environment = {
-  production: false,
-  supabaseUrl: 'YOUR_SUPABASE_PROJECT_URL',
-  supabaseKey: 'YOUR_SUPABASE_ANON_KEY'
-};
-\`\`\`
 
-### 2. รัน Frontend
-\`\`\`bash
+
+###  รัน Frontend
+
 npm install
 ionic serve
-\`\`\`
 
-### 3. การจัดการ Supabase Edge Functions
+
+###  การจัดการ Supabase Edge Functions
 โค้ด API พิเศษจะอยู่ในโฟลเดอร์ \`supabase/functions/\` (รันด้วย Deno)
 - รันฟังก์ชันจำลองบนเครื่อง: \`supabase functions serve\`
 - Deploy ฟังก์ชันขึ้นเซิร์ฟเวอร์: \`supabase functions deploy <function_name>\`
