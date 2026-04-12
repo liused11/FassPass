@@ -29,5 +29,4 @@ ionic serve
 - Deploy ฟังก์ชันขึ้นเซิร์ฟเวอร์: \`supabase functions deploy <function_name>\`
 
 ## 📚 Documentation
-- **[API Documentation](./docs/API_DOCS.md):** รายละเอียด Endpoint และ Payload ของ Edge Functions ทั้งหมด
-- **Database Schema:** (ถ้ามีภาพ ER Diagram หรืออธิบาย table ให้ใส่ลิงก์ตรงนี้)
+
