@@ -29,4 +29,4 @@ ionic serve
 - Deploy ฟังก์ชันขึ้นเซิร์ฟเวอร์: \`supabase functions deploy <function_name>\`
 
 ## 📚 Documentation
-
+edgefunction จะอยู่ ที่ FassPass\supabase\functions
