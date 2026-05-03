@@ -1,7 +1,8 @@
 import { IonicModule } from '@ionic/angular';
-import { NgModule } from '@angular/core';
+import { NgModule, CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DecimalPipe } from '@angular/common';
 import { Tab1Page } from './tab1.page';
 import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
 
@@ -11,7 +12,6 @@ import { ParkingReservationsComponent } from '../modal/parking-reservations/park
 import { CheckBookingComponent } from '../modal/check-booking/check-booking.component';
 import { BookingSlotComponent } from '../modal/booking-slot/booking-slot.component';
 import { BookingSuccessModalComponent } from '../modal/booking-success-modal/booking-success-modal.component';
-import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 import { RegisterCodeModalComponent } from '../modal/register-code/register-code-modal.component';
 
 
@@ -24,6 +24,8 @@ import { RegisterCodeModalComponent } from '../modal/register-code/register-code
     Tab1PageRoutingModule,
     RegisterCodeModalComponent
   ],
-  declarations: [Tab1Page, ParkingDetailComponent, ParkingReservationsComponent, CheckBookingComponent, BookingSlotComponent, BookingSuccessModalComponent, BuildingDetailComponent]
+  declarations: [Tab1Page, ParkingDetailComponent, ParkingReservationsComponent, CheckBookingComponent, BookingSlotComponent, BookingSuccessModalComponent],
+  providers: [DecimalPipe],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA]
 })
 export class Tab1PageModule { }

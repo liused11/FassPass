@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { ModalController } from '@ionic/angular';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
-import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
+// import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 
 @Component({
     selector: 'app-tab6',
@@ -38,21 +38,21 @@ export class Tab6Page implements OnInit {
 
     async goToDetail(building: any) {
         
-        if (building.category === 'building') {
-            const modal = await this.modalCtrl.create({
-                component: BuildingDetailComponent,
-                componentProps: {
-                    lot: building
-                },
-                initialBreakpoint: 1,
-                breakpoints: [0, 1],
-                backdropDismiss: true,
-                showBackdrop: true,
-                cssClass: 'detail-sheet-modal',
-            });
-            await modal.present();
-            return;
-        }
+        // if (building.category === 'building') {
+        //     const modal = await this.modalCtrl.create({
+        //         component: BuildingDetailComponent,
+        //         componentProps: {
+        //             lot: building
+        //         },
+        //         initialBreakpoint: 1,
+        //         breakpoints: [0, 1],
+        //         backdropDismiss: true,
+        //         showBackdrop: true,
+        //         cssClass: 'detail-sheet-modal',
+        //     });
+        //     await modal.present();
+        //     return;
+        // }
 
         
         const typeModal = await this.modalCtrl.create({

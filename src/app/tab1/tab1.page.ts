@@ -9,8 +9,10 @@ import {
   PLATFORM_ID,
   NgZone
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { isPlatformBrowser } from '@angular/common';
-import { ModalController, Platform, AlertController } from '@ionic/angular';
+import { IonicModule, ModalController, Platform, AlertController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { Subscription, interval, of, Subject } from 'rxjs';
 import { catchError, timeout, debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -18,7 +20,6 @@ import { UiEventService } from '../services/ui-event';
 import { SupabaseService } from '../services/supabase.service';
 import { ParkingDetailComponent } from '../modal/parking-detail/parking-detail.component';
 import { BookingTypeSelectorComponent } from '../modal/booking-type-selector/booking-type-selector.component';
-import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 import { RegisterCodeModalComponent } from '../modal/register-code/register-code-modal.component';
 
 import * as ngeohash from 'ngeohash';
@@ -29,7 +30,13 @@ import { BookmarkService } from '../services/bookmark.service';
 import { ReservationService } from '../services/reservation.service';
 import { BottomSheetService } from '../services/bottom-sheet.service';
 
-import buildingFloorData from '../components/floor-plan/e12-floor1.json';
+// import buildingFloorData from '../components/floor-plan/e12-floor1.json';
+
+const buildingFloorData = {
+  buildingId: 'e12',
+  buildingName: 'อาคาร E12',
+  floors: []
+};
 
 @Component({
   selector: 'app-tab1',
@@ -449,20 +456,20 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
   }
 
 
-  async openBuildingDetails(building: any) {
-    const modal = await this.modalCtrl.create({
-      component: BuildingDetailComponent,
-      componentProps: {
-        lot: building
-      },
-      initialBreakpoint: 1,
-      breakpoints: [0, 1],
-      backdropDismiss: true,
-      showBackdrop: true,
-      cssClass: 'detail-sheet-modal',
-    });
-    return await modal.present();
-  }
+  // async openBuildingDetails(building: any) {
+  //   const modal = await this.modalCtrl.create({
+  //     component: BuildingDetailComponent,
+  //     componentProps: {
+  //       lot: building
+  //     },
+  //     initialBreakpoint: 1,
+  //     breakpoints: [0, 1],
+  //     backdropDismiss: true,
+  //     showBackdrop: true,
+  //     cssClass: 'detail-sheet-modal',
+  //   });
+  //   return await modal.present();
+  // }
 
 
 
@@ -1039,22 +1046,22 @@ export class Tab1Page implements OnInit, OnDestroy, AfterViewInit {
 
   async viewLotDetails(lot: ParkingLot) {
 
-    if (lot.category === 'building') {
+    // if (lot.category === 'building') {
 
-      const modal = await this.modalCtrl.create({
-        component: BuildingDetailComponent,
-        componentProps: {
-          lot: lot
-        },
-        initialBreakpoint: 1,
-        breakpoints: [0, 1],
-        backdropDismiss: true,
-        showBackdrop: true,
-        cssClass: 'detail-sheet-modal',
-      });
-      await modal.present();
-      return;
-    }
+    //   const modal = await this.modalCtrl.create({
+    //     component: BuildingDetailComponent,
+    //     componentProps: {
+    //       lot: lot
+    //     },
+    //     initialBreakpoint: 1,
+    //     breakpoints: [0, 1],
+    //     backdropDismiss: true,
+    //     showBackdrop: true,
+    //     cssClass: 'detail-sheet-modal',
+    //   });
+    //   await modal.present();
+    //   return;
+    // }
 
 
     this.isModalOpen = true;

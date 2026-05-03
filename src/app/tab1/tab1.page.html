@@ -48,22 +48,6 @@
           </div>
         </div>
 
-        
-        <div
-          class="flex-1 cursor-pointer rounded-full py-2 px-1 text-center transition-all duration-300 relative overflow-hidden"
-          (click)="selectedLocation = 'building'; locationChanged({detail: {value: 'building'}})"
-          [ngClass]="{'text-white shadow-md': selectedLocation === 'building', 'text-gray-500 hover:bg-gray-50': selectedLocation !== 'building'}">
-
-          <div class="absolute inset-0 bg-[#1a73e8] transition-transform duration-300 ease-out origin-right"
-            [style.transform]="selectedLocation === 'building' ? 'scaleX(1)' : 'scaleX(0)'" style="z-index: 0;"></div>
-
-          <div class="relative z-10 flex items-center justify-center gap-2">
-            <ion-icon name="business"
-              [style.color]="selectedLocation === 'building' ? 'white' : 'currentColor'"></ion-icon>
-            <span class="text-sm font-bold">อาคารผู้เยี่ยมชม</span>
-          </div>
-        </div>
-
       </div>
 
     </div>
@@ -249,7 +233,7 @@
             <div *ngFor="let building of filteredBuildingRooms; let i = index; trackBy: trackByRoomId"
               class="lot-card bg-white rounded-xl p-4 mb-3 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-100 relative overflow-hidden cursor-pointer"
               [style.border-left]="'6px solid ' + (building.color || '#1a73e8')"
-              (click)="openBuildingDetails(building)">
+              >
 
               <div class="flex flex-row gap-4">
                 

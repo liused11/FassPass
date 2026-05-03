@@ -5,7 +5,7 @@ import { ParkingDataService } from '../services/parking-data.service';
 import { ReservationService } from '../services/reservation.service';
 import { ReservationDetailComponent } from '../modal/reservation-detail/reservation-detail.component';
 import { SupabaseService } from '../services/supabase.service';
-import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
+// import { BuildingDetailComponent } from '../modal/building-detail/building-detail.component';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -733,15 +733,15 @@ export class Tab2Page implements OnInit, OnDestroy {
     const lot = this.parkingService.getParkingLotById(buildingId);
     if (!lot) return;
 
-    const modal = await this.modalCtrl.create({
-      component: BuildingDetailComponent,
-      componentProps: { lot },
-      initialBreakpoint: 1,
-      breakpoints: [0, 1],
-      backdropDismiss: true,
-      showBackdrop: true,
-      cssClass: 'detail-sheet-modal',
-    });
-    await modal.present();
+    // const modal = await this.modalCtrl.create({
+    //   component: BuildingDetailComponent,
+    //   componentProps: { lot },
+    //   initialBreakpoint: 1,
+    //   breakpoints: [0, 1],
+    //   backdropDismiss: true,
+    //   showBackdrop: true,
+    //   cssClass: 'detail-sheet-modal',
+    // });
+    // await modal.present();
   }
 }
